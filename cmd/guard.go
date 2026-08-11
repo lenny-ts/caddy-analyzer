@@ -14,6 +14,8 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/L9Lenny/caddy-analyzer/pkg/audit"
+	"github.com/L9Lenny/caddy-analyzer/pkg/blocklist"
+	"github.com/L9Lenny/caddy-analyzer/pkg/enrich"
 	"github.com/L9Lenny/caddy-analyzer/pkg/guard"
 	"github.com/L9Lenny/caddy-analyzer/pkg/reader"
 )
@@ -33,7 +35,14 @@ var (
 	guardAnomalyFactor     float64
 	guardUARotation        int
 	guardCredStuffingLimit int
+	guardCountryBlock      []string
+	guardBlocklistRefresh  string
+	guardNoBlocklist       bool
+	guardGeoIPDB           string
 )
+
+const blocklistCacheDir = "/var/lib/caddy-analyzer/blocklist"
+const minBlocklistRefresh = 1 * time.Hour
 
 func init() {
 	guardCmd.Flags().IntVarP(&guardLimit, "limit", "l", 100, "Max requests before blocking (0 disables)")
@@ -50,6 +59,10 @@ func init() {
 	guardCmd.Flags().Float64VarP(&guardAnomalyFactor, "rps-anomaly", "", 0, "Alert when current RPS exceeds this factor over the EWMA baseline (0 disables; e.g. 5 = 5x spike)")
 	guardCmd.Flags().IntVarP(&guardUARotation, "ua-rotation", "", 10, "Distinct User-Agents from one IP before scanner/rotation heuristic fires")
 	guardCmd.Flags().IntVarP(&guardCredStuffingLimit, "cred-stuffing-limit", "", 0, "Alert when N distinct IPs fail auth on the same path (0 disables)")
+	guardCmd.Flags().StringSliceVarP(&guardCountryBlock, "country-block", "", nil, "Block IPs from these ISO country codes (e.g. CN,RU,IR)")
+	guardCmd.Flags().StringVarP(&guardBlocklistRefresh, "blocklist-refresh", "", "6h", "Blocklist background refresh interval (min 1h; 0 disables)")
+	guardCmd.Flags().BoolVarP(&guardNoBlocklist, "no-blocklist", "", false, "Disable blocklist feed checking")
+	guardCmd.Flags().StringVarP(&guardGeoIPDB, "geoip-db", "", "", "Path to GeoIP mmdb file (auto-discovered if empty)")
 	rootCmd.AddCommand(guardCmd)
 }
 
@@ -63,6 +76,8 @@ Detection:
   • 404 surge — directory scanning / enumeration
   • Request threshold — generic high-volume
   • Pattern detection — 26 categories: SQLi, NoSQLi, XSS, SSTI, SSRF, RCE, path traversal, LFI wrappers, GraphQL, Log4j/JNDI, XXE, open redirect, LDAP/XPath/CRLF/SSI injection, prototype pollution, probes, scanners, UA rotation, JWT abuse, object enumeration, beaconing (confidence >= --detect-confidence)
+  • Blocklist feeds (Spamhaus DROP/EDROP, FireHOL, CINS, Tor exits) — immediate block
+  • Country block (--country-block) — immediate block by GeoIP country code
 
 Set any threshold to 0 to disable it. Blockade is temporary (default 10m).
 For permanent block: --duration 0. Rules live in the CADDY_ANALYZER iptables
@@ -76,6 +91,8 @@ Examples:
   caddy-analyze guard k8s://caddy-pod -n production --auth-limit 5
   caddy-analyze guard /var/log/caddy/access.log --never-block 10.0.0.0/8,192.168.1.1
   caddy-analyze guard /var/log/caddy/access.log --never-block-file /etc/caddy-analyzer/allowlist.txt
+  caddy-analyze guard /var/log/caddy/access.log --country-block CN,RU,IR --geoip-db /etc/geoip/dbip-country-lite.mmdb
+  caddy-analyze guard /var/log/caddy/access.log --no-blocklist
 `,
 	Args: cobra.ArbitraryArgs,
 	RunE: runGuard,
@@ -169,6 +186,68 @@ func runGuard(cmd *cobra.Command, args []string) error {
 		}
 	}
 
+	// Blocklist manager: load cached feeds first, then start background
+	// refresh. If --no-blocklist is set, skip entirely.
+	var blMgr *blocklist.Manager
+	if !guardNoBlocklist {
+		var err error
+		blMgr, err = blocklist.NewManager(nil, blocklistCacheDir)
+		if err != nil {
+			return fmt.Errorf("blocklist manager: %w", err)
+		}
+		blMgr.LoadAll()
+		stats := blMgr.Stats()
+		if stats.Active == 0 {
+			fmt.Fprintf(os.Stderr, "No cached blocklists found. Running initial refresh...\n")
+			statuses := blMgr.Refresh()
+			active := 0
+			for _, st := range statuses {
+				if st.Error == "" && st.Entries > 0 {
+					active++
+				}
+				if st.Error != "" {
+					fmt.Fprintf(os.Stderr, "  %s: %s\n", st.Name, st.Error)
+				} else {
+					fmt.Fprintf(os.Stderr, "  %s: %d entries\n", st.Name, st.Entries)
+				}
+			}
+			if active == 0 {
+				fmt.Fprintf(os.Stderr, "Warning: all blocklist feeds failed. Running without blocklist protection.\n")
+			}
+		}
+	}
+
+	// GeoIP enricher: needed for country-block. If --geoip-db is empty,
+	// auto-discovery is attempted. If country-block is set but no GeoIP
+	// db is found, warn the user.
+	var geoip *enrich.GeoIP
+	if len(guardCountryBlock) > 0 || guardGeoIPDB != "" {
+		var err error
+		geoip, err = enrich.NewGeoIP(guardGeoIPDB)
+		if err != nil {
+			if len(guardCountryBlock) > 0 {
+				return fmt.Errorf("--country-block requires GeoIP db: %w", err)
+			}
+			fmt.Fprintf(os.Stderr, "Warning: GeoIP db not found, country/ASN enrichment disabled: %v\n", err)
+			geoip = nil
+		} else {
+			defer func() { _ = geoip.Close() }()
+		}
+	}
+
+	var blocklistRefresh time.Duration
+	if guardBlocklistRefresh == "0" {
+		blocklistRefresh = 0
+	} else {
+		blocklistRefresh, err = time.ParseDuration(guardBlocklistRefresh)
+		if err != nil {
+			return fmt.Errorf("invalid blocklist-refresh %q: %w", guardBlocklistRefresh, err)
+		}
+		if blocklistRefresh > 0 && blocklistRefresh < minBlocklistRefresh {
+			return fmt.Errorf("--blocklist-refresh must be >= %s", minBlocklistRefresh)
+		}
+	}
+
 	g := guard.New(guard.Config{
 		Limit:               guardLimit,
 		AuthLimit:           guardAuthLimit,
@@ -188,6 +267,10 @@ func runGuard(cmd *cobra.Command, args []string) error {
 		AnomalyFactor:       guardAnomalyFactor,
 		UARotationThreshold: guardUARotation,
 		CredStuffingLimit:   guardCredStuffingLimit,
+		BlocklistMgr:        blMgr,
+		BlocklistRefresh:    blocklistRefresh,
+		CountryBlock:        guardCountryBlock,
+		GeoIP:               geoip,
 	})
 
 	durMsg := duration.String()
@@ -206,6 +289,18 @@ func runGuard(cmd *cobra.Command, args []string) error {
 		fmt.Fprintf(os.Stderr, "Pattern detection blocking: confidence >= %d\n", guardDetectConfidence)
 	} else {
 		fmt.Fprintf(os.Stderr, "Pattern detection blocking: off\n")
+	}
+	if blMgr != nil {
+		stats := blMgr.Stats()
+		fmt.Fprintf(os.Stderr, "Blocklist: %d entries across %d active sources\n", stats.Total, stats.Active)
+		if blocklistRefresh > 0 {
+			fmt.Fprintf(os.Stderr, "Blocklist refresh: every %s\n", blocklistRefresh)
+		}
+	} else {
+		fmt.Fprintf(os.Stderr, "Blocklist: off\n")
+	}
+	if len(guardCountryBlock) > 0 && geoip != nil {
+		fmt.Fprintf(os.Stderr, "Country block: %s\n", strings.Join(guardCountryBlock, ", "))
 	}
 	fmt.Fprintf(os.Stderr, "Ctrl+C to stop\n\n")
 
@@ -227,6 +322,9 @@ func runGuard(cmd *cobra.Command, args []string) error {
 	fmt.Fprintln(os.Stderr, "\nGuard stopped.")
 	if n := g.Count(); n > 0 {
 		fmt.Fprintf(os.Stderr, "IPs blocked this session: %d\n", n)
+	}
+	if n := g.BlocklistHits(); n > 0 {
+		fmt.Fprintf(os.Stderr, "IPs blocked via blocklist/country-block: %d\n", n)
 	}
 	return nil
 }

@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/L9Lenny/caddy-analyzer/pkg/analysis"
+	"github.com/L9Lenny/caddy-analyzer/pkg/blocklist"
 	"github.com/L9Lenny/caddy-analyzer/pkg/parser"
 	"github.com/L9Lenny/caddy-analyzer/pkg/types"
 )
@@ -52,6 +53,13 @@ func runCmd(ctx context.Context, bin string, args ...string) error {
 type Blocker interface {
 	Block(ip string) error
 	Unblock(ip string) error
+}
+
+// GeoIPLookuper is the subset of *enrich.GeoIP used by the guard for
+// country-block lookups. Defining it as an interface allows tests to
+// inject a mock without a real mmdb file.
+type GeoIPLookuper interface {
+	Lookup(ip string) (types.GeoInfo, error)
 }
 
 type iptablesBlocker struct{}
@@ -191,6 +199,20 @@ type Config struct {
 	// iptables blocker is used. Tests should provide a fake blocker
 	// so that loadState cleanup hits the fake, not real iptables.
 	Blocker Blocker
+	// BlocklistMgr, if non-nil, enables immediate blocking of IPs
+	// found in any configured blocklist feed. The manager must have
+	// been loaded (LoadAll or Refresh) before guard starts.
+	BlocklistMgr *blocklist.Manager
+	// BlocklistRefresh is the interval between automatic blocklist
+	// refreshes in guard mode. If <= 0, no background refresh runs.
+	BlocklistRefresh time.Duration
+	// CountryBlock is a list of ISO country codes whose IPs are
+	// blocked on sight. Requires GeoIP to be set.
+	CountryBlock []string
+	// GeoIP, if non-nil, is used for country-block lookups. If
+	// CountryBlock is non-empty and GeoIP is nil, country-block is
+	// silently disabled.
+	GeoIP GeoIPLookuper
 }
 
 type expiryEntry struct {
@@ -236,6 +258,13 @@ type Guard struct {
 	lastSave time.Time
 	saveMu   sync.Mutex
 	saveGen  atomic.Int64
+	// Blocklist and GeoIP for immediate block-on-match.
+	blocklistMgr *blocklist.Manager
+	countryBlock map[string]bool
+	geoip        GeoIPLookuper
+	// blocklistHits counts IPs blocked via blocklist or country-block
+	// for stats reporting.
+	blocklistHits atomic.Int64
 }
 
 // ipBucket holds per-second counters for one IP.
@@ -441,6 +470,13 @@ func New(cfg Config) *Guard {
 	if blocker == nil {
 		blocker = iptablesBlocker{}
 	}
+	countryBlock := make(map[string]bool)
+	for _, cc := range cfg.CountryBlock {
+		cc = strings.ToUpper(strings.TrimSpace(cc))
+		if cc != "" {
+			countryBlock[cc] = true
+		}
+	}
 	g := &Guard{
 		blocked:        make(map[string]bool),
 		blockedSubnets: make([]*net.IPNet, 0),
@@ -454,6 +490,9 @@ func New(cfg Config) *Guard {
 		allowlist:      parseCIDRList(cfg.NeverBlock),
 		detectCounts:   make(map[string]int),
 		sliding:        newSlidingCounters(cfg.Window),
+		blocklistMgr:   cfg.BlocklistMgr,
+		countryBlock:   countryBlock,
+		geoip:          cfg.GeoIP,
 	}
 	if cfg.UARotationThreshold > 0 {
 		g.detector.SetUARotationThreshold(cfg.UARotationThreshold)
@@ -742,6 +781,13 @@ func (g *Guard) Evaluate(line string) {
 	if g.IsBlocked(entry.RemoteIP) {
 		return
 	}
+	// Blocklist and country-block: immediate block on match. The
+	// allowlist (--never-block) always wins over both — this is checked
+	// inside checkImmediateBlock so an allowlisted IP is never blocked
+	// by a feed or country rule.
+	if g.checkImmediateBlock(entry.RemoteIP) {
+		return
+	}
 	g.tickReqs.Add(1)
 	g.sliding.add(entry.RemoteIP, time.Now(), entry.Status == 401 || entry.Status == 403, entry.Status == 404, entry.Path())
 	if g.cfg.DetectionConfidence > 0 {
@@ -757,6 +803,37 @@ func (g *Guard) Evaluate(line string) {
 		g.detector.Detect(entry)
 	}
 	g.engine.Process(entry)
+}
+
+// checkImmediateBlock returns true if ip matches the blocklist or a
+// blocked country and was blocked. The allowlist is checked first:
+// if ip is allowlisted, no immediate block is applied and false is
+// returned. The block is applied inline (not deferred to Tick) so the
+// IP is cut off before it can do more damage.
+func (g *Guard) checkImmediateBlock(ip string) bool {
+	if g.isAllowlisted(ip) {
+		return false
+	}
+	if g.blocklistMgr != nil {
+		if hit, source := g.blocklistMgr.Contains(ip); hit {
+			ctx, cancel := context.WithTimeout(context.Background(), iptablesTimeout)
+			defer cancel()
+			g.block(ctx, Candidate{IP: ip, Count: 1, Why: "blocklist: " + source}, time.Now())
+			g.blocklistHits.Add(1)
+			return true
+		}
+	}
+	if g.geoip != nil && len(g.countryBlock) > 0 {
+		info, err := g.geoip.Lookup(ip)
+		if err == nil && info.CountryCode != "" && g.countryBlock[info.CountryCode] {
+			ctx, cancel := context.WithTimeout(context.Background(), iptablesTimeout)
+			defer cancel()
+			g.block(ctx, Candidate{IP: ip, Count: 1, Why: "country-block: " + info.CountryCode}, time.Now())
+			g.blocklistHits.Add(1)
+			return true
+		}
+	}
+	return false
 }
 
 type Candidate struct {
@@ -998,6 +1075,16 @@ func (g *Guard) Run(ctx context.Context, linesCh <-chan string, logf func(string
 		g.runExpiryLoop(ctx)
 	}()
 
+	// Blocklist background refresh: periodically re-fetch all feeds so
+	// new malicious networks are picked up without a manual refresh.
+	if g.blocklistMgr != nil && g.cfg.BlocklistRefresh > 0 {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			g.runBlocklistRefresh(ctx, logf)
+		}()
+	}
+
 	ticker := time.NewTicker(g.cfg.Window)
 	defer ticker.Stop()
 
@@ -1023,4 +1110,33 @@ func (g *Guard) Run(ctx context.Context, linesCh <-chan string, logf func(string
 			return
 		}
 	}
+}
+
+// runBlocklistRefresh re-fetches all blocklist feeds at the configured
+// interval. Failures are logged via logf but do not stop the loop —
+// the next tick will retry.
+func (g *Guard) runBlocklistRefresh(ctx context.Context, logf func(string, ...interface{})) {
+	ticker := time.NewTicker(g.cfg.BlocklistRefresh)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ticker.C:
+			statuses := g.blocklistMgr.Refresh()
+			for _, st := range statuses {
+				if st.Error != "" {
+					logf("[blocklist] %s: %s\n", st.Name, st.Error)
+				} else {
+					logf("[blocklist] %s: %d entries refreshed\n", st.Name, st.Entries)
+				}
+			}
+		case <-ctx.Done():
+			return
+		}
+	}
+}
+
+// BlocklistHits returns the number of IPs blocked via blocklist or
+// country-block matching since the guard started.
+func (g *Guard) BlocklistHits() int64 {
+	return g.blocklistHits.Load()
 }
