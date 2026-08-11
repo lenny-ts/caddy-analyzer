@@ -1,6 +1,6 @@
 caddy-analyze
 caddy-analyze.exe
-caddy-analyzer.json
+caddy-analyzer.*
 caddy_access.log
 report.html
 sample.log
