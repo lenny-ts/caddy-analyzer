@@ -2,6 +2,10 @@ package enrich
 
 import (
 	"fmt"
+	"net/http"
+	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"testing"
 	"time"
 )
@@ -152,5 +156,89 @@ func TestCacheName(t *testing.T) {
 	cache := NewCache(mock, 1*time.Hour)
 	if cache.Name() != "mock" {
 		t.Fatalf("expected 'mock', got %q", cache.Name())
+	}
+}
+
+func TestSetAutoDownload(t *testing.T) {
+	old := autoDownload
+	defer func() { autoDownload = old }()
+
+	SetAutoDownload(false)
+	if autoDownload {
+		t.Error("expected autoDownload=false")
+	}
+	SetAutoDownload(true)
+	if !autoDownload {
+		t.Error("expected autoDownload=true")
+	}
+}
+
+func TestDownloadFile(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprint(w, "fake-mmdb-data")
+	}))
+	defer srv.Close()
+
+	dir := t.TempDir()
+	dest := filepath.Join(dir, "test.mmdb")
+	if err := downloadFile(srv.URL, dest); err != nil {
+		t.Fatalf("downloadFile: %v", err)
+	}
+	data, err := os.ReadFile(dest)
+	if err != nil {
+		t.Fatalf("ReadFile: %v", err)
+	}
+	if string(data) != "fake-mmdb-data" {
+		t.Errorf("expected 'fake-mmdb-data', got %q", data)
+	}
+}
+
+func TestDownloadFileHTTPError(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusNotFound)
+	}))
+	defer srv.Close()
+
+	dir := t.TempDir()
+	dest := filepath.Join(dir, "test.mmdb")
+	err := downloadFile(srv.URL, dest)
+	if err == nil {
+		t.Error("expected error for HTTP 404")
+	}
+}
+
+func TestNewGeoIPNoFileNoAutoDownload(t *testing.T) {
+	old := autoDownload
+	defer func() { autoDownload = old }()
+	SetAutoDownload(false)
+
+	// Temporarily clear search paths so no file is found.
+	oldPaths := geoIPSearchPaths
+	defer func() { geoIPSearchPaths = oldPaths }()
+	geoIPSearchPaths = []string{"/nonexistent/GeoIP.mmdb"}
+
+	_, err := NewGeoIP("")
+	if err == nil {
+		t.Error("expected error when no mmdb found and auto-download disabled")
+	}
+}
+
+func TestUserConfigDir(t *testing.T) {
+	oldHome := os.Getenv("HOME")
+	defer func() { _ = os.Setenv("HOME", oldHome) }()
+
+	dir := t.TempDir()
+	_ = os.Setenv("HOME", dir)
+
+	got, err := userConfigDir()
+	if err != nil {
+		t.Fatalf("userConfigDir: %v", err)
+	}
+	want := filepath.Join(dir, ".config", "caddy-analyzer")
+	if got != want {
+		t.Errorf("expected %s, got %s", want, got)
+	}
+	if fi, err := os.Stat(got); err != nil || !fi.IsDir() {
+		t.Errorf("expected dir to exist: %s", got)
 	}
 }

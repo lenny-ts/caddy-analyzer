@@ -40,6 +40,7 @@ var (
 	guardBlocklistRefresh  string
 	guardNoBlocklist       bool
 	guardGeoIPDB           string
+	guardNoAutoDL          bool
 )
 
 const minBlocklistRefresh = 1 * time.Hour
@@ -63,6 +64,7 @@ func init() {
 	guardCmd.Flags().StringVarP(&guardBlocklistRefresh, "blocklist-refresh", "", "6h", "Blocklist background refresh interval (min 1h; 0 disables)")
 	guardCmd.Flags().BoolVarP(&guardNoBlocklist, "no-blocklist", "", false, "Disable blocklist feed checking")
 	guardCmd.Flags().StringVarP(&guardGeoIPDB, "geoip-db", "", "", "Path to GeoIP mmdb file (auto-discovered if empty)")
+	guardCmd.Flags().BoolVarP(&guardNoAutoDL, "no-auto-download", "", false, "Disable automatic download of DB-IP lite mmdb on first run")
 	guardCmd.Flags().StringVarP(&blocklistCacheDir, "cache-dir", "", defaultBlocklistCacheDir(), "Directory for cached blocklist files")
 	rootCmd.AddCommand(guardCmd)
 }
@@ -234,6 +236,7 @@ func runGuard(cmd *cobra.Command, args []string) error {
 	// db is found, warn the user.
 	var geoip *enrich.GeoIP
 	if len(guardCountryBlock) > 0 || guardGeoIPDB != "" {
+		enrich.SetAutoDownload(!guardNoAutoDL)
 		var err error
 		geoip, err = enrich.NewGeoIP(guardGeoIPDB)
 		if err != nil {

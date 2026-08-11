@@ -64,6 +64,7 @@ var (
 	flagMaxSize    string
 	flagDefang     bool
 	flagGeoIPDB    string
+	flagNoAutoDL   bool
 )
 
 var Version = "1.0.0"
@@ -155,6 +156,7 @@ func init() {
 	flags.StringVar(&flagMaxSize, "max-size", "", "Filter responses at most this size (bytes, or k/mb/gb suffix e.g. 512kb)")
 	flags.BoolVarP(&flagDefang, "defang", "", false, "Defang IPs in output (replace . with [.]) for safe sharing")
 	flags.StringVarP(&flagGeoIPDB, "geoip-db", "", "", "Path to GeoIP mmdb file (DB-IP or MaxMind). Auto-discovers if empty")
+	flags.BoolVarP(&flagNoAutoDL, "no-auto-download", "", false, "Disable automatic download of DB-IP lite mmdb on first run")
 	rootCmd.PersistentFlags().StringVarP(&flagK8sNS, "namespace", "n", "", "Kubernetes namespace")
 
 	rootFlags := rootCmd.Flags()
@@ -346,6 +348,7 @@ func applyForwarded(entry *types.LogEntry, filters types.Filters) {
 // auto-discovery. Returns nil if no mmdb file is available (non-fatal:
 // analysis continues without country/ASN data).
 func newGeoIPEnricher() *enrich.GeoIP {
+	enrich.SetAutoDownload(!flagNoAutoDL)
 	g, err := enrich.NewGeoIP(flagGeoIPDB)
 	if err != nil {
 		if flagGeoIPDB != "" {

@@ -2,7 +2,9 @@ package enrich
 
 import (
 	"fmt"
+	"io"
 	"net"
+	"net/http"
 	"os"
 	"path/filepath"
 	"sync"
@@ -16,7 +18,17 @@ import (
 const (
 	geoCacheTTL     = 24 * time.Hour
 	geoCacheMaxSize = 50000
+
+	// dbipCountryURL is the DB-IP country-lite mmdb download URL.
+	dbipCountryURL = "https://download.dbip.com/dbip-country-lite.mmdb"
+	// dbipASNURL is the DB-IP ASN-lite mmdb download URL.
+	dbipASNURL = "https://download.dbip.com/dbip-asn-lite.mmdb"
 )
+
+// autoDownload controls whether NewGeoIP auto-downloads the DB-IP lite
+// mmdb when no file is found. Enabled by default; can be disabled via
+// SetAutoDownload(false).
+var autoDownload = true
 
 // GeoIP enriches IP addresses with country and ASN data from a MaxMind or
 // DB-IP mmdb file. The same reader handles both country-only and
@@ -84,9 +96,89 @@ var geoIPASNSearchPaths = []string{
 	"/usr/share/GeoIP/GeoLite2-ASN.mmdb",
 }
 
+// SetAutoDownload enables or disables automatic download of the DB-IP
+// lite mmdb when no GeoIP file is found. Must be called before NewGeoIP.
+func SetAutoDownload(enabled bool) {
+	autoDownload = enabled
+}
+
+// userConfigDir returns the directory where auto-downloaded mmdb files
+// are stored (~/.config/caddy-analyzer/).
+func userConfigDir() (string, error) {
+	dir := filepath.Join(os.Getenv("HOME"), ".config", "caddy-analyzer")
+	if err := os.MkdirAll(dir, 0o750); err != nil {
+		return "", fmt.Errorf("create config dir %s: %w", dir, err)
+	}
+	return dir, nil
+}
+
+// downloadFile downloads url to dest with a 5-minute timeout.
+func downloadFile(url, dest string) (retErr error) {
+	client := &http.Client{Timeout: 5 * time.Minute}
+	req, err := http.NewRequest(http.MethodGet, url, nil)
+	if err != nil {
+		return err
+	}
+	req.Header.Set("User-Agent", "caddy-analyzer/1.0")
+	resp, err := client.Do(req)
+	if err != nil {
+		return fmt.Errorf("download %s: %w", url, err)
+	}
+	defer func() {
+		_ = resp.Body.Close()
+	}()
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("download %s: HTTP %s", url, resp.Status)
+	}
+	out, err := os.Create(dest)
+	if err != nil {
+		return fmt.Errorf("create %s: %w", dest, err)
+	}
+	defer func() {
+		if cerr := out.Close(); cerr != nil && retErr == nil {
+			retErr = fmt.Errorf("close %s: %w", dest, cerr)
+		}
+	}()
+	if _, err := io.Copy(out, resp.Body); err != nil {
+		return fmt.Errorf("write %s: %w", dest, err)
+	}
+	return nil
+}
+
+// autoDownloadGeoIP downloads the DB-IP country-lite and ASN-lite mmdb
+// files to the user config directory and returns their paths.
+func autoDownloadGeoIP() (countryPath, asnPath string, err error) {
+	dir, err := userConfigDir()
+	if err != nil {
+		return "", "", err
+	}
+	countryPath = filepath.Join(dir, "dbip-country-lite.mmdb")
+	asnPath = filepath.Join(dir, "dbip-asn-lite.mmdb")
+
+	if _, e := os.Stat(countryPath); e != nil {
+		fmt.Fprintf(os.Stderr, "Auto-downloading DB-IP country-lite mmdb to %s...\n", countryPath)
+		if err := downloadFile(dbipCountryURL, countryPath); err != nil {
+			return "", "", fmt.Errorf("auto-download GeoIP: %w", err)
+		}
+		fmt.Fprintf(os.Stderr, "  done.\n")
+	}
+
+	if _, e := os.Stat(asnPath); e != nil {
+		fmt.Fprintf(os.Stderr, "Auto-downloading DB-IP ASN-lite mmdb to %s...\n", asnPath)
+		if err := downloadFile(dbipASNURL, asnPath); err != nil {
+			// ASN is optional; country-only is still useful.
+			fmt.Fprintf(os.Stderr, "  warning: ASN download failed: %v\n", err)
+			return countryPath, "", nil
+		}
+		fmt.Fprintf(os.Stderr, "  done.\n")
+	}
+	return countryPath, asnPath, nil
+}
+
 // NewGeoIP opens the mmdb file at path. If path is empty, auto-discovers
-// the first matching file in geoIPSearchPaths. Returns an error if no
-// usable file is found or the file cannot be opened.
+// the first matching file in geoIPSearchPaths. If no file is found and
+// auto-download is enabled, downloads the DB-IP lite mmdb to
+// ~/.config/caddy-analyzer/ and opens it.
 func NewGeoIP(path string) (*GeoIP, error) {
 	if path != "" {
 		return openGeoIP(path, "")
@@ -94,6 +186,13 @@ func NewGeoIP(path string) (*GeoIP, error) {
 
 	countryPath, ok := findFirst(geoIPSearchPaths)
 	if !ok {
+		if autoDownload {
+			cp, ap, err := autoDownloadGeoIP()
+			if err != nil {
+				return nil, err
+			}
+			return openGeoIP(cp, ap)
+		}
 		return nil, fmt.Errorf("no GeoIP mmdb file found; pass --geoip-db or place a file in one of: %v", geoIPSearchPaths)
 	}
 	asnPath, _ := findFirst(geoIPASNSearchPaths)
