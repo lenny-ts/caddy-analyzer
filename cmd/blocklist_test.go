@@ -159,3 +159,63 @@ func TestBlocklistRefreshFakeSource(t *testing.T) {
 		t.Errorf("expected source test-local, got %s", source)
 	}
 }
+
+func TestBuildSourcesFromConfigFile(t *testing.T) {
+	resetBlocklistFlags()
+	defer resetBlocklistFlags()
+
+	dir := t.TempDir()
+	cfgPath := filepath.Join(dir, "caddy-analyzer.json")
+	cfgData := `{
+		"blocklist": {
+			"no_defaults": true,
+			"custom_sources": [{"name":"from-cfg","url":"http://example.com"}]
+		}
+	}`
+	if err := os.WriteFile(cfgPath, []byte(cfgData), 0640); err != nil {
+		t.Fatal(err)
+	}
+
+	// Change working directory so config.Load() finds the file.
+	wd, _ := os.Getwd()
+	_ = os.Chdir(dir)
+	defer func() { _ = os.Chdir(wd) }()
+
+	srcs, err := buildSources()
+	if err != nil {
+		t.Fatalf("buildSources: %v", err)
+	}
+	if len(srcs) != 1 {
+		t.Fatalf("expected 1 source from config file, got %d", len(srcs))
+	}
+	if srcs[0].Name != "from-cfg" {
+		t.Errorf("expected from-cfg, got %s", srcs[0].Name)
+	}
+}
+
+func TestBuildSourcesCLIFlagOverridesConfigFile(t *testing.T) {
+	resetBlocklistFlags()
+	defer resetBlocklistFlags()
+
+	dir := t.TempDir()
+	cfgPath := filepath.Join(dir, "caddy-analyzer.json")
+	cfgData := `{
+		"blocklist": {
+			"no_defaults": false
+		}
+	}`
+	if err := os.WriteFile(cfgPath, []byte(cfgData), 0640); err != nil {
+		t.Fatal(err)
+	}
+
+	wd, _ := os.Getwd()
+	_ = os.Chdir(dir)
+	defer func() { _ = os.Chdir(wd) }()
+
+	// CLI flag should override config file's no_defaults=false
+	blocklistNoDefaults = true
+	_, err := buildSources()
+	if err == nil {
+		t.Fatal("expected error: no defaults + no custom = empty")
+	}
+}

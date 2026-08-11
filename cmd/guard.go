@@ -15,6 +15,7 @@ import (
 
 	"github.com/L9Lenny/caddy-analyzer/pkg/audit"
 	"github.com/L9Lenny/caddy-analyzer/pkg/blocklist"
+	"github.com/L9Lenny/caddy-analyzer/pkg/config"
 	"github.com/L9Lenny/caddy-analyzer/pkg/enrich"
 	"github.com/L9Lenny/caddy-analyzer/pkg/guard"
 	"github.com/L9Lenny/caddy-analyzer/pkg/reader"
@@ -187,11 +188,22 @@ func runGuard(cmd *cobra.Command, args []string) error {
 	}
 
 	// Blocklist manager: load cached feeds first, then start background
-	// refresh. If --no-blocklist is set, skip entirely.
+	// refresh. If --no-blocklist is set, skip entirely. Source list is
+	// assembled from the config file (if any) so 'blocklist init'
+	// settings are honoured.
 	var blMgr *blocklist.Manager
 	if !guardNoBlocklist {
+		var sources []blocklist.Source
+		cfg, _, _ := config.Load()
+		if cfg != nil && cfg.Blocklist != nil {
+			var err error
+			sources, err = cfg.Blocklist.ResolveSources()
+			if err != nil {
+				return fmt.Errorf("blocklist config: %w", err)
+			}
+		}
 		var err error
-		blMgr, err = blocklist.NewManager(nil, blocklistCacheDir)
+		blMgr, err = blocklist.NewManager(sources, blocklistCacheDir)
 		if err != nil {
 			return fmt.Errorf("blocklist manager: %w", err)
 		}

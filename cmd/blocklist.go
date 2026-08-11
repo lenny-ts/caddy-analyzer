@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 	"text/tabwriter"
 	"time"
@@ -11,6 +12,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/L9Lenny/caddy-analyzer/pkg/blocklist"
+	"github.com/L9Lenny/caddy-analyzer/pkg/config"
 )
 
 var blocklistCmd = &cobra.Command{
@@ -22,6 +24,7 @@ Actions:
   refresh   Download all configured feeds and update the local cache.
   list       Show the status of every configured feed (entries, age, errors).
   config     Print the current feed configuration as JSON.
+  init       Save current blocklist settings (from flags) to the config file.
 
 Default feeds (disabled with --no-default-blocklists):
   • Spamhaus DROP    https://www.spamhaus.org/drop/drop.txt
@@ -34,10 +37,14 @@ Custom feeds are added with --blocklist-config and removed with
 --blocklist-remove. The cache lives in --cache-dir (default
 ~/.cache/caddy-analyzer/blocklists).
 
+'blocklist init' persists the current flag settings to caddy-analyzer.json
+so the guard and blocklist subcommands pick them up automatically.
+
 Examples:
   caddy-analyze blocklist refresh
   caddy-analyze blocklist list
   caddy-analyze blocklist config
+  caddy-analyze blocklist init --no-default-blocklists --blocklist-config mylist.txt
   caddy-analyze blocklist refresh --blocklist-config mylist.txt
   caddy-analyze blocklist list --no-default-blocklists
 `,
@@ -78,54 +85,49 @@ func runBlocklist(cmd *cobra.Command, args []string) error {
 		return blocklistList()
 	case "config":
 		return blocklistConfig()
+	case "init":
+		return blocklistInit()
 	default:
-		return fmt.Errorf("unknown action %q: use refresh, list, or config", action)
+		return fmt.Errorf("unknown action %q: use refresh, list, config, or init", action)
 	}
 }
 
-// buildSources assembles the source list from defaults and config files,
-// honouring --no-default-blocklists and --blocklist-remove.
-func buildSources() ([]blocklist.Source, error) {
-	var sources []blocklist.Source
-	if !blocklistNoDefaults {
-		sources = append(sources, blocklist.DefaultSources...)
+// loadBlocklistConfig builds a BlocklistConfig from the config file (if
+// any) and the CLI flags. CLI flags override config file values.
+func loadBlocklistConfig() (*config.BlocklistConfig, error) {
+	// Start from the config file.
+	var bc config.BlocklistConfig
+	cfg, _, _ := config.Load()
+	if cfg != nil && cfg.Blocklist != nil {
+		bc = *cfg.Blocklist
+	}
+
+	// CLI flags override.
+	if blocklistNoDefaults {
+		bc.NoDefaults = true
 	}
 	for _, path := range blocklistConfigFiles {
-		fileSrcs, err := loadSourcesFile(path)
+		fileBC, err := config.LoadBlocklistFile(path)
 		if err != nil {
 			return nil, fmt.Errorf("--blocklist-config %s: %w", path, err)
 		}
-		sources = append(sources, fileSrcs...)
+		bc.CustomSources = append(bc.CustomSources, fileBC.CustomSources...)
 	}
 	if len(blocklistRemoveSources) > 0 {
-		remove := make(map[string]bool, len(blocklistRemoveSources))
-		for _, name := range blocklistRemoveSources {
-			remove[strings.TrimSpace(name)] = true
-		}
-		filtered := sources[:0]
-		for _, s := range sources {
-			if !remove[s.Name] {
-				filtered = append(filtered, s)
-			}
-		}
-		sources = filtered
+		bc.RemoveSources = append(bc.RemoveSources, blocklistRemoveSources...)
 	}
-	if len(sources) == 0 {
-		return nil, fmt.Errorf("no sources configured: enable defaults or add --blocklist-config")
-	}
-	return sources, nil
+	return &bc, nil
 }
 
-func loadSourcesFile(path string) ([]blocklist.Source, error) {
-	data, err := os.ReadFile(path)
+// buildSources assembles the source list from the config file and CLI
+// flags, honouring --no-default-blocklists, --blocklist-config, and
+// --blocklist-remove.
+func buildSources() ([]blocklist.Source, error) {
+	bc, err := loadBlocklistConfig()
 	if err != nil {
 		return nil, err
 	}
-	var srcs []blocklist.Source
-	if err := json.Unmarshal(data, &srcs); err != nil {
-		return nil, err
-	}
-	return srcs, nil
+	return bc.ResolveSources()
 }
 
 func blocklistRefresh() error {
@@ -224,4 +226,50 @@ func humanAge(d time.Duration) string {
 	default:
 		return fmt.Sprintf("%dd", int(d.Hours()/24))
 	}
+}
+
+// blocklistInit writes the current blocklist configuration (from CLI
+// flags) to the config file so it is picked up automatically by the
+// guard and blocklist subcommands on future invocations.
+func blocklistInit() error {
+	bc, err := loadBlocklistConfig()
+	if err != nil {
+		return err
+	}
+	// Load the existing config so we don't clobber Source/Namespace.
+	cfg, _, err := config.Load()
+	if err != nil {
+		cfg = &config.Config{}
+	}
+	if cfg == nil {
+		cfg = &config.Config{}
+	}
+	cfg.Blocklist = bc
+
+	path := config.LocalConfigPath()
+	if flagConfigGlobal {
+		path, err = config.DefaultConfigPath()
+		if err != nil {
+			return fmt.Errorf("global config path: %w", err)
+		}
+	}
+	data, err := json.MarshalIndent(cfg, "", "  ")
+	if err != nil {
+		return err
+	}
+	if dir := filepath.Dir(path); dir != "." && dir != "" {
+		if err := os.MkdirAll(dir, 0750); err != nil {
+			return fmt.Errorf("create config dir: %w", err)
+		}
+	}
+	if err := os.WriteFile(path, data, 0600); err != nil {
+		return fmt.Errorf("write config: %w", err)
+	}
+	srcs, _ := bc.ResolveSources()
+	fmt.Printf("Blocklist config saved: %s\n", path)
+	fmt.Printf("  No defaults: %t\n", bc.NoDefaults)
+	fmt.Printf("  Custom sources: %d\n", len(bc.CustomSources))
+	fmt.Printf("  Remove sources: %d\n", len(bc.RemoveSources))
+	fmt.Printf("  Resolved feeds: %d\n", len(srcs))
+	return nil
 }
