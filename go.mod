@@ -8,6 +8,7 @@ require (
 	github.com/charmbracelet/lipgloss v1.1.0
 	github.com/oschwald/maxminddb-golang v1.13.1
 	github.com/spf13/cobra v1.10.2
+	github.com/yl2chen/cidranger v1.0.2
 )
 
 require (
