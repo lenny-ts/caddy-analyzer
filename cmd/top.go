@@ -23,9 +23,9 @@ import (
 var flagTopBy string
 
 var topCmd = &cobra.Command{
-  Use:   "top [dimension] [source...]",
-  Short: "Quickly display top-N metrics for a specific dimension (path, ip, ua, status, method, host, bandwidth, country, asn)",
-  Long: `Quickly inspect the top N requests for a specific dimension without generating a full analysis report.
+	Use:   "top [dimension] [source...]",
+	Short: "Quickly display top-N metrics for a specific dimension (path, ip, ua, status, method, host, bandwidth, country, asn)",
+	Long: `Quickly inspect the top N requests for a specific dimension without generating a full analysis report.
 
 Dimensions:
   path        Top requested HTTP URIs / endpoints (default)

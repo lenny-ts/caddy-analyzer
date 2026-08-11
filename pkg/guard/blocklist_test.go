@@ -81,7 +81,7 @@ func TestGuardNeverBlockWinsOverBlocklist(t *testing.T) {
 		BlockDuration: 0,
 		IPValidator:   func(string) error { return nil },
 		BlocklistMgr:  mgr,
-		NeverBlock:     []string{"10.0.0.0/8"},
+		NeverBlock:    []string{"10.0.0.0/8"},
 	})
 	g.SetBlocker(fb)
 

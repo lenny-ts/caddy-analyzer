@@ -931,7 +931,7 @@ func (g *Guard) Tick(ctx context.Context) []Candidate {
 	g.mu.Unlock()
 	g.sliding.resetAuthFailPaths()
 
-	g.detectAnomaly(now)
+	g.detectAnomaly()
 
 	// Flush any debounced state at the end of the tick so blocks from this
 	// tick are persisted even under low block volume.
@@ -946,7 +946,7 @@ func (g *Guard) Tick(ctx context.Context) []Candidate {
 // the current window's RPS exceeds AnomalyFactor × baseline. This catches
 // volumetric spikes / DDoS that per-IP thresholds miss. Alert-only: blocking
 // individual hosts is the wrong tool for a distributed flood.
-func (g *Guard) detectAnomaly(now time.Time) {
+func (g *Guard) detectAnomaly() {
 	reqs := g.tickReqs.Swap(0)
 	if g.cfg.Window <= 0 {
 		return

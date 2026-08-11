@@ -40,7 +40,7 @@ func generateHTMLReport(
 	total int64,
 	rps float64,
 	avgDur float64,
-	topPaths, topIPs, topUAs, topMethods, topCountries, topASNs, topProtos, topTLS, topBots, topReferers, topPathBytes, suspicious []types.CountItem,
+	topPaths, topIPs, _, _, topCountries, topASNs, topProtos, topTLS, _, _, _, suspicious []types.CountItem,
 	detect bool,
 	activeFilters []string,
 	suspiciousDetails map[string][]string,

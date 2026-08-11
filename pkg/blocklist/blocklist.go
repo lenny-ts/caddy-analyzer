@@ -139,8 +139,8 @@ func (m *Manager) refreshSource(src Source) SourceStatus {
 	body, err := m.httpFetch(src.URL)
 	if err != nil {
 		st := SourceStatus{
-			Name: src.Name,
-			URL:  src.URL,
+			Name:  src.Name,
+			URL:   src.URL,
 			Error: fmt.Sprintf("fetch: %v", err),
 		}
 		m.statuses[src.Name] = st

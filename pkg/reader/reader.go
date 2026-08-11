@@ -73,7 +73,7 @@ func expandPaths(pattern string) []string {
 	return matches
 }
 
-func newLineChannel(ctx context.Context) chan string {
+func newLineChannel() chan string {
 	return make(chan string, 1000)
 }
 
@@ -82,7 +82,7 @@ type StdinReader struct{}
 func (r *StdinReader) Name() string { return "stdin" }
 
 func (r *StdinReader) Read(ctx context.Context) (<-chan string, error) {
-	out := newLineChannel(ctx)
+	out := newLineChannel()
 	go func() {
 		defer close(out)
 		scanner := bufio.NewScanner(os.Stdin)
@@ -111,7 +111,7 @@ func (r *FileReader) Name() string {
 }
 
 func (r *FileReader) Read(ctx context.Context) (<-chan string, error) {
-	out := newLineChannel(ctx)
+	out := newLineChannel()
 	if r.follow && len(r.paths) > 1 {
 		// In follow mode with multiple files, read them concurrently
 		// so all files are tailed in parallel. Without this, the first
@@ -267,7 +267,7 @@ type DockerReader struct {
 func (r *DockerReader) Name() string { return "docker:" + r.container }
 
 func (r *DockerReader) Read(ctx context.Context) (<-chan string, error) {
-	out := newLineChannel(ctx)
+	out := newLineChannel()
 	args := []string{"logs"}
 	if r.follow {
 		args = append(args, "-f")
@@ -298,7 +298,7 @@ func (r *K8sReader) Name() string {
 }
 
 func (r *K8sReader) Read(ctx context.Context) (<-chan string, error) {
-	out := newLineChannel(ctx)
+	out := newLineChannel()
 	args := []string{"logs", "--tail=-1"}
 	if r.follow {
 		args = append(args, "--follow")
@@ -320,7 +320,7 @@ type JournalctlReader struct {
 func (r *JournalctlReader) Name() string { return "journalctl:" + r.unit }
 
 func (r *JournalctlReader) Read(ctx context.Context) (<-chan string, error) {
-	out := newLineChannel(ctx)
+	out := newLineChannel()
 	args := []string{"-u", r.unit, "--output=cat"}
 	if r.follow {
 		args = append(args, "--follow")

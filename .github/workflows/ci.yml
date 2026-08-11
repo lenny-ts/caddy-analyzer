@@ -51,7 +51,7 @@ jobs:
         run: |
           COV=$(go tool cover -func=coverage.out | tail -1 | awk '{print $NF}' | sed 's/%//')
           echo "Total coverage: ${COV}%"
-          awk -v c="$COV" 'BEGIN { if (c+0 < 50) { print "::error::Coverage " c "% is below 50% threshold"; exit 1 } }'
+          awk -v c="$COV" 'BEGIN { if (c+0 < 55) { print "::error::Coverage " c "% is below 55% threshold"; exit 1 } }'
 
   fmt:
     name: Go Fmt

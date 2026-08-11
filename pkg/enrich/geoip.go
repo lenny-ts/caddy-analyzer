@@ -14,8 +14,8 @@ import (
 )
 
 const (
-	geoCacheTTL      = 24 * time.Hour
-	geoCacheMaxSize  = 50000
+	geoCacheTTL     = 24 * time.Hour
+	geoCacheMaxSize = 50000
 )
 
 // GeoIP enriches IP addresses with country and ASN data from a MaxMind or
