@@ -41,7 +41,6 @@ var (
 	guardGeoIPDB           string
 )
 
-const blocklistCacheDir = "/var/lib/caddy-analyzer/blocklist"
 const minBlocklistRefresh = 1 * time.Hour
 
 func init() {
@@ -63,6 +62,7 @@ func init() {
 	guardCmd.Flags().StringVarP(&guardBlocklistRefresh, "blocklist-refresh", "", "6h", "Blocklist background refresh interval (min 1h; 0 disables)")
 	guardCmd.Flags().BoolVarP(&guardNoBlocklist, "no-blocklist", "", false, "Disable blocklist feed checking")
 	guardCmd.Flags().StringVarP(&guardGeoIPDB, "geoip-db", "", "", "Path to GeoIP mmdb file (auto-discovered if empty)")
+	guardCmd.Flags().StringVarP(&blocklistCacheDir, "cache-dir", "", defaultBlocklistCacheDir(), "Directory for cached blocklist files")
 	rootCmd.AddCommand(guardCmd)
 }
 
