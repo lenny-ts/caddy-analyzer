@@ -13,7 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`--defang` flag**: defangs IPs (`.` → `[.]`) and URL schemes (`http://` → `hxxp://`) across all commands for safe IOC sharing.
 - **`tail --detect`**: inline threat highlighting on streamed entries. IP colored by severity, attack types appended after a `→` arrow. Clean entries unchanged.
 - **Progress bar**: determinate bar on TTY for file analysis (`caddy-analyze`, `top`, `diff`); indeterminate spinner for non-file sources. Auto-disabled on pipe.
-- **Threat-intel enrichment**: AbuseIPDB client with bounded TTL cache (10K entries). Guard flags: `--enrich`, `--enrich-threshold`.
+- **Threat-intel enrichment**: GeoIP enrichment via DB-IP/MaxMind mmdb (offline, zero API key). `--geoip-db` flag with auto-discovery. Country/ASN top-N dimensions (`--top country`, `--top asn`).
 - **Guard features**: sliding-window rate limiting, distributed-scan defense (`--subnet-limit`), RPS anomaly alerting (`--rps-anomaly`), credential stuffing detection (`--cred-stuffing-limit`), `--trust-forwarded` for reverse proxy/CDN.
 - **`--state-file` on `block`/`unban`**: manual blocks/unbans sync with guard state file — survive restarts.
 - **Detection engine 2x throughput**: case-fold elimination, per-source marker triage, literal fast path. ~7K lines/sec with `--detect` (was ~3.5K).

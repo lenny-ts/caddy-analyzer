@@ -14,7 +14,6 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/L9Lenny/caddy-analyzer/pkg/audit"
-	"github.com/L9Lenny/caddy-analyzer/pkg/enrich"
 	"github.com/L9Lenny/caddy-analyzer/pkg/guard"
 	"github.com/L9Lenny/caddy-analyzer/pkg/reader"
 )
@@ -33,9 +32,7 @@ var (
 	guardSubnetLimit       int
 	guardAnomalyFactor     float64
 	guardUARotation        int
-	guardEnrich            bool
 	guardCredStuffingLimit int
-	guardEnrichThreshold   int
 )
 
 func init() {
@@ -52,9 +49,7 @@ func init() {
 	guardCmd.Flags().IntVarP(&guardSubnetLimit, "subnet-limit", "", 0, "Block a /24 when its combined requests exceed this (0 disables; distributed-scan defense)")
 	guardCmd.Flags().Float64VarP(&guardAnomalyFactor, "rps-anomaly", "", 0, "Alert when current RPS exceeds this factor over the EWMA baseline (0 disables; e.g. 5 = 5x spike)")
 	guardCmd.Flags().IntVarP(&guardUARotation, "ua-rotation", "", 10, "Distinct User-Agents from one IP before scanner/rotation heuristic fires")
-	guardCmd.Flags().BoolVarP(&guardEnrich, "enrich", "", false, "Enable threat-intel enrichment (AbuseIPDB). Set ABUSEIPDB_KEY env var")
 	guardCmd.Flags().IntVarP(&guardCredStuffingLimit, "cred-stuffing-limit", "", 0, "Alert when N distinct IPs fail auth on the same path (0 disables)")
-	guardCmd.Flags().IntVarP(&guardEnrichThreshold, "enrich-threshold", "", 70, "Min AbuseIPDB score to pre-block IP with auth failures (0 disables enrichment blocking)")
 	rootCmd.AddCommand(guardCmd)
 }
 
@@ -174,15 +169,6 @@ func runGuard(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-	var enricher enrich.Enricher
-	if guardEnrich {
-		key := os.Getenv("ABUSEIPDB_KEY")
-		if key == "" {
-			return fmt.Errorf("--enrich requires ABUSEIPDB_KEY env var")
-		}
-		enricher = enrich.NewCache(enrich.NewAbuseIPDB(key), 30*24*time.Hour)
-	}
-
 	g := guard.New(guard.Config{
 		Limit:               guardLimit,
 		AuthLimit:           guardAuthLimit,
@@ -201,9 +187,7 @@ func runGuard(cmd *cobra.Command, args []string) error {
 		SubnetLimit:         guardSubnetLimit,
 		AnomalyFactor:       guardAnomalyFactor,
 		UARotationThreshold: guardUARotation,
-		Enricher:            enricher,
 		CredStuffingLimit:   guardCredStuffingLimit,
-		EnrichThreshold:     guardEnrichThreshold,
 	})
 
 	durMsg := duration.String()

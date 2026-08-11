@@ -412,14 +412,9 @@ caddy-analyze export-sigma - | sigma check    # pipe to validator</pre>
                 <td>Alert when N distinct IPs fail auth (401/403) on the same path within the window. Catches distributed credential stuffing. <code>0</code> disables.</td>
             </tr>
             <tr>
-                <td><code>--enrich</code></td>
-                <td><code>false</code></td>
-                <td>Enable threat-intel enrichment via AbuseIPDB. Set <code>ABUSEIPDB_KEY</code> env var. IPs with auth failures and AbuseIPDB score ≥ <code>--enrich-threshold</code> are pre-blocked.</td>
-            </tr>
-            <tr>
-                <td><code>--enrich-threshold</code></td>
-                <td><code>70</code></td>
-                <td>Minimum AbuseIPDB abuse confidence score to pre-block an IP with auth failures. <code>0</code> disables enrichment blocking.</td>
+                <td><code>--geoip-db</code></td>
+                <td><code>""</code></td>
+                <td>Path to GeoIP mmdb file (DB-IP or MaxMind). Auto-discovers in cwd, <code>~/.config/caddy-analyzer</code>, <code>/var/lib</code>, <code>/usr/share/GeoIP</code> if empty. Enables <code>--top country</code> / <code>--top asn</code> dimensions.</td>
             </tr>
             <tr>
                 <td><code>--ua-rotation</code></td>

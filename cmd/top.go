@@ -23,9 +23,9 @@ import (
 var flagTopBy string
 
 var topCmd = &cobra.Command{
-	Use:   "top [dimension] [source...]",
-	Short: "Quickly display top-N metrics for a specific dimension (path, ip, ua, status, method, host, bandwidth)",
-	Long: `Quickly inspect the top N requests for a specific dimension without generating a full analysis report.
+  Use:   "top [dimension] [source...]",
+  Short: "Quickly display top-N metrics for a specific dimension (path, ip, ua, status, method, host, bandwidth, country, asn)",
+  Long: `Quickly inspect the top N requests for a specific dimension without generating a full analysis report.
 
 Dimensions:
   path        Top requested HTTP URIs / endpoints (default)
@@ -35,6 +35,8 @@ Dimensions:
   method      Top HTTP methods (GET, POST, PUT, DELETE, etc.)
   host        Top request domain hosts
   bandwidth   Top paths sorted by total byte bandwidth transferred
+  country     Top client countries (requires GeoIP mmdb)
+  asn         Top client autonomous systems (requires GeoIP mmdb)
 
 Useful Flags:
   -t, --top <N>      Number of top entries to display (default: 10)
@@ -86,6 +88,11 @@ func runTopCmd(cmd *cobra.Command, args []string) error {
 	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer cancel()
 
+	geoip := newGeoIPEnricher()
+	if geoip != nil {
+		defer func() { _ = geoip.Close() }()
+	}
+
 	totalLines := countTotalLines(sources)
 	bar := progress.New(os.Stderr, totalLines, "Analyzing")
 
@@ -101,6 +108,7 @@ func runTopCmd(cmd *cobra.Command, args []string) error {
 				bar.Add(1)
 				continue
 			}
+			enrichGeoIP(entry, geoip)
 			engine.Process(entry)
 			bar.Add(1)
 		}
@@ -178,6 +186,10 @@ func topFieldForDimension(dim string) (types.TopField, bool) {
 		return types.TopMethod, true
 	case "host", "hosts":
 		return types.TopHost, true
+	case "country", "countries":
+		return types.TopCountry, true
+	case "asn":
+		return types.TopASN, true
 	case "bandwidth", "bytes":
 		return types.TopPath, true
 	}
@@ -205,6 +217,10 @@ func topItems(dim string, s *types.Stats, n int) []types.CountItem {
 		return analysis.TopN(s.MethodCounts, n)
 	case "host", "hosts":
 		return analysis.TopN(s.HostCounts, n)
+	case "country", "countries":
+		return analysis.TopN(s.CountryCounts, n)
+	case "asn":
+		return analysis.TopN(s.ASNCounts, n)
 	}
 	return nil
 }
@@ -225,6 +241,10 @@ func topTitle(dim string) string {
 		return "Methods"
 	case "host", "hosts":
 		return "Hosts"
+	case "country", "countries":
+		return "Countries"
+	case "asn":
+		return "Autonomous Systems"
 	}
 	return "Results"
 }
@@ -249,7 +269,7 @@ func writeTopCSV(w io.Writer, items []types.CountItem) error {
 
 func isSupportedDimension(s string) bool {
 	switch strings.ToLower(s) {
-	case "path", "paths", "ip", "ips", "ua", "useragent", "user-agent", "status", "method", "methods", "host", "hosts", "bandwidth", "bytes":
+	case "path", "paths", "ip", "ips", "ua", "useragent", "user-agent", "status", "method", "methods", "host", "hosts", "bandwidth", "bytes", "country", "countries", "asn":
 		return true
 	}
 	return false

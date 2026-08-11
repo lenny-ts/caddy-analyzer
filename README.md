@@ -265,8 +265,7 @@ Subcommands:
 | `--subnet-limit` | | `0` | Block a /24 when its combined requests exceed this (guard). `0` disables; distributed-scan defense |
 | `--rps-anomaly` | | `0` | Alert when current RPS exceeds this factor over the EWMA baseline (guard). `0` disables; e.g. `5` = 5× spike |
 | `--cred-stuffing-limit` | | `0` | Alert when N distinct IPs fail auth on the same path (guard). `0` disables |
-| `--enrich` | | `false` | Enable threat-intel enrichment via AbuseIPDB (guard). Set `ABUSEIPDB_KEY` env var |
-| `--enrich-threshold` | | `70` | Min AbuseIPDB score to pre-block IP with auth failures (guard). `0` disables enrichment blocking |
+| `--geoip-db` | | `""` | Path to GeoIP mmdb file (DB-IP or MaxMind). Auto-discovers if empty |
 | `--version` | `-v` | `false` | Print version and exit |
 </details>
 

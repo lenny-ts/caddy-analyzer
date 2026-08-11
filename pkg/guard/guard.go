@@ -15,7 +15,6 @@ import (
 	"time"
 
 	"github.com/L9Lenny/caddy-analyzer/pkg/analysis"
-	"github.com/L9Lenny/caddy-analyzer/pkg/enrich"
 	"github.com/L9Lenny/caddy-analyzer/pkg/parser"
 	"github.com/L9Lenny/caddy-analyzer/pkg/types"
 )
@@ -187,9 +186,7 @@ type Config struct {
 	SubnetLimit         int
 	AnomalyFactor       float64
 	UARotationThreshold int
-	Enricher            enrich.Enricher
 	CredStuffingLimit   int
-	EnrichThreshold     int
 	// Blocker is an optional firewall blocker. If nil, the real
 	// iptables blocker is used. Tests should provide a fake blocker
 	// so that loadState cleanup hits the fake, not real iptables.
@@ -823,67 +820,6 @@ func (g *Guard) Tick(ctx context.Context) []Candidate {
 		for _, cs := range g.sliding.credStuffingCandidates(g.cfg.CredStuffingLimit) {
 			if g.cfg.OnAudit != nil {
 				g.cfg.OnAudit("cred_stuffing", "-", fmt.Sprintf("%d distinct IPs failing auth on %s", cs.IPCount, cs.Path), g.cfg.BlockDuration.String())
-			}
-		}
-	}
-
-	// Threat-intel enrichment: pre-block IPs with known bad reputation that
-	// have started misbehaving (at least 1 auth failure). Avoids calling the
-	// API for every IP in the window — only those showing suspicious activity.
-	// Capped at 20 lookups per tick to avoid blocking the guard on slow API
-	// responses (each AbuseIPDB call has a 10s timeout).
-	enrichLookups := 0
-	if g.cfg.Enricher != nil && g.cfg.EnrichThreshold > 0 {
-		for _, ip := range g.sliding.ips() {
-			if enrichLookups >= 20 {
-				break
-			}
-			if g.IsBlocked(ip) || seen[ip] {
-				continue
-			}
-			_, authFail, _ := g.sliding.sum(ip, now)
-			if authFail == 0 {
-				continue
-			}
-			enrichLookups++
-			rep, err := g.cfg.Enricher.Lookup(ip)
-			if err != nil || rep == nil {
-				continue
-			}
-			if rep.Score >= g.cfg.EnrichThreshold {
-				candidates = append(candidates, Candidate{
-					IP:    ip,
-					Count: authFail,
-					Why:   fmt.Sprintf("threat_intel: %s score=%d (%s, %s)", rep.Source, rep.Score, rep.Country, rep.ISP),
-				})
-				seen[ip] = true
-			}
-		}
-	}
-
-	// Enrich existing candidates with threat-intel context for the audit log.
-	// Shares the per-tick lookup cap so a large candidate set does not block
-	// the guard for N×10s.
-	if g.cfg.Enricher != nil {
-		for i := range candidates {
-			if enrichLookups >= 20 {
-				break
-			}
-			if enrich.IsPrivateOrLoopback(candidates[i].IP) {
-				continue
-			}
-			// Skip CIDR candidates (from --subnet-limit): enrichment APIs
-			// expect individual IPs, not subnets.
-			if _, _, err := net.ParseCIDR(candidates[i].IP); err == nil {
-				continue
-			}
-			enrichLookups++
-			rep, err := g.cfg.Enricher.Lookup(candidates[i].IP)
-			if err != nil || rep == nil {
-				continue
-			}
-			if rep.Score > 0 {
-				candidates[i].Why = fmt.Sprintf("%s [enrich: %s score=%d %s]", candidates[i].Why, rep.Source, rep.Score, rep.Country)
 			}
 		}
 	}

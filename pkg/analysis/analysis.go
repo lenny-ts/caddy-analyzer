@@ -138,6 +138,13 @@ func (e *Engine) Process(entry *types.LogEntry) {
 		s.AddStrBytes(s.IPBytesMap, entry.RemoteIP, entry.Size)
 	}
 
+	if entry.Geo.CountryCode != "" {
+		s.IncStrCount(s.CountryCounts, entry.Geo.CountryCode)
+	}
+	if entry.Geo.ASN > 0 {
+		s.IncStrCount(s.ASNCounts, fmt.Sprintf("AS%d", entry.Geo.ASN))
+	}
+
 	if entry.Status >= 500 {
 		s.Errors++
 		s.IncStrCount(s.PathErrorCounts, entry.Path())

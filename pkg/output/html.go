@@ -12,12 +12,14 @@ func (r *Report) printHTML() error {
 	s := r.engine.Stats()
 	total := s.TotalRequests
 
-	var topPaths, topIPs, topUAs, topMethods []types.CountItem
+	var topPaths, topIPs, topUAs, topMethods, topCountries, topASNs []types.CountItem
 	if r.top > 0 {
 		topPaths = analysis.TopN(s.PathCounts, r.top)
 		topIPs = analysis.TopN(s.RemoteIPCounts, r.top)
 		topUAs = analysis.TopN(s.UserAgentCounts, r.top)
 		topMethods = analysis.TopN(s.MethodCounts, r.top)
+		topCountries = analysis.TopN(s.CountryCounts, r.top)
+		topASNs = analysis.TopN(s.ASNCounts, r.top)
 	}
 	topProtos := analysis.TopN(s.ProtoCounts, 5)
 	topTLS := analysis.TopN(s.TLSVersionCounts, 5)
@@ -27,7 +29,7 @@ func (r *Report) printHTML() error {
 	suspicious := analysis.TopN(s.SuspiciousIPs, 20)
 
 	html := generateHTMLReport(s, total, r.engine.RPS(), r.engine.AvgDuration(),
-		topPaths, topIPs, topUAs, topMethods, topProtos, topTLS, topBots, topReferers, topPathBytes, suspicious, r.detect, r.activeFilters(), s.SuspiciousDetails)
+		topPaths, topIPs, topUAs, topMethods, topCountries, topASNs, topProtos, topTLS, topBots, topReferers, topPathBytes, suspicious, r.detect, r.activeFilters(), s.SuspiciousDetails)
 
 	_, err := fmt.Fprint(r.writer, html)
 	return err
@@ -38,7 +40,7 @@ func generateHTMLReport(
 	total int64,
 	rps float64,
 	avgDur float64,
-	topPaths, topIPs, topUAs, topMethods, topProtos, topTLS, topBots, topReferers, topPathBytes, suspicious []types.CountItem,
+	topPaths, topIPs, topUAs, topMethods, topCountries, topASNs, topProtos, topTLS, topBots, topReferers, topPathBytes, suspicious []types.CountItem,
 	detect bool,
 	activeFilters []string,
 	suspiciousDetails map[string][]string,
@@ -268,6 +270,12 @@ func generateHTMLReport(
             </table>
         </div>
 
+        <!-- Top Countries -->
+        %s
+
+        <!-- Top ASNs -->
+        %s
+
         <!-- Status Codes -->
         <div class="card">
             <h2>Status Codes Breakdown</h2>
@@ -302,6 +310,8 @@ func generateHTMLReport(
 		cardClass(errPct), errPct, botPct,
 		renderTableRows(topPaths, total),
 		renderTableRows(topIPs, total),
+		renderGeoCard("Top Client Countries", topCountries, total),
+		renderGeoCard("Top Autonomous Systems", topASNs, total),
 		s.Status2xx, Pct(s.Status2xx, total),
 		s.Status3xx, Pct(s.Status3xx, total),
 		s.Status4xx, Pct(s.Status4xx, total),
@@ -329,6 +339,16 @@ func renderTableRows(items []types.CountItem, total int64) string {
 			escapeHTML(item.Key), item.Count, ratio)
 	}
 	return rows
+}
+
+// renderGeoCard renders an optional GeoIP card (countries or ASNs). Returns
+// an empty string when no data is available so the card is omitted entirely.
+func renderGeoCard(title string, items []types.CountItem, total int64) string {
+	if len(items) == 0 {
+		return ""
+	}
+	return fmt.Sprintf(`<div class="card"><h2>%s</h2><table><thead><tr><th>%s</th><th>Requests</th><th class="bar-cell">Distribution</th></tr></thead><tbody>%s</tbody></table></div>`,
+		escapeHTML(title), escapeHTML(title), renderTableRows(items, total))
 }
 
 func renderMixedRows(protos, tls []types.CountItem) string {

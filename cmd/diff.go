@@ -145,6 +145,11 @@ func processLogFile(ctx context.Context, path string) (*analysis.Engine, error) 
 	}
 	engine := analysis.New(filters)
 
+	geoip := newGeoIPEnricher()
+	if geoip != nil {
+		defer func() { _ = geoip.Close() }()
+	}
+
 	src := reader.ParseSource(path)
 	r := reader.FromSource(src)
 	lines, err := r.Read(ctx)
@@ -160,6 +165,7 @@ func processLogFile(ctx context.Context, path string) (*analysis.Engine, error) 
 			continue
 		}
 		applyForwarded(entry, filters)
+		enrichGeoIP(entry, geoip)
 		engine.Process(entry)
 		bar.Add(1)
 	}

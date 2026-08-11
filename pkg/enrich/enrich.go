@@ -113,8 +113,8 @@ func IsPrivateOrLoopback(ip string) bool {
 }
 
 // MultiEnricher combines multiple enrichers, returning the first non-nil
-// reputation (first-source-wins). This lets you stack AbuseIPDB + VirusTotal
-// without duplicating lookups: the cache prevents redundant API calls.
+// reputation (first-source-wins). This lets you stack multiple threat-intel
+// sources without duplicating lookups: the cache prevents redundant API calls.
 type MultiEnricher struct {
 	sources []Enricher
 }
