@@ -6,13 +6,13 @@
 </p>
 
 <p align="center">
-  <a href="https://go.dev"><img src="https://img.shields.io/badge/Go-1.24-38bdf8?style=flat-square&logo=go" alt="Go Version"></a>
-  <a href="https://pkg.go.dev/github.com/L9Lenny/caddy-analyzer"><img src="https://pkg.go.dev/badge/github.com/L9Lenny/caddy-analyzer.svg" alt="Go Reference"></a>
-  <a href="https://l9lenny.github.io/caddy-analyzer/"><img src="https://img.shields.io/badge/Documentation-238636?style=flat-square&logo=github" alt="Documentation"></a>
-  <a href="https://github.com/L9Lenny/caddy-analyzer/actions"><img src="https://github.com/L9Lenny/caddy-analyzer/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <a href="https://go.dev"><img src="https://img.shields.io/badge/Go-1.25-38bdf8?style=flat-square&logo=go" alt="Go Version"></a>
+  <a href="https://pkg.go.dev/github.com/lenny-ts/caddy-analyzer"><img src="https://pkg.go.dev/badge/github.com/lenny-ts/caddy-analyzer.svg" alt="Go Reference"></a>
+  <a href="https://lenny-ts.github.io/caddy-analyzer/"><img src="https://img.shields.io/badge/Documentation-238636?style=flat-square&logo=github" alt="Documentation"></a>
+  <a href="https://github.com/lenny-ts/caddy-analyzer/actions"><img src="https://github.com/lenny-ts/caddy-analyzer/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-purple.svg?style=flat-square" alt="License"></a>
-  <a href="https://github.com/L9Lenny/caddy-analyzer/releases"><img src="https://img.shields.io/github/v/release/L9Lenny/caddy-analyzer?style=flat-square&color=fbbf24" alt="Release"></a>
-  <a href="https://github.com/L9Lenny/caddy-analyzer"><img src="https://img.shields.io/github/stars/L9Lenny/caddy-analyzer?style=flat-square" alt="Stars"></a>
+  <a href="https://github.com/lenny-ts/caddy-analyzer/releases"><img src="https://img.shields.io/github/v/release/lenny-ts/caddy-analyzer?style=flat-square&color=fbbf24" alt="Release"></a>
+  <a href="https://github.com/lenny-ts/caddy-analyzer"><img src="https://img.shields.io/github/stars/lenny-ts/caddy-analyzer?style=flat-square" alt="Stars"></a>
 </p>
 
 <p align="center"><strong>🛡️ 26 attack categories · Dual-pass evasion-resistant engine · Real-time iptables firewall guard · Sigma export · MITRE ATT&CK tagged</strong></p>
@@ -183,23 +183,23 @@ Active on `caddy-analyze` (offline mode), `top`, and `diff` (per-file with filen
 
 ```bash
 # Linux / macOS
-curl -sSfL https://raw.githubusercontent.com/L9Lenny/caddy-analyzer/main/install.sh | bash
+curl -sSfL https://raw.githubusercontent.com/lenny-ts/caddy-analyzer/main/install.sh | bash
 
 # Windows (PowerShell)
-iwr -useb https://raw.githubusercontent.com/L9Lenny/caddy-analyzer/main/install.ps1 | iex
+iwr -useb https://raw.githubusercontent.com/lenny-ts/caddy-analyzer/main/install.ps1 | iex
 
 # Go toolchain
-go install github.com/L9Lenny/caddy-analyzer/cmd/caddy-analyze@latest
+go install github.com/lenny-ts/caddy-analyzer/cmd/caddy-analyze@latest
 
 # Docker
-docker run --rm -v /var/log/caddy:/logs ghcr.io/L9Lenny/caddy-analyzer /logs/access.log
+docker run --rm -v /var/log/caddy:/logs ghcr.io/lenny-ts/caddy-analyzer /logs/access.log
 ```
 
 ---
 
 ## Documentation
 
-Full documentation is available at **[l9lenny.github.io/caddy-analyzer](https://l9lenny.github.io/caddy-analyzer/)**.
+Full documentation is available at **[lenny-ts.github.io/caddy-analyzer](https://lenny-ts.github.io/caddy-analyzer/)**.
 
 <details>
 <summary><strong>Command Reference</strong></summary>
@@ -296,7 +296,7 @@ Memory is bounded by LRU IP eviction (100K cap, configurable via `Detector.SetIP
 ## Development
 
 ```bash
-git clone https://github.com/L9Lenny/caddy-analyzer.git
+git clone https://github.com/lenny-ts/caddy-analyzer.git
 cd caddy-analyzer
 go build ./cmd/caddy-analyze
 go test ./...

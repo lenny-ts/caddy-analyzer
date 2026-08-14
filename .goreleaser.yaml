@@ -12,7 +12,7 @@ builds:
     env:
       - CGO_ENABLED=0
     ldflags:
-      - -s -w -X github.com/L9Lenny/caddy-analyzer/cmd.Version={{.Version}}
+      - -s -w -X github.com/lenny-ts/caddy-analyzer/cmd.Version={{.Version}}
     goos:
       - linux
       - darwin

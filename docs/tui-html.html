@@ -3,131 +3,149 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="view-transition" content="same-origin">
     <title>TUI & HTML Reports — caddy-analyzer</title>
-    <style>
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            background: #111111;
-            color: #d1d5db;
-            line-height: 1.6;
-            max-width: 900px;
-            margin: 0 auto;
-            padding: 2rem 1rem;
-        }
-
-        h1, h2, h3 { color: #ffffff; font-weight: 600; }
-        h1 { font-size: 1.8rem; border-bottom: 1px solid #282828; padding-bottom: 0.5rem; margin-bottom: 0.5rem; }
-        .subtitle { color: #9ca3af; font-size: 1.05rem; margin-bottom: 2rem; }
-        a { color: #60a5fa; text-decoration: none; }
-        a:hover { text-decoration: underline; }
-
-        nav.doc-nav {
-            display: flex;
-            gap: 0.75rem;
-            flex-wrap: wrap;
-            margin-bottom: 2rem;
-            border-bottom: 1px solid #222222;
-            padding-bottom: 1rem;
-        }
-
-        nav.doc-nav a {
-            background: #181818;
-            border: 1px solid #282828;
-            color: #d1d5db;
-            padding: 0.4rem 0.8rem;
-            border-radius: 4px;
-            font-size: 0.85rem;
-            font-family: monospace;
-        }
-
-        nav.doc-nav a:hover, nav.doc-nav a.active {
-            border-color: #60a5fa;
-            color: #ffffff;
-            background: #222222;
-        }
-
-        pre, code {
-            font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
-            font-size: 0.88em;
-        }
-
-        pre {
-            background: #181818;
-            border: 1px solid #282828;
-            border-radius: 4px;
-            padding: 1rem;
-            overflow-x: auto;
-            color: #e5e7eb;
-            margin: 1rem 0 1.5rem 0;
-        }
-
-        p { margin-bottom: 1rem; }
-        ul { margin: 0 0 1.5rem 1.5rem; }
-        li { margin-bottom: 0.4rem; }
-
-        iframe {
-            width: 100%;
-            height: 520px;
-            border: 1px solid #282828;
-            border-radius: 4px;
-            background: #0d1117;
-            margin-top: 1rem;
-        }
-
-        .footer {
-            margin-top: 4rem;
-            padding-top: 1.5rem;
-            border-top: 1px solid #222222;
-            color: #6b7280;
-            font-size: 0.85rem;
-        }
-    </style>
+    <meta name="description" content="6-tab interactive terminal dashboard (--watch) and standalone dark-mode HTML web reports (-f html). Live streaming, real-time threat detection, shareable outputs.">
+    <meta name="theme-color" content="#0a0a0c">
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E🛡️%3C/text%3E%3C/svg%3E">
+    <meta property="og:title" content="TUI & HTML Reports — caddy-analyzer">
+    <meta property="og:description" content="6-tab interactive TUI dashboard and standalone dark-mode HTML web reports.">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://lenny-ts.github.io/caddy-analyzer/tui-html.html">
+    <meta property="og:image" content="https://lenny-ts.github.io/caddy-analyzer/og-image.png">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="TUI & HTML Reports — caddy-analyzer">
+    <meta name="twitter:description" content="6-tab interactive TUI dashboard and standalone dark-mode HTML web reports.">
+    <script>try{var t=localStorage.getItem('caddy-docs-theme');if(t==='light')document.documentElement.setAttribute('data-theme','light');else if(t!=='dark'&&window.matchMedia&&window.matchMedia('(prefers-color-scheme: light)').matches)document.documentElement.setAttribute('data-theme','light');}catch(e){}</script>
+    <meta name="doc:modified" content="2026-07-29T16:47:05+00:00">
+    <meta name="color-scheme" content="dark light">
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="apple-touch-icon.png">
+    <link rel="canonical" href="https://lenny-ts.github.io/caddy-analyzer/tui-html.html">
+    <link rel="dns-prefetch" href="//github.com">
+    <link rel="dns-prefetch" href="//pkg.go.dev">
+    <link rel="preconnect" href="//github.com">
+    <link rel="prefetch" href="index.html">
+    <link rel="stylesheet" href="styles.min.css?v=25">
+    <script type="speculationrules">{"prefetch":[{"where":{"href_matches":"/*.html"},"eagerness":"moderate"}]}</script>
 </head>
 <body>
 
-    <h1>TUI Dashboard & Output Reports</h1>
-    <div class="subtitle">Interactive terminal user interface and standalone web export options</div>
+    <a href="#main" class="skip-link">Skip to content</a>
+    <div class="scroll-progress"></div>
+    <div class="aurora" aria-hidden="true">
+        <i class="aurora-blob-3"></i>
+        <i class="aurora-beam"></i>
+        <i class="aurora-vignette"></i>
+    </div>
+    <div class="grid-overlay"></div>
 
-    <nav class="doc-nav">
-        <a href="index.html">Overview</a>
-        <a href="installation.html">Installation</a>
-        <a href="sources.html">Log Sources</a>
-        <a href="subcommands.html">Subcommands</a>
-        <a href="security.html">Threat Detector</a>
-        <a href="tui-html.html" class="active">TUI & HTML Reports</a>
-    </nav>
+    <main class="wrap" id="main">
 
-    <h2>1. 6-Tab Interactive TUI Dashboard (--watch)</h2>
-    <p>Launch an interactive full-screen terminal dashboard powered by Bubbletea and Lipgloss:</p>
-    <pre>caddy-analyze --watch /var/log/caddy/access.log</pre>
+        <div class="page-header reveal">
+            <h1>TUI Dashboard &amp; Output Reports</h1>
+            <p class="subtitle">Interactive terminal user interface and standalone web export options</p>
+        </div>
 
-    <h3>Navigation Tabs</h3>
-    <ul>
-        <li><code>[1: Summary]</code> Overview of total requests, RPS, 5xx error rate, latency percentiles, and traffic classification.</li>
-        <li><code>[2: Realtime Stream]</code> Live colorized log entry stream (2xx green, 3xx cyan, 4xx yellow, 5xx red, IP purple, path white).</li>
-        <li><code>[3: Security Alerts]</code> Real-time threat alerts (SQLi, XSS, RCE, probe attempts).</li>
-        <li><code>[4: Top IPs]</code> Sortable table of top requesting client IP addresses.</li>
-        <li><code>[5: Top Paths]</code> Table of top requested HTTP endpoints.</li>
-        <li><code>[6: User Agents]</code> Classification table of user agents (browsers vs bots).</li>
-    </ul>
+        <nav class="doc-nav reveal" aria-label="Documentation">
+            <a href="index.html">Overview</a>
+            <a href="installation.html">Installation</a>
+            <a href="sources.html">Log Sources</a>
+            <a href="subcommands.html">Subcommands</a>
+            <a href="security.html">Threat Detector</a>
+            <a href="tui-html.html" class="active" aria-current="page">TUI &amp; HTML Reports</a>
+        </nav>
 
-    <h2>2. Offline Dark-Mode HTML Report (-f html)</h2>
-    <p>Export a single-file, self-contained dark-mode HTML report that requires zero external assets, npm packages, or internet access:</p>
-    <pre>caddy-analyze -f html -o report.html --detect /var/log/caddy/access.log</pre>
+        <section class="reveal">
+            <h2>1. 6-Tab Interactive TUI Dashboard (--watch)</h2>
+            <p>Launch an interactive full-screen terminal dashboard powered by Bubbletea and Lipgloss:</p>
+<pre>caddy-analyze --watch /var/log/caddy/access.log</pre>
 
-    <h2>3. Machine-Readable Exports (JSON & CSV)</h2>
-    <pre># Export raw JSON metrics report
+            <h3>Navigation Tabs</h3>
+            <div class="feature-grid">
+                <div class="feature-card">
+                    <span class="feature-icon" aria-hidden="true">📊</span>
+                    <h3>1 · Summary</h3>
+                    <p>Overview of total requests, RPS, status-code breakdown (2xx–5xx), response sizes, and latency percentiles (min/avg/max, P50, P95).</p>
+                </div>
+                <div class="feature-card">
+                    <span class="feature-icon" aria-hidden="true">🌊</span>
+                    <h3>2 · Realtime Stream</h3>
+                    <p>Live colorized log entry stream (2xx green, 3xx cyan, 4xx yellow, 5xx red, IP purple, path white).</p>
+                </div>
+                <div class="feature-card">
+                    <span class="feature-icon" aria-hidden="true">🚨</span>
+                    <h3>3 · Security</h3>
+                    <p>Security status: shows "CLEAR", or lists the top suspicious client IPs by number of detected malicious requests.</p>
+                </div>
+                <div class="feature-card">
+                    <span class="feature-icon" aria-hidden="true">🌐</span>
+                    <h3>4 · Top IPs</h3>
+                    <p>Table of the top 20 requesting client IP addresses (ranked by request count).</p>
+                </div>
+                <div class="feature-card">
+                    <span class="feature-icon" aria-hidden="true">🛤️</span>
+                    <h3>5 · Top Paths</h3>
+                    <p>Table of the top 20 requested HTTP endpoints (ranked by request count).</p>
+                </div>
+                <div class="feature-card">
+                    <span class="feature-icon" aria-hidden="true">🤖</span>
+                    <h3>6 · User Agents</h3>
+                    <p>Numbered list of the top 15 user agents (ranked by request count).</p>
+                </div>
+            </div>
+
+            <h3>Keyboard Shortcuts</h3>
+            <div class="table-wrap">
+                <table>
+                    <caption>TUI keybindings — all keys work anywhere in the dashboard</caption>
+                    <thead>
+                        <tr>
+                            <th scope="col">Key</th>
+                            <th scope="col">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr><td><code>1</code>–<code>6</code></td><td>Jump directly to tab 1–6</td></tr>
+                        <tr><td><code>Tab</code> / <code>→</code></td><td>Next tab</td></tr>
+                        <tr><td><code>Shift+Tab</code> / <code>←</code></td><td>Previous tab</td></tr>
+                        <tr><td><code>r</code></td><td>Reset analysis — clears stats and restarts the window</td></tr>
+                        <tr><td><code>q</code>, <code>Ctrl+C</code>, <code>Esc</code></td><td>Quit the dashboard</td></tr>
+                    </tbody>
+                </table>
+                </div>
+                <p>The dashboard auto-resets its internal counters every 5 minutes so long <code>--watch</code> sessions don't accumulate unbounded state; <code>r</code> resets immediately.</p>
+        </section>
+
+        <section class="reveal">
+            <h2>2. Offline Dark-Mode HTML Report (-f html)</h2>
+            <p>Export a single-file, self-contained dark-mode HTML report that requires zero external assets, npm packages, or internet access:</p>
+<pre>caddy-analyze -f html -o report.html --detect /var/log/caddy/access.log</pre>
+        </section>
+
+        <section class="reveal">
+            <h2>3. Machine-Readable Exports (JSON &amp; CSV)</h2>
+<pre># Export raw JSON metrics report
 caddy-analyze -f json -o report.json /var/log/caddy/access.log
 
 # Export CSV format for spreadsheets
 caddy-analyze -f csv -o report.csv /var/log/caddy/access.log</pre>
+        </section>
 
-    <h2>Interactive HTML Report Preview</h2>
-    <iframe src="demo.html" title="HTML Report Preview"></iframe>
+        <section class="reveal">
+            <h2>4. Interactive HTML Report Preview</h2>
+            <p>Live preview of the standalone HTML report format:</p>
+            <iframe src="demo.html" title="HTML Report Preview" width="1280" height="720" loading="lazy"></iframe>
+        </section>
 
-    <div class="footer">
-        <p>caddy-analyzer is open-source software released under the <a href="https://github.com/L9Lenny/caddy-analyzer/blob/main/LICENSE">MIT License</a>.</p>
-    </div>
+        <footer class="footer reveal">
+            <p>caddy-analyzer is open-source software released under the <a href="https://github.com/lenny-ts/caddy-analyzer/blob/main/LICENSE">MIT License</a>.</p>
+        </footer>
+
+    </main>
+
+    <button class="back-to-top" aria-label="Back to top">↑</button>
+    <script src="docs.min.js?v=25" defer></script>
 
 </body>
 </html>

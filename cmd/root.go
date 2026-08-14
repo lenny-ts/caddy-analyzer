@@ -18,14 +18,14 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/spf13/cobra"
 
-	"github.com/L9Lenny/caddy-analyzer/pkg/analysis"
-	"github.com/L9Lenny/caddy-analyzer/pkg/config"
-	"github.com/L9Lenny/caddy-analyzer/pkg/output"
-	"github.com/L9Lenny/caddy-analyzer/pkg/parser"
-	"github.com/L9Lenny/caddy-analyzer/pkg/progress"
-	"github.com/L9Lenny/caddy-analyzer/pkg/reader"
-	"github.com/L9Lenny/caddy-analyzer/pkg/tui"
-	"github.com/L9Lenny/caddy-analyzer/pkg/types"
+	"github.com/lenny-ts/caddy-analyzer/pkg/analysis"
+	"github.com/lenny-ts/caddy-analyzer/pkg/config"
+	"github.com/lenny-ts/caddy-analyzer/pkg/output"
+	"github.com/lenny-ts/caddy-analyzer/pkg/parser"
+	"github.com/lenny-ts/caddy-analyzer/pkg/progress"
+	"github.com/lenny-ts/caddy-analyzer/pkg/reader"
+	"github.com/lenny-ts/caddy-analyzer/pkg/tui"
+	"github.com/lenny-ts/caddy-analyzer/pkg/types"
 )
 
 var (
@@ -97,7 +97,7 @@ Filtering (activate colored log listing instead of report):
   --2xx..--5xx           Filter by status class
   -e, --errors-only      Filter server errors only
   --no-bots / --bots-only Filter by traffic type
-  -g, --grep <pattern>   Search across URI, User-Agent, IP
+  --grep <pattern>   Search across URI, User-Agent, IP
 
 Config (auto-detected):
   ./caddy-analyzer.json        Local config

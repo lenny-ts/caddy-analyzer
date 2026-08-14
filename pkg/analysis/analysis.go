@@ -8,7 +8,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/L9Lenny/caddy-analyzer/pkg/types"
+	"github.com/lenny-ts/caddy-analyzer/pkg/types"
 )
 
 // grepCache caches compiled grep patterns across entries so a multi-million-line
