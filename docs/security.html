@@ -89,131 +89,157 @@
                 <div class="threat-card">
                     <h3 class="threat-name"><span class="threat-icon" aria-hidden="true">💉</span>SQL Injection</h3>
                     <p class="threat-patterns"><code>UNION SELECT</code>, <code>OR 1=1</code>, <code>pg_sleep</code>, <code>INTO OUTFILE</code>, <code>@@version</code>, etc.</p>
+                    <p class="sig-count">19 signatures</p>
                     <p class="threat-meta"><span class="mitre-tag">T1190</span> <span class="conf-tag">conf 6–10</span></p>
                 </div>
                 <div class="threat-card">
                     <h3 class="threat-name"><span class="threat-icon" aria-hidden="true">🍃</span>NoSQL Injection</h3>
                     <p class="threat-patterns"><code>$ne</code>, <code>$gt</code>, <code>$regex</code>, <code>$where</code>, <code>$nin</code>, <code>%24ne</code>, etc.</p>
+                    <p class="sig-count">3 signatures</p>
                     <p class="threat-meta"><span class="mitre-tag">T1190</span> <span class="conf-tag">conf 7–8</span></p>
                 </div>
                 <div class="threat-card">
                     <h3 class="threat-name"><span class="threat-icon" aria-hidden="true">📜</span>XSS</h3>
                     <p class="threat-patterns"><code>&lt;script</code>, <code>onerror=</code>, <code>onfocus=</code>, <code>alert(</code>, <code>document.cookie</code>, <code>data:text/html</code>, etc.</p>
+                    <p class="sig-count">18 signatures</p>
                     <p class="threat-meta"><span class="mitre-tag">T1059.007</span> <span class="mitre-tag">T1189</span> <span class="conf-tag">conf 2–9</span></p>
                 </div>
                 <div class="threat-card">
                     <h3 class="threat-name"><span class="threat-icon" aria-hidden="true">🧩</span>SSTI</h3>
                     <p class="threat-patterns"><code>__class__</code>, <code>__mro__</code>, <code>freemarker</code>, <code>nunjucks</code>, <code>{{7*7}}</code>, <code>os.popen</code>, <code>&lt;#assign</code>, <code>&lt;%=</code>, <code>__${...}__</code>, etc.</p>
+                    <p class="sig-count">6 signatures</p>
                     <p class="threat-meta"><span class="mitre-tag">T1190</span> <span class="conf-tag">conf 8–9</span></p>
                 </div>
                 <div class="threat-card">
                     <h3 class="threat-name"><span class="threat-icon" aria-hidden="true">🌐</span>SSRF</h3>
                     <p class="threat-patterns"><code>169.254.169.254</code>, <code>0x7f000001</code>, <code>gopher://</code>, <code>dict://</code>, <code>redis://</code>, etc.</p>
+                    <p class="sig-count">11 signatures</p>
                     <p class="threat-meta"><span class="mitre-tag">T1190</span> <span class="conf-tag">conf 6–10</span></p>
                 </div>
                 <div class="threat-card">
                     <h3 class="threat-name"><span class="threat-icon" aria-hidden="true">⚡</span>RCE</h3>
                     <p class="threat-patterns"><code>/bin/sh</code>, <code>whoami</code>, <code>/dev/tcp/</code>, <code>powershell</code>, <code>certutil</code>, <code>eval()</code>, <code>rO0AB</code>, <code>_$$ND_FUNC$$_</code>, etc.</p>
+                    <p class="sig-count">23 signatures</p>
                     <p class="threat-meta"><span class="mitre-tag">T1059</span> <span class="mitre-tag">T1190</span> <span class="conf-tag">conf 7–10</span></p>
                 </div>
                 <div class="threat-card">
                     <h3 class="threat-name"><span class="threat-icon" aria-hidden="true">📂</span>Path Traversal / LFI</h3>
                     <p class="threat-patterns"><code>../</code>, <code>..%00</code>, <code>/etc/passwd</code>, <code>/proc/self/*</code>, <code>php://input</code>, etc.</p>
+                    <p class="sig-count">10 signatures</p>
                     <p class="threat-meta"><span class="mitre-tag">T1083</span> <span class="conf-tag">conf 6–9</span></p>
                 </div>
                 <div class="threat-card">
                     <h3 class="threat-name"><span class="threat-icon" aria-hidden="true">🔍</span>GraphQL Introspection</h3>
                     <p class="threat-patterns"><code>__schema</code>, <code>__type</code>, <code>IntrospectionQuery</code>, etc.</p>
+                    <p class="sig-count">3 signatures</p>
                     <p class="threat-meta"><span class="mitre-tag">T1595.002</span> <span class="conf-tag">conf 6–8</span></p>
                 </div>
                 <div class="threat-card">
                     <h3 class="threat-name"><span class="threat-icon" aria-hidden="true">☕</span>Log4j / JNDI</h3>
                     <p class="threat-patterns"><code>${jndi:ldap://</code>, <code>${env:</code>, <code>${lower:jndi</code>, <code>${::-j}</code>, etc.</p>
+                    <p class="sig-count">4 signatures</p>
                     <p class="threat-meta"><span class="mitre-tag">T1190</span> <span class="mitre-tag">T1059</span> <span class="conf-tag">conf 5–10</span></p>
                 </div>
                 <div class="threat-card">
                     <h3 class="threat-name"><span class="threat-icon" aria-hidden="true">📄</span>XXE / XInclude</h3>
                     <p class="threat-patterns"><code>&lt;!ENTITY</code>, <code>SYSTEM</code>, <code>PUBLIC</code>, <code>xi:include</code>, <code>xpointer</code>, etc.</p>
+                    <p class="sig-count">6 signatures</p>
                     <p class="threat-meta"><span class="mitre-tag">T1190</span> <span class="conf-tag">conf 8–9</span></p>
                 </div>
                 <div class="threat-card">
                     <h3 class="threat-name"><span class="threat-icon" aria-hidden="true">↪️</span>Open Redirect</h3>
                     <p class="threat-patterns"><code>?url=http://</code>, <code>?redirect=//</code>, <code>//evil.com</code>, <code>?url=/\</code>, etc.</p>
+                    <p class="sig-count">5 signatures</p>
                     <p class="threat-meta"><span class="mitre-tag">T1566.002</span> <span class="conf-tag">conf 7</span></p>
                 </div>
                 <div class="threat-card">
                     <h3 class="threat-name"><span class="threat-icon" aria-hidden="true">🔑</span>LDAP Injection</h3>
                     <p class="threat-patterns"><code>(&amp;(</code>, <code>(|(</code>, <code>)(|(</code>, URL-encoded operators, etc.</p>
+                    <p class="sig-count">2 signatures</p>
                     <p class="threat-meta"><span class="mitre-tag">T1190</span> <span class="conf-tag">conf 7–8</span></p>
                 </div>
                 <div class="threat-card">
                     <h3 class="threat-name"><span class="threat-icon" aria-hidden="true">🧭</span>XPath Injection</h3>
                     <p class="threat-patterns"><code>]|//*</code>, <code>.//*</code>, etc.</p>
+                    <p class="sig-count">2 signatures</p>
                     <p class="threat-meta"><span class="mitre-tag">T1190</span> <span class="conf-tag">conf 7</span></p>
                 </div>
                 <div class="threat-card">
                     <h3 class="threat-name"><span class="threat-icon" aria-hidden="true">↩️</span>CRLF / Log Injection</h3>
                     <p class="threat-patterns"><code>%0d%0aSet-Cookie:</code>, <code>%0d%0aLocation:</code>, literal CRLF, <code>%E5%98%8A%E5%98%8D</code>, etc.</p>
+                    <p class="sig-count">4 signatures</p>
                     <p class="threat-meta"><span class="mitre-tag">T1190</span> <span class="mitre-tag">T1059</span> <span class="conf-tag">conf 5–8</span></p>
                 </div>
                 <div class="threat-card">
                     <h3 class="threat-name"><span class="threat-icon" aria-hidden="true">🧬</span>Prototype Pollution</h3>
                     <p class="threat-patterns"><code>__proto__</code>, <code>constructor.prototype</code>, JSON payloads, etc.</p>
+                    <p class="sig-count">2 signatures</p>
                     <p class="threat-meta"><span class="mitre-tag">T1190</span> <span class="mitre-tag">T1059.007</span> <span class="conf-tag">conf 7–8</span></p>
                 </div>
                 <div class="threat-card">
                     <h3 class="threat-name"><span class="threat-icon" aria-hidden="true">📡</span>SSI Injection</h3>
                     <p class="threat-patterns"><code>&lt;!--#exec cmd=</code>, <code>#include virtual=</code>, <code>#echo var=</code>, etc.</p>
+                    <p class="sig-count">3 signatures</p>
                     <p class="threat-meta"><span class="mitre-tag">T1190</span> <span class="mitre-tag">T1059</span> <span class="conf-tag">conf 7–9</span></p>
                 </div>
                 <div class="threat-card">
                     <h3 class="threat-name"><span class="threat-icon" aria-hidden="true">🔄</span>User-Agent Rotation</h3>
                     <p class="threat-patterns">Behavioral heuristic — IPs rotating ≥10 distinct UAs (credential stuffing, evasive scanners), etc.</p>
+                    <p class="sig-count">behavioral heuristic</p>
                     <p class="threat-meta"><span class="mitre-tag">T1595.001</span> <span class="conf-tag">conf 6 · behavioral</span></p>
                 </div>
                 <div class="threat-card">
                     <h3 class="threat-name"><span class="threat-icon" aria-hidden="true">🎟️</span>JWT Abuse</h3>
                     <p class="threat-patterns"><code>"alg":"none"</code> bypass, JWT token in URI, <code>kid</code> path traversal, Bearer token leak, etc.</p>
+                    <p class="sig-count">7 signatures</p>
                     <p class="threat-meta"><span class="mitre-tag">T1550.001</span> <span class="mitre-tag">T1190</span> <span class="conf-tag">conf 4–10</span></p>
                 </div>
                 <div class="threat-card">
                     <h3 class="threat-name"><span class="threat-icon" aria-hidden="true">🔢</span>Object Enumeration (BOLA/IDOR)</h3>
                     <p class="threat-patterns">Sequential ID enumeration per path template (≥10 distinct IDs on <code>/api/users/{id}</code>), etc.</p>
+                    <p class="sig-count">behavioral heuristic</p>
                     <p class="threat-meta"><span class="mitre-tag">T1595.002</span> <span class="mitre-tag">T1190</span> <span class="conf-tag">conf 7 · behavioral</span></p>
                 </div>
                 <div class="threat-card">
                     <h3 class="threat-name"><span class="threat-icon" aria-hidden="true">🛰️</span>Beaconing / C2</h3>
                     <p class="threat-patterns">Periodic callback detection (inter-arrival CV &lt; 0.25, 10–50 samples per path), etc.</p>
+                    <p class="sig-count">behavioral heuristic</p>
                     <p class="threat-meta"><span class="mitre-tag">T1071.001</span> <span class="mitre-tag">T1573</span> <span class="conf-tag">conf 6 · behavioral</span></p>
                 </div>
                 <div class="threat-card">
                     <h3 class="threat-name"><span class="threat-icon" aria-hidden="true">📦</span>LFI Wrapper Abuse</h3>
                     <p class="threat-patterns"><code>phar://</code>, <code>data://</code>, <code>expect://</code>, <code>compress.zlib</code>, etc.</p>
+                    <p class="sig-count">2 signatures</p>
                     <p class="threat-meta"><span class="mitre-tag">T1083</span> <span class="mitre-tag">T1190</span> <span class="conf-tag">conf 8–9</span></p>
                 </div>
                 <div class="threat-card">
                     <h3 class="threat-name"><span class="threat-icon" aria-hidden="true">🔐</span>Sensitive File Probes</h3>
                     <p class="threat-patterns"><code>.env</code>, <code>.git/config</code>, <code>id_rsa</code>, <code>dump.sql</code>, <code>phpinfo.php</code>, etc.</p>
+                    <p class="sig-count">17 signatures</p>
                     <p class="threat-meta"><span class="mitre-tag">T1083</span> <span class="mitre-tag">T1552.001</span> <span class="conf-tag">conf 4–9</span></p>
                 </div>
                 <div class="threat-card">
                     <h3 class="threat-name"><span class="threat-icon" aria-hidden="true">🛠️</span>Admin Probes</h3>
                     <p class="threat-patterns"><code>/phpmyadmin</code>, <code>/actuator/*</code>, <code>/h2-console</code>, <code>/swagger-ui</code>, etc.</p>
+                    <p class="sig-count">13 signatures</p>
                     <p class="threat-meta"><span class="mitre-tag">T1595.002</span> <span class="conf-tag">conf 5–9</span></p>
                 </div>
                 <div class="threat-card">
                     <h3 class="threat-name"><span class="threat-icon" aria-hidden="true">📰</span>WordPress Probes</h3>
                     <p class="threat-patterns"><code>/wp-content/plugins/</code>, <code>/xmlrpc.php</code>, <code>/wp-json/wp/v2/</code>, etc.</p>
+                    <p class="sig-count">8 signatures</p>
                     <p class="threat-meta"><span class="mitre-tag">T1595.002</span> <span class="conf-tag">conf 6–8</span></p>
                 </div>
                 <div class="threat-card">
                     <h3 class="threat-name"><span class="threat-icon" aria-hidden="true">🖥️</span>CGI Probes</h3>
                     <p class="threat-patterns"><code>/cgi-bin/</code>, <code>.cgi</code>, <code>.fcgi</code>, etc.</p>
+                    <p class="sig-count">2 signatures</p>
                     <p class="threat-meta"><span class="mitre-tag">T1595.002</span> <span class="conf-tag">conf 5–7</span></p>
                 </div>
                 <div class="threat-card">
                     <h3 class="threat-name"><span class="threat-icon" aria-hidden="true">🔭</span>Scanner Tools</h3>
                     <p class="threat-patterns"><code>sqlmap</code>, <code>nuclei</code>, <code>gobuster</code>, <code>ffuf</code>, <code>wpscan</code>, <code>masscan</code>, <code>hydra</code>, <code>metasploit</code>, <code>shodan</code>, etc.</p>
+                    <p class="sig-count">1 rule · 73 tools</p>
                     <p class="threat-meta"><span class="mitre-tag">T1595</span> <span class="conf-tag">conf 9</span></p>
                 </div>
             </div>
@@ -292,32 +318,6 @@ caddy-analyze tail --defang access.log</pre>
 
         <footer class="footer reveal">
             <p>caddy-analyzer is open-source software released under the <a href="https://github.com/lenny-ts/caddy-analyzer/blob/main/LICENSE">MIT License</a>.</p>
-                    <p class="sig-count">19 signatures</p>
-                    <p class="sig-count">3 signatures</p>
-                    <p class="sig-count">18 signatures</p>
-                    <p class="sig-count">6 signatures</p>
-                    <p class="sig-count">11 signatures</p>
-                    <p class="sig-count">23 signatures</p>
-                    <p class="sig-count">10 signatures</p>
-                    <p class="sig-count">3 signatures</p>
-                    <p class="sig-count">4 signatures</p>
-                    <p class="sig-count">6 signatures</p>
-                    <p class="sig-count">5 signatures</p>
-                    <p class="sig-count">2 signatures</p>
-                    <p class="sig-count">2 signatures</p>
-                    <p class="sig-count">4 signatures</p>
-                    <p class="sig-count">2 signatures</p>
-                    <p class="sig-count">3 signatures</p>
-                    <p class="sig-count">7 signatures</p>
-                    <p class="sig-count">2 signatures</p>
-                    <p class="sig-count">17 signatures</p>
-                    <p class="sig-count">13 signatures</p>
-                    <p class="sig-count">8 signatures</p>
-                    <p class="sig-count">2 signatures</p>
-                    <p class="sig-count">1 rule · 73 tools</p>
-                    <p class="sig-count">behavioral heuristic</p>
-                    <p class="sig-count">behavioral heuristic</p>
-                    <p class="sig-count">behavioral heuristic</p>
         </footer>
 
     </main>
