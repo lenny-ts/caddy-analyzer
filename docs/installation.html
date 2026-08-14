@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="view-transition" content="same-origin">
     <title>Installation Guide — caddy-analyzer</title>
     <meta name="description" content="Install caddy-analyzer on Linux, macOS, Windows (PowerShell), via Go toolchain, Docker, systemd, or pre-built binaries. Complete setup guide.">
     <meta name="theme-color" content="#0a0a0c">
@@ -10,8 +11,8 @@
     <meta property="og:title" content="Installation Guide — caddy-analyzer">
     <meta property="og:description" content="Install on Linux, macOS, Windows, Docker, systemd, or from source. Complete setup guide.">
     <meta property="og:type" content="website">
-    <meta property="og:url" content="https://l9lenny.github.io/caddy-analyzer/docs/installation.html">
-    <meta property="og:image" content="https://l9lenny.github.io/caddy-analyzer/docs/og-image.svg">
+    <meta property="og:url" content="https://lenny-ts.github.io/caddy-analyzer/installation.html">
+    <meta property="og:image" content="https://lenny-ts.github.io/caddy-analyzer/og-image.png">
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="Installation Guide — caddy-analyzer">
     <meta name="twitter:description" content="Install on Linux, macOS, Windows, Docker, systemd, or from source.">
@@ -19,11 +20,13 @@
     <meta name="doc:modified" content="2026-08-01T21:11:47+00:00">
     <meta name="color-scheme" content="dark light">
     <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="apple-touch-icon.png">
+    <link rel="canonical" href="https://lenny-ts.github.io/caddy-analyzer/installation.html">
     <link rel="dns-prefetch" href="//github.com">
     <link rel="dns-prefetch" href="//pkg.go.dev">
     <link rel="preconnect" href="//github.com">
     <link rel="prefetch" href="sources.html">
-    <link rel="stylesheet" href="styles.min.css">
+    <link rel="stylesheet" href="styles.min.css?v=25">
     <script type="speculationrules">{"prefetch":[{"where":{"href_matches":"/*.html"},"eagerness":"moderate"}]}</script>
 </head>
 <body>
@@ -56,23 +59,23 @@
         <section class="reveal">
             <h2>1. Linux &amp; macOS One-Line Installer</h2>
             <p>The automated POSIX shell script detects your operating system (Linux or macOS) and processor architecture (AMD64, ARM64 Apple Silicon/Raspberry Pi, ARMv7, 386), downloads the latest compiled release binary, and installs it to <code>/usr/local/bin/caddy-analyze</code>:</p>
-<pre>curl -sSfL https://raw.githubusercontent.com/L9Lenny/caddy-analyzer/main/install.sh | bash</pre>
+<pre>curl -sSfL https://raw.githubusercontent.com/lenny-ts/caddy-analyzer/main/install.sh | bash</pre>
         </section>
 
         <section class="reveal">
             <h2>2. Windows PowerShell One-Line Installer</h2>
             <p>Downloads the compiled <code>caddy-analyze.exe</code> binary for Windows, extracts it into <code>%LOCALAPPDATA%\caddy-analyze</code>, and adds the folder to your User PATH variable automatically:</p>
-<pre>iwr -useb https://raw.githubusercontent.com/L9Lenny/caddy-analyzer/main/install.ps1 | iex</pre>
+<pre>iwr -useb https://raw.githubusercontent.com/lenny-ts/caddy-analyzer/main/install.ps1 | iex</pre>
         </section>
 
         <section class="reveal">
             <h2>3. Go Toolchain Installation</h2>
-            <p>If you have Go 1.22+ installed, compile and install directly from source code using the Go toolchain:</p>
+            <p>If you have Go 1.25+ installed, compile and install directly from source code using the Go toolchain:</p>
             <div class="callout callout-info">
                 <p class="callout-label">ℹ Prerequisite</p>
-                Requires <strong>Go 1.22+</strong> installed on your system. Check with <code>go version</code>. Download from <a href="https://go.dev/dl/">go.dev/dl</a> if needed.
+                Requires <strong>Go 1.25+</strong> installed on your system. Check with <code>go version</code>. Download from <a href="https://go.dev/dl/">go.dev/dl</a> if needed.
             </div>
-<pre>go install github.com/L9Lenny/caddy-analyzer/cmd/caddy-analyze@latest</pre>
+<pre>go install github.com/lenny-ts/caddy-analyzer/cmd/caddy-analyze@latest</pre>
         </section>
 
         <section class="reveal">
@@ -83,15 +86,15 @@
                 Mounting <code>/var/run/docker.sock</code> gives the container <strong>root-equivalent access</strong> to the Docker daemon. Only do this in trusted environments — the container can start, stop, and inspect all other containers.
             </div>
 <pre># Run static log file analysis
-docker run --rm -v /var/log/caddy:/logs ghcr.io/L9Lenny/caddy-analyzer /logs/access.log
+docker run --rm -v /var/log/caddy:/logs ghcr.io/lenny-ts/caddy-analyzer /logs/access.log
 
 # Stream from Docker daemon socket
-docker run --rm -v /var/run/docker.sock:/var/run/docker.sock ghcr.io/L9Lenny/caddy-analyzer docker://my-caddy</pre>
+docker run --rm -v /var/run/docker.sock:/var/run/docker.sock ghcr.io/lenny-ts/caddy-analyzer docker://my-caddy</pre>
         </section>
 
         <section class="reveal">
             <h2>5. Manual Binary Releases</h2>
-            <p>Pre-built, 100% statically linked binaries without dynamic libc dependencies are available on the <a href="https://github.com/L9Lenny/caddy-analyzer/releases">GitHub Releases page</a>:</p>
+            <p>Pre-built, 100% statically linked binaries without dynamic libc dependencies are available on the <a href="https://github.com/lenny-ts/caddy-analyzer/releases">GitHub Releases page</a>:</p>
             <ul>
                 <li><code>caddy-analyzer_0.1.0_linux_amd64.tar.gz</code> — Linux x86_64</li>
                 <li><code>caddy-analyzer_0.1.0_linux_arm64.tar.gz</code> — Linux ARM64 (Raspberry Pi 4/5, AWS Graviton)</li>
@@ -140,14 +143,14 @@ sudo systemctl enable --now caddy-guard</pre>
             </div>
         </section>
 
-        <div class="footer reveal">
-            <p>caddy-analyzer is open-source software released under the <a href="https://github.com/L9Lenny/caddy-analyzer/blob/main/LICENSE">MIT License</a>.</p>
-        </div>
+        <footer class="footer reveal">
+            <p>caddy-analyzer is open-source software released under the <a href="https://github.com/lenny-ts/caddy-analyzer/blob/main/LICENSE">MIT License</a>.</p>
+        </footer>
 
     </main>
 
     <button class="back-to-top" aria-label="Back to top">↑</button>
-    <script src="docs.min.js" defer></script>
+    <script src="docs.min.js?v=25" defer></script>
 
 </body>
 </html>

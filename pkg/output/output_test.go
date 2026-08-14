@@ -5,8 +5,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/L9Lenny/caddy-analyzer/pkg/analysis"
-	"github.com/L9Lenny/caddy-analyzer/pkg/types"
+	"github.com/lenny-ts/caddy-analyzer/pkg/analysis"
+	"github.com/lenny-ts/caddy-analyzer/pkg/types"
 )
 
 func TestReportOutputs(t *testing.T) {

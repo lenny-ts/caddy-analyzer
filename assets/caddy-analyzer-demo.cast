@@ -1,7 +1,7 @@
 {"version": 2, "width": 209, "height": 54, "timestamp": 1785352039, "env": {"SHELL": "/bin/bash", "TERM": "xterm-256color"}}
 [0.228561, "o", "\u001b[?2004h\u001b]0;lenny@lenny: /tmp/demo\u0007\u001b[01;32mlenny@lenny\u001b[00m:\u001b[01;34m/tmp/demo\u001b[00m$ "]
-[1.074849, "o", "\u001b[7mcurl -sSfL https://raw.githubusercontent.com/L9Lenny/caddy-analyzer/main/install.sh | sh\u001b[27m"]
-[1.824089, "o", "\r\u001b[C\u001b[C\u001b[C\u001b[C\u001b[C\u001b[C\u001b[C\u001b[C\u001b[C\u001b[C\u001b[C\u001b[C\u001b[C\u001b[C\u001b[C\u001b[C\u001b[C\u001b[C\u001b[C\u001b[C\u001b[C\u001b[C\u001b[Ccurl -sSfL https://raw.githubusercontent.com/L9Lenny/caddy-analyzer/main/install.sh | sh\r\n\u001b[?2004l\r"]
+[1.074849, "o", "\u001b[7mcurl -sSfL https://raw.githubusercontent.com/lenny-ts/caddy-analyzer/main/install.sh | sh\u001b[27m"]
+[1.824089, "o", "\r\u001b[C\u001b[C\u001b[C\u001b[C\u001b[C\u001b[C\u001b[C\u001b[C\u001b[C\u001b[C\u001b[C\u001b[C\u001b[C\u001b[C\u001b[C\u001b[C\u001b[C\u001b[C\u001b[C\u001b[C\u001b[C\u001b[C\u001b[Ccurl -sSfL https://raw.githubusercontent.com/lenny-ts/caddy-analyzer/main/install.sh | sh\r\n\u001b[?2004l\r"]
 [2.979913, "o", "[*] Installing caddy-analyze v0.1.2 for linux/amd64...\r\n"]
 [3.338964, "o", "Installing to /usr/local/bin (requires sudo)...\r\n"]
 [3.344505, "o", "[sudo] password for lenny: "]

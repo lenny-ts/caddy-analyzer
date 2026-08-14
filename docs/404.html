@@ -3,9 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="view-transition" content="same-origin">
     <title>404 — Page Not Found | caddy-analyzer</title>
     <meta name="description" content="The page you are looking for does not exist. Return to the caddy-analyzer documentation.">
     <meta name="theme-color" content="#0a0a0c">
+    <link rel="apple-touch-icon" href="apple-touch-icon.png">
     <meta name="color-scheme" content="dark light">
     <meta name="robots" content="noindex">
     <meta property="og:title" content="404 — caddy-analyzer">
@@ -19,7 +21,7 @@
             } catch (e) {}
         })();
     </script>
-    <link rel="stylesheet" href="styles.min.css">
+    <link rel="stylesheet" href="styles.min.css?v=25">
     <style>
         body.error-page {
             display: flex;
@@ -124,6 +126,7 @@
             background: var(--accent);
             color: #0a0a0f;
         }
+        [data-theme="light"] .error-btn-primary { color: #ffffff; }
         .error-btn-primary:hover {
             transform: translateY(-2px);
             box-shadow: 0 8px 24px -6px rgba(72,209,204,0.5);
@@ -176,9 +179,9 @@
         <p class="error-desc">The page you're looking for has drifted off into orbit, or never existed. Let's get you back to safety.</p>
         <div class="error-actions">
             <a href="index.html" class="error-btn error-btn-primary">&#9664; Back to docs</a>
-            <a href="https://github.com/L9Lenny/caddy-analyzer" class="error-btn error-btn-secondary" target="_blank" rel="noopener">GitHub &#8599;</a>
+            <a href="https://github.com/lenny-ts/caddy-analyzer" class="error-btn error-btn-secondary" target="_blank" rel="noopener">GitHub &#8599;</a>
         </div>
     </main>
-    <script src="docs.min.js"></script>
+    <script src="docs.min.js?v=25" defer></script>
 </body>
 </html>

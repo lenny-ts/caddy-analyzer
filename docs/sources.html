@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="view-transition" content="same-origin">
     <title>Log Sources Guide — caddy-analyzer</title>
     <meta name="description" content="Feed Caddy v2 logs from files, globs, stdin pipes, Docker containers, Kubernetes pods, or systemd journalctl. All input source formats covered.">
     <meta name="theme-color" content="#0a0a0c">
@@ -10,20 +11,22 @@
     <meta property="og:title" content="Log Sources Guide — caddy-analyzer">
     <meta property="og:description" content="Files, globs, stdin, docker://, k8s://, journalctl:// — all Caddy v2 log input sources.">
     <meta property="og:type" content="website">
-    <meta property="og:url" content="https://l9lenny.github.io/caddy-analyzer/docs/sources.html">
-    <meta property="og:image" content="https://l9lenny.github.io/caddy-analyzer/docs/og-image.svg">
+    <meta property="og:url" content="https://lenny-ts.github.io/caddy-analyzer/sources.html">
+    <meta property="og:image" content="https://lenny-ts.github.io/caddy-analyzer/og-image.png">
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="Log Sources Guide — caddy-analyzer">
     <meta name="twitter:description" content="Files, globs, stdin, docker://, k8s://, journalctl:// — all input sources.">
     <script>try{var t=localStorage.getItem('caddy-docs-theme');if(t==='light')document.documentElement.setAttribute('data-theme','light');else if(t!=='dark'&&window.matchMedia&&window.matchMedia('(prefers-color-scheme: light)').matches)document.documentElement.setAttribute('data-theme','light');}catch(e){}</script>
-    <meta name="doc:modified" content="2026-07-28T23:22:25+02:00">
+    <meta name="doc:modified" content="2026-07-28T23:22:25+00:00">
     <meta name="color-scheme" content="dark light">
     <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="apple-touch-icon.png">
+    <link rel="canonical" href="https://lenny-ts.github.io/caddy-analyzer/sources.html">
     <link rel="dns-prefetch" href="//github.com">
     <link rel="dns-prefetch" href="//pkg.go.dev">
     <link rel="preconnect" href="//github.com">
     <link rel="prefetch" href="subcommands.html">
-    <link rel="stylesheet" href="styles.min.css">
+    <link rel="stylesheet" href="styles.min.css?v=25">
     <script type="speculationrules">{"prefetch":[{"where":{"href_matches":"/*.html"},"eagerness":"moderate"}]}</script>
 </head>
 <body>
@@ -55,7 +58,7 @@
 
         <section class="reveal">
             <h2>1. Local Log Files &amp; Path Globs</h2>
-            <p>Read directly from local JSON access log files on disk. If positional source arguments are omitted, <code>caddy-analyze</code> automatically checks for local log files in <code>./access.log</code>, <code>./caddy.log</code>, or <code>/var/log/caddy/access.log</code>:</p>
+            <p>Read directly from local JSON access log files on disk. If positional source arguments are omitted, <code>caddy-analyze</code> automatically checks for local log files in <code>./access.log</code>, <code>./caddy.log</code>, <code>./caddy-access.log</code>, <code>/var/log/caddy/access.log</code>, or <code>/var/log/caddy/caddy.log</code>:</p>
 <pre># Single access log file
 caddy-analyze /var/log/caddy/access.log
 
@@ -118,14 +121,14 @@ caddy-analyze journalctl://caddy.service</pre>
             </div>
         </section>
 
-        <div class="footer reveal">
-            <p>caddy-analyzer is open-source software released under the <a href="https://github.com/L9Lenny/caddy-analyzer/blob/main/LICENSE">MIT License</a>.</p>
-        </div>
+        <footer class="footer reveal">
+            <p>caddy-analyzer is open-source software released under the <a href="https://github.com/lenny-ts/caddy-analyzer/blob/main/LICENSE">MIT License</a>.</p>
+        </footer>
 
     </main>
 
     <button class="back-to-top" aria-label="Back to top">↑</button>
-    <script src="docs.min.js" defer></script>
+    <script src="docs.min.js?v=25" defer></script>
 
 </body>
 </html>

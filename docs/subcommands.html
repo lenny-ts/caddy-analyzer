@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="view-transition" content="same-origin">
     <title>Subcommands &amp; Flags Specification — caddy-analyzer</title>
     <meta name="description" content="Complete reference for caddy-analyze subcommands: tail, top, diff, config, guard, block, unban, export-sigma. All flags and usage examples.">
     <meta name="theme-color" content="#0a0a0c">
@@ -10,8 +11,8 @@
     <meta property="og:title" content="Subcommands & Flags — caddy-analyzer">
     <meta property="og:description" content="Complete CLI reference: tail, top, diff, config, guard, block, unban, export-sigma.">
     <meta property="og:type" content="website">
-    <meta property="og:url" content="https://l9lenny.github.io/caddy-analyzer/docs/subcommands.html">
-    <meta property="og:image" content="https://l9lenny.github.io/caddy-analyzer/docs/og-image.svg">
+    <meta property="og:url" content="https://lenny-ts.github.io/caddy-analyzer/subcommands.html">
+    <meta property="og:image" content="https://lenny-ts.github.io/caddy-analyzer/og-image.png">
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="Subcommands & Flags — caddy-analyzer">
     <meta name="twitter:description" content="Complete CLI reference: tail, top, diff, config, guard, block, unban, export-sigma.">
@@ -19,11 +20,13 @@
     <meta name="doc:modified" content="2026-08-05T23:34:51+00:00">
     <meta name="color-scheme" content="dark light">
     <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="apple-touch-icon.png">
+    <link rel="canonical" href="https://lenny-ts.github.io/caddy-analyzer/subcommands.html">
     <link rel="dns-prefetch" href="//github.com">
     <link rel="dns-prefetch" href="//pkg.go.dev">
     <link rel="preconnect" href="//github.com">
     <link rel="prefetch" href="security.html">
-    <link rel="stylesheet" href="styles.min.css">
+    <link rel="stylesheet" href="styles.min.css?v=25">
     <script type="speculationrules">{"prefetch":[{"where":{"href_matches":"/*.html"},"eagerness":"moderate"}]}</script>
 </head>
 <body>
@@ -55,7 +58,7 @@
 
         <section class="reveal">
             <h2>1. Comprehensive CLI Flags Reference</h2>
-            <p>All flags can be combined with any subcommand or main analysis execution:</p>
+            <p>The persistent flags below (from <code>--from</code> to <code>--namespace</code>) are inherited by every subcommand (<code>tail</code>, <code>top</code>, <code>diff</code>, <code>guard</code>, <code>config</code>, <code>block</code>, <code>unban</code>, <code>export-sigma</code>) and the main analysis run. The root-only flags <code>--watch</code>, <code>--follow</code>, <code>--interval</code>, <code>--detect</code>, and <code>--version</code> are available only on <code>caddy-analyze</code> itself (see the "Display &amp; Output" table below).</p>
 
             <h3>Time Range &amp; Request Filters</h3>
             <div class="table-wrap">
@@ -162,9 +165,33 @@
                     </tr>
                     <tr>
                         <td><code>--grep</code></td>
-                        <td><code>-</code></td>
+                        <td>—</td>
                         <td><code>""</code></td>
                         <td>Search across URI, User-Agent, IP, Host. <code>caddy-analyze --grep "/api"</code></td>
+                    </tr>
+                    <tr>
+                        <td><code>--host</code></td>
+                        <td>—</td>
+                        <td><code>""</code></td>
+                        <td>Filter by request host (substring match, case-insensitive). <code>caddy-analyze --host example.com</code></td>
+                    </tr>
+                    <tr>
+                        <td><code>--max-latency</code></td>
+                        <td>—</td>
+                        <td><code>""</code></td>
+                        <td>Filter requests faster than a duration (counterpart to <code>--slow</code>). <code>caddy-analyze --max-latency 100ms</code></td>
+                    </tr>
+                    <tr>
+                        <td><code>--min-size</code></td>
+                        <td>—</td>
+                        <td><code>""</code></td>
+                        <td>Filter responses at least this size (bytes, or <code>k/mb/gb</code> suffix). <code>caddy-analyze --min-size 1mb</code></td>
+                    </tr>
+                    <tr>
+                        <td><code>--max-size</code></td>
+                        <td>—</td>
+                        <td><code>""</code></td>
+                        <td>Filter responses at most this size (bytes, or <code>k/mb/gb</code> suffix). <code>caddy-analyze --max-size 512kb</code></td>
                     </tr>
                 </tbody>
             </table>
@@ -240,6 +267,36 @@
                         <td><code>false</code></td>
                         <td>Print version (injected via <code>-ldflags</code> at build time; <code>dev</code> if unset) and exit.</td>
                     </tr>
+                    <tr>
+                        <td><code>--compact</code></td>
+                        <td><code>-c</code></td>
+                        <td><code>false</code></td>
+                        <td>Compact output mode (smaller, condensed tables). <code>caddy-analyze -c</code></td>
+                    </tr>
+                    <tr>
+                        <td><code>--max-cardinality</code></td>
+                        <td>—</td>
+                        <td><code>100000</code></td>
+                        <td>Max distinct keys tracked per counter (paths, IPs, UAs). <code>0</code> = unlimited. Bounds memory on huge-cardinality logs.</td>
+                    </tr>
+                    <tr>
+                        <td><code>--ua-rotation</code></td>
+                        <td>—</td>
+                        <td><code>10</code></td>
+                        <td>Distinct User-Agents from one IP before the scanner/rotation heuristic fires (<code>0</code> = default). Root-level variant of the guard flag.</td>
+                    </tr>
+                    <tr>
+                        <td><code>--defang</code></td>
+                        <td>—</td>
+                        <td><code>false</code></td>
+                        <td>Defang IPs in output (replace <code>.</code> with <code>[.]</code>) for safe sharing of IOCs. <code>caddy-analyze tail --detect --defang</code></td>
+                    </tr>
+                    <tr>
+                        <td><code>--namespace</code></td>
+                        <td><code>-n</code></td>
+                        <td><code>""</code></td>
+                        <td>Kubernetes namespace for <code>k8s://</code> sources. <code>caddy-analyze top ip -n production k8s://pod</code></td>
+                    </tr>
                 </tbody>
             </table>
             </div>
@@ -309,6 +366,7 @@ caddy-analyze export-sigma - | sigma check    # pipe to validator</pre>
                 <thead>
                     <tr>
                         <th scope="col">Flag</th>
+                        <th scope="col">Short</th>
                         <th scope="col">Default</th>
                         <th scope="col">Description</th>
                     </tr>
@@ -316,86 +374,103 @@ caddy-analyze export-sigma - | sigma check    # pipe to validator</pre>
                 <tbody>
                     <tr>
                         <td><code>--limit</code></td>
+                        <td><code>-l</code></td>
                         <td><code>100</code></td>
                         <td>Max detections per IP within the window before blocking</td>
                     </tr>
                     <tr>
                         <td><code>--window</code></td>
+                        <td><code>-w</code></td>
                         <td><code>1m</code></td>
                         <td>Rolling time window for rate counting</td>
                     </tr>
                     <tr>
                         <td><code>--duration</code></td>
+                        <td><code>-d</code></td>
                         <td><code>10m</code></td>
                         <td>How long to keep an IP blocked before auto-unbanning (<code>0</code> = permanent)</td>
                     </tr>
                     <tr>
                         <td><code>--auth-limit</code></td>
+                        <td>—</td>
                         <td><code>10</code></td>
                         <td>Max failed auth (401/403) requests before blocking</td>
                     </tr>
                     <tr>
                         <td><code>--notfound-limit</code></td>
+                        <td>—</td>
                         <td><code>50</code></td>
                         <td>Max 404 responses before blocking (directory brute-force defense)</td>
                     </tr>
                     <tr>
                         <td><code>--audit-log</code></td>
+                        <td>—</td>
                         <td><code>/var/log/caddy-analyzer-audit.jsonl</code></td>
                         <td>Path to JSON-lines audit log recording every block/unblock action (timestamp, IP, reason, duration, user). File created with <code>0600</code> permissions. Pass empty string to disable. Also available on <code>block</code> and <code>unban</code> subcommands.</td>
                     </tr>
                     <tr>
                         <td><code>--state-file</code></td>
+                        <td>—</td>
                         <td><code>/var/lib/caddy-analyzer/blocked.json</code></td>
                         <td>Persist blocked-IP state to a JSON file so bans survive guard restarts. Expired entries are cleaned up on load. Pass empty string to disable.</td>
                     </tr>
                     <tr>
                         <td><code>--never-block</code></td>
+                        <td>—</td>
                         <td><code>""</code></td>
                         <td>Comma-separated list of IPs/CIDRs that should never be blocked (e.g. <code>10.0.0.0/8,192.168.1.1</code>). Protects trusted gateways and proxies from false-positive bans.</td>
                     </tr>
                     <tr>
                         <td><code>--never-block-file</code></td>
+                        <td>—</td>
                         <td><code>""</code></td>
                         <td>Path to a file containing IPs/CIDRs (one per line, <code>#</code> comments supported) that should never be blocked. Merged with <code>--never-block</code>.</td>
                     </tr>
                     <tr>
                         <td><code>--detect-confidence</code></td>
+                        <td>—</td>
                         <td><code>8</code></td>
                         <td>Minimum confidence (1-10) for pattern-detection blocking. Detections scoring below this threshold are reported but not blocked. Pass <code>0</code> to disable pattern-based blocking entirely (rate/status thresholds still apply).</td>
                     </tr>
                     <tr>
                         <td><code>--subnet-limit</code></td>
+                        <td>—</td>
                         <td><code>0</code></td>
                         <td>Block a whole /24 (IPv4) or /64 (IPv6) when its combined requests exceed this threshold, even if no single IP trips. Distributed-scan defense. <code>0</code> disables.</td>
                     </tr>
                     <tr>
                         <td><code>--rps-anomaly</code></td>
+                        <td>—</td>
                         <td><code>0</code></td>
                         <td>Alert when current RPS exceeds this factor over the EWMA baseline (e.g. <code>5</code> = 5× spike). Catches volumetric spikes / DDoS. <code>0</code> disables.</td>
                     </tr>
                     <tr>
                         <td><code>--cred-stuffing-limit</code></td>
+                        <td>—</td>
                         <td><code>0</code></td>
                         <td>Alert when N distinct IPs fail auth (401/403) on the same path within the window. Catches distributed credential stuffing. <code>0</code> disables.</td>
                     </tr>
                     <tr>
                         <td><code>--enrich</code></td>
+                        <td>—</td>
                         <td><code>false</code></td>
                         <td>Enable threat-intel enrichment via AbuseIPDB. Set <code>ABUSEIPDB_KEY</code> env var. IPs with auth failures and AbuseIPDB score ≥ <code>--enrich-threshold</code> are pre-blocked.</td>
                     </tr>
                     <tr>
                         <td><code>--enrich-threshold</code></td>
+                        <td>—</td>
                         <td><code>70</code></td>
                         <td>Minimum AbuseIPDB abuse confidence score to pre-block an IP with auth failures. <code>0</code> disables enrichment blocking.</td>
                     </tr>
                     <tr>
                         <td><code>--ua-rotation</code></td>
+                        <td>—</td>
                         <td><code>10</code></td>
                         <td>Distinct User-Agents from one IP before scanner/rotation heuristic fires.</td>
                     </tr>
                     <tr>
                         <td><code>--trust-forwarded</code></td>
+                        <td>—</td>
                         <td><code>false</code></td>
                         <td>Trust <code>X-Forwarded-For</code> / <code>X-Real-IP</code> for client IP (use behind a reverse proxy/CDN).</td>
                     </tr>
@@ -455,14 +530,14 @@ sudo caddy-analyze unban --all
 sudo caddy-analyze unban --list</pre>
         </section>
 
-        <div class="footer reveal">
-            <p>caddy-analyzer is open-source software released under the <a href="https://github.com/L9Lenny/caddy-analyzer/blob/main/LICENSE">MIT License</a>.</p>
-        </div>
+        <footer class="footer reveal">
+            <p>caddy-analyzer is open-source software released under the <a href="https://github.com/lenny-ts/caddy-analyzer/blob/main/LICENSE">MIT License</a>.</p>
+        </footer>
 
     </main>
 
     <button class="back-to-top" aria-label="Back to top">↑</button>
-    <script src="docs.min.js" defer></script>
+    <script src="docs.min.js?v=25" defer></script>
 
 </body>
 </html>

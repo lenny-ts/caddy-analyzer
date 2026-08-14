@@ -21,6 +21,22 @@
         updateProgress();
     }
 
+    /* ----- Sticky nav compaction -----
+       Adds .is-scrolled to nav.doc-nav once the page scrolls past the top,
+       shrinking its padding/font for a compact floating bar. */
+    var docNavEl = document.querySelector("nav.doc-nav");
+    if (docNavEl) {
+        var compactNav = function () {
+            docNavEl.classList.toggle("is-scrolled", (window.scrollY || 0) > 24);
+        };
+        window.addEventListener("scroll", function () {
+            if (!_progressRAF) {
+                _progressRAF = window.requestAnimationFrame(compactNav);
+            }
+        }, { passive: true });
+        compactNav();
+    }
+
     /* ----- Reveal on scroll ----- */
     var revealEls = document.querySelectorAll(".reveal, .reveal-stagger");
     if (!("IntersectionObserver" in window)) {
@@ -45,8 +61,9 @@
             .replace(/-+/g, "-")
             .replace(/^-|-$/g, "");
     };
-    var headings = document.querySelectorAll("h2, h3");
+    var headings = document.querySelectorAll("main h2, main h3");
     headings.forEach(function (h) {
+        if (h.closest(".threat-card, .feature-card, .doc-card, .callout, .quick-ref, .terminal")) return;
         if (h.querySelector(".heading-anchor")) return;
         if (!h.id) {
             var slug = slugify(h.textContent);
@@ -73,6 +90,41 @@
         h.appendChild(link);
     });
 
+    /* ----- Cinematic section reveal — word-by-word clip slide on h2 ----- */
+    (function () {
+        if (prefersReduced) return;
+        var cin = document.querySelectorAll("main > h2, main section > h2");
+        if (!cin.length) return;
+        cin.forEach(function (h2) {
+            if (h2.closest(".threat-card, .feature-card, .doc-card, .callout")) return;
+            if (h2.classList.contains("cinema-heading")) return;
+            var anchor = h2.querySelector(".heading-anchor");
+            if (anchor) anchor.remove();
+            var words = h2.textContent.trim().split(/\s+/);
+            if (words.length < 3) { if (anchor) h2.appendChild(anchor); return; }
+            h2.innerHTML = "";
+            h2.classList.add("cinema-heading");
+            words.forEach(function (w) {
+                var span = document.createElement("span");
+                span.className = "cinema-word";
+                span.textContent = w;
+                h2.appendChild(span);
+                h2.appendChild(document.createTextNode(" "));
+            });
+            if (anchor) h2.appendChild(anchor);
+            h2.classList.remove("in");
+        });
+        var cinIO = new IntersectionObserver(function (entries) {
+            entries.forEach(function (entry) {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add("in");
+                    cinIO.unobserve(entry.target);
+                }
+            });
+        }, { threshold: 0.4 });
+        cin.forEach(function (h2) { cinIO.observe(h2); });
+    })();
+
     /* ----- Copy-to-clipboard buttons + language labels on <pre> ----- */
     var detectLang = function (text) {
         var t = text.trim();
@@ -88,8 +140,9 @@
             /^#\s/.test(t) || /[|&>;]\s/.test(t)) return "bash";
         return "shell";
     };
-    var pres = document.querySelectorAll("pre");
+    var pres = document.querySelectorAll("pre:not(.callout pre):not(.no-copy)");
     pres.forEach(function (pre) {
+        if (pre.closest(".callout, .no-copy")) return;
         var raw = pre.textContent.trimEnd();
         pre.dataset.raw = raw;
 
@@ -254,6 +307,28 @@
         toc.appendChild(tocList);
         document.body.appendChild(toc);
 
+        /* Click handler — manual scroll calculation bypasses scrollIntoView
+           quirks (double offset from scroll-padding + scroll-margin) */
+        tocList.addEventListener("click", function (e) {
+            var link = e.target.closest("a");
+            if (!link) return;
+            var id = link.dataset.target;
+            var target = document.getElementById(id);
+            if (!target) return;
+            e.preventDefault();
+            var navOffset = 80;
+            var top = target.getBoundingClientRect().top + window.scrollY - navOffset;
+            window.scrollTo({ top: top, behavior: "smooth" });
+            history.replaceState(null, "", "#" + id);
+            links.forEach(function (r) {
+                r.link.classList.toggle("active", r.heading.id === id);
+            });
+            target.classList.add("anchor-flash");
+            setTimeout(function () {
+                target.classList.remove("anchor-flash");
+            }, 2200);
+        });
+
         /* Scroll-spy: highlight the TOC link for the section in view */
         var spyIO = new IntersectionObserver(function (entries) {
             entries.forEach(function (entry) {
@@ -264,7 +339,7 @@
                         l.heading.id === id);
                 });
             });
-        }, { rootMargin: "-20% 0px -70% 0px" });
+        }, { rootMargin: "-80px 0px -70% 0px" });
         headings.forEach(function (item) { spyIO.observe(item.el); });
 
         /* Sync TOC position on scroll/resize (fixed element, needs offset) */
@@ -292,6 +367,59 @@
         badge.textContent = minutes + " min read";
         headerEl.appendChild(badge);
     }
+
+    /* ----- Breadcrumb + last-updated + version meta -----
+       Injects a hierarchy breadcrumb at the top of each page and a
+       "vX.Y.Z · updated <date>" meta line, so readers always know the
+       current docs version and where they are in the site. */
+    (function () {
+        var VERSION = "v0.3.0";
+        var UPDATED = "2026-08-14";
+        var REPO = "https://github.com/lenny-ts/caddy-analyzer";
+
+        var trail = {
+            "index.html": ["Overview"],
+            "installation.html": ["Overview", "Installation"],
+            "sources.html": ["Overview", "Log Sources"],
+            "subcommands.html": ["Overview", "Subcommands"],
+            "security.html": ["Overview", "Security Threats"],
+            "tui-html.html": ["Overview", "TUI & HTML Reports"]
+        };
+
+        var current = (location.pathname.split("/").pop() || "index.html").toLowerCase();
+        var crumbs = trail[current] || ["Overview"];
+
+        var pageHeader = document.querySelector(".page-header");
+        if (pageHeader) {
+            var breadcrumb = document.createElement("nav");
+            breadcrumb.className = "breadcrumb";
+            breadcrumb.setAttribute("aria-label", "Breadcrumb");
+            var ul = document.createElement("ol");
+            crumbs.forEach(function (label, i) {
+                var li = document.createElement("li");
+                var a = document.createElement("a");
+                if (i === crumbs.length - 1) {
+                    a.className = "breadcrumb-current";
+                    a.setAttribute("aria-current", "page");
+                } else {
+                    a.href = "index.html";
+                }
+                a.textContent = label;
+                li.appendChild(a);
+                ul.appendChild(li);
+            });
+            breadcrumb.appendChild(ul);
+            pageHeader.insertBefore(breadcrumb, pageHeader.firstChild);
+
+            var meta = document.createElement("p");
+            meta.className = "doc-meta";
+            meta.innerHTML =
+                '<a href="' + REPO + '/releases" rel="noopener">' + VERSION + "</a>" +
+                ' · updated <time datetime="' + UPDATED + '">' + UPDATED + "</time>" +
+                ' · <a href="' + REPO + '" rel="noopener">GitHub</a>';
+            pageHeader.appendChild(meta);
+        }
+    })();
 
     /* ----- Mobile hamburger nav toggle -----
        Injects a toggle button as first child of nav.doc-nav.
@@ -456,6 +584,220 @@
             }
         }, { passive: true });
     }
+
+    /* ===================================================================
+       ANIMATED GRADIENT BORDERS — inject .card-grad ring into cards.
+       Runs regardless of motion preference; the CSS disables the spin
+       under prefers-reduced-motion and falls back to a static ring.
+       =================================================================== */
+    (function () {
+        var targets = document.querySelectorAll(
+            ".feature-card, .doc-card, .threat-card, .stat"
+        );
+        targets.forEach(function (card) {
+            if (card.querySelector(".card-grad")) return;
+            var ring = document.createElement("i");
+            ring.className = "card-grad";
+            ring.setAttribute("aria-hidden", "true");
+            card.appendChild(ring);
+        });
+    })();
+
+    /* ===================================================================
+       CURSOR SPOTLIGHT + CLICK RIPPLE — a soft glow follows the pointer
+       and cards/buttons emit a ripple on press. Disabled on touch /
+       reduced-motion.
+       =================================================================== */
+    (function () {
+        if (prefersReduced || coarsePointer) return;
+
+        var glow = document.createElement("div");
+        glow.className = "cursor-glow";
+        glow.setAttribute("aria-hidden", "true");
+        document.body.appendChild(glow);
+
+        var mx = -100, my = -100, tx = -100, ty = -100, raf = null;
+        var loop = function () {
+            mx += (tx - mx) * 0.18;
+            my += (ty - my) * 0.18;
+            glow.style.transform =
+                "translate(" + (mx - 150) + "px," + (my - 150) + "px)";
+            raf = null;
+            if (Math.abs(tx - mx) > 0.5 || Math.abs(ty - my) > 0.5) {
+                raf = requestAnimationFrame(loop);
+            }
+        };
+        window.addEventListener("mousemove", function (e) {
+            tx = e.clientX;
+            ty = e.clientY;
+            if (!raf) raf = requestAnimationFrame(loop);
+        }, { passive: true });
+
+        document.addEventListener("mouseleave", function () {
+            glow.style.opacity = "0";
+        });
+        document.addEventListener("mouseenter", function () {
+            glow.style.opacity = "1";
+        });
+
+        document.addEventListener("pointerdown", function (e) {
+            if (e.pointerType !== "mouse") return;
+            var hit = e.target.closest(
+                ".feature-card, .doc-card, .threat-card, .stat, .btn, .doc-nav a"
+            );
+            if (!hit) return;
+            var r = hit.getBoundingClientRect();
+            var rip = document.createElement("span");
+            rip.className = "ripple";
+            rip.style.left = (e.clientX - r.left) + "px";
+            rip.style.top = (e.clientY - r.top) + "px";
+            hit.appendChild(rip);
+            setTimeout(function () { rip.remove(); }, 650);
+        });
+    })();
+
+    /* =====================================================================
+       PAGE-ENTRY SHEEN SWEEP — cinematic light sweep once on load
+       ===================================================================== */
+    (function () {
+        if (prefersReduced) return;
+        var sheen = document.createElement("div");
+        sheen.className = "page-sheen";
+        sheen.setAttribute("aria-hidden", "true");
+        document.body.appendChild(sheen);
+        setTimeout(function () { sheen.remove(); }, 1100);
+    })();
+
+    /* =====================================================================
+       STARFIELD / PARTICLES — site-wide drifting canvas
+       ===================================================================== */
+    (function () {
+        if (prefersReduced || coarsePointer) return;
+        var canvas = document.createElement("canvas");
+        canvas.className = "starfield-canvas";
+        canvas.setAttribute("aria-hidden", "true");
+        document.body.appendChild(canvas);
+        var ctx = canvas.getContext("2d");
+        if (!ctx) { canvas.remove(); return; }
+        var W, H, dpr, particles = [];
+        var mouse = { x: -9999, y: -9999 };
+        var running = true;
+
+        function resize() {
+            dpr = Math.min(window.devicePixelRatio || 1, 2);
+            W = window.innerWidth;
+            H = window.innerHeight;
+            canvas.width = W * dpr;
+            canvas.height = H * dpr;
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+            var count = Math.min(140, Math.floor(W * H / 16000));
+            particles = [];
+            for (var i = 0; i < count; i++) {
+                particles.push({
+                    x: Math.random() * W,
+                    y: Math.random() * H,
+                    r: Math.random() * 1.6 + 0.4,
+                    vx: (Math.random() - 0.5) * 0.25,
+                    vy: (Math.random() - 0.5) * 0.25,
+                    a: Math.random() * 0.5 + 0.15,
+                    tw: Math.random() * Math.PI * 2
+                });
+            }
+        }
+        window.addEventListener("resize", resize);
+        resize();
+
+        function draw(t) {
+            if (!running) return;
+            ctx.clearRect(0, 0, W, H);
+            for (var i = 0; i < particles.length; i++) {
+                var p = particles[i];
+                p.x += p.vx;
+                p.y += p.vy;
+                var dx = p.x - mouse.x;
+                var dy = p.y - mouse.y;
+                var dist = Math.sqrt(dx * dx + dy * dy);
+                if (dist < 140 && dist > 0.01) {
+                    p.x += dx / dist * 0.6;
+                    p.y += dy / dist * 0.6;
+                }
+                if (p.x < -20) p.x = W + 20;
+                if (p.x > W + 20) p.x = -20;
+                if (p.y < -20) p.y = H + 20;
+                if (p.y > H + 20) p.y = -20;
+                p.tw += 0.03;
+                var alpha = p.a * (0.6 + 0.4 * Math.sin(p.tw));
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+                ctx.fillStyle = "rgba(72, 209, 204, " + alpha.toFixed(3) + ")";
+                ctx.fill();
+                var link = p.r > 1.4;
+                if (link) {
+                    for (var j = i + 1; j < particles.length; j++) {
+                        var q = particles[j];
+                        var d2x = p.x - q.x;
+                        var d2y = p.y - q.y;
+                        var d2 = Math.sqrt(d2x * d2x + d2y * d2y);
+                        if (d2 < 90) {
+                            ctx.beginPath();
+                            ctx.moveTo(p.x, p.y);
+                            ctx.lineTo(q.x, q.y);
+                            ctx.strokeStyle = "rgba(56, 189, 248, " + (0.08 * (1 - d2 / 90)).toFixed(3) + ")";
+                            ctx.lineWidth = 1;
+                            ctx.stroke();
+                        }
+                    }
+                }
+            }
+            requestAnimationFrame(draw);
+        }
+        requestAnimationFrame(draw);
+
+        window.addEventListener("mousemove", function (e) {
+            mouse.x = e.clientX;
+            mouse.y = e.clientY;
+        }, { passive: true });
+
+        document.addEventListener("visibilitychange", function () {
+            running = !document.hidden;
+            if (running) requestAnimationFrame(draw);
+        });
+    })();
+
+    /* =====================================================================
+       SPARKLE TRAIL — gradient sparkles following the cursor
+       ===================================================================== */
+    (function () {
+        if (prefersReduced || coarsePointer) return;
+        var host = document.createElement("div");
+        host.className = "sparkle-trail";
+        host.setAttribute("aria-hidden", "true");
+        document.body.appendChild(host);
+        var last = 0;
+        window.addEventListener("mousemove", function (e) {
+            var now = Date.now();
+            if (now - last < 55) return;
+            last = now;
+            var s = document.createElement("span");
+            s.className = "sparkle";
+            s.style.left = e.clientX + "px";
+            s.style.top = e.clientY + "px";
+            s.style.setProperty("--dx", (Math.random() * 40 - 20) + "px");
+            s.style.setProperty("--dy", (Math.random() * -50 - 10) + "px");
+            host.appendChild(s);
+            setTimeout(function () { s.remove(); }, 900);
+        }, { passive: true });
+    })();
+
+    /* =====================================================================
+       LIVE-TRAFFIC HERO — enable pulsing dots when hero terminal is in view
+       ===================================================================== */
+    (function () {
+        if (prefersReduced) return;
+        var lt = document.getElementById("live-traffic");
+        if (!lt) return;
+        lt.classList.add("on");
+    })();
 
     /* =====================================================================
        PER-PAGE BACKGROUND — logo watermark on all pages (CSS-only)
@@ -650,7 +992,7 @@
 
             try {
                 var highlighted = highlight(raw);
-                pre.innerHTML = highlighted;
+                pre.innerHTML = "<code>" + highlighted + "</code>";
                 if (langLabel) pre.appendChild(langLabel);
                 if (copyBtn) pre.appendChild(copyBtn);
             } catch (e) {}
@@ -737,7 +1079,7 @@
                 if (btt) btt.click();
             }
             if (e.key.toLowerCase() === "g" && !e.ctrlKey && !e.metaKey) {
-                var ghLink = document.querySelector('a[href*="github.com/L9Lenny/caddy-analyzer"]');
+                var ghLink = document.querySelector('a[href*="github.com/lenny-ts/caddy-analyzer"]');
                 if (ghLink) window.open(ghLink.href, "_blank");
             }
         });
@@ -792,17 +1134,12 @@
 
         document.body.classList.add("page-enter");
 
-        var overlay = document.createElement("div");
-        overlay.className = "page-transition";
-        document.body.appendChild(overlay);
-
-        navigate = function (href) {
-            overlay.classList.add("active");
-            setTimeout(function () {
-                window.location.href = href;
-            }, 250);
-        };
-
+        /* Cross-document View Transitions handle the animation natively
+           (styles.css: @view-transition { navigation: auto }). For browsers
+           without the API the body.page-enter fade-in plays instead. We
+           only handle keyboard/modifier-free internal links to make sure
+           the transition actually fires (avoiding full-page reloads that
+           bypass the animation). */
         document.addEventListener("click", function (e) {
             var link = e.target.closest("a");
             if (!link) return;
@@ -911,7 +1248,7 @@
                 window.scrollTo({ top: 0, behavior: "smooth" });
             }},
             { title: "Go to GitHub", kind: "Action", run: function () {
-                window.open("https://github.com/L9Lenny/caddy-analyzer", "_blank");
+                window.open("https://github.com/lenny-ts/caddy-analyzer", "_blank");
             }},
             { title: "Show keyboard shortcuts", kind: "Action", run: function () {
                 var o = document.querySelector(".kbd-overlay");
@@ -946,6 +1283,36 @@
         var items = [];
         var selected = 0;
 
+        /* Cross-page full-text search index (built by tools/build-search-index.js).
+           Fetched once, merged into the palette so searches match content on
+           every docs page, not just the current one. */
+        var remoteItems = [];
+        var indexState = "pending";
+        var loadIndex = function () {
+            if (indexState !== "pending") return;
+            indexState = "loading";
+            fetch("search-index.json")
+                .then(function (r) { return r.json(); })
+                .then(function (data) {
+                    indexState = "ready";
+                    remoteItems = (data.entries || []).map(function (e) {
+                        return {
+                            title: e.title,
+                            kind: e.kind,
+                            href: e.href,
+                            page: e.page,
+                            body: (e.body || "").toLowerCase()
+                        };
+                    });
+                    if (overlay.classList.contains("open")) {
+                        buildItems();
+                        render(input.value);
+                    }
+                })
+                .catch(function () { indexState = "failed"; });
+        };
+        loadIndex();
+
         var buildItems = function () {
             items = PAGES.slice();
             ACTIONS.forEach(function (a) { items.push(a); });
@@ -955,13 +1322,46 @@
                     title: h.textContent.replace(/\s+/g, " ").trim(),
                     kind: h.tagName === "H2" ? "Section" : "Subsection",
                     href: "#" + h.id,
-                    heading: h
+                    heading: h,
+                    body: sectionText(h)
+                });
+            });
+            remoteItems.forEach(function (r) {
+                items.push({
+                    title: r.title,
+                    kind: r.kind,
+                    href: r.href,
+                    page: r.page,
+                    body: r.body
                 });
             });
         };
 
-        var score = function (q, text) {
-            q = q.toLowerCase(); text = text.toLowerCase();
+        /* Collect the plain text of a section up to the next heading, so the
+           palette can match and jump to content beyond just titles. */
+        var sectionText = function (heading) {
+            var parts = [];
+            var node = heading.nextElementSibling;
+            while (node && !/^H[1-6]$/.test(node.tagName)) {
+                if (node.querySelector && node.querySelector("h1,h2,h3,h4,h5,h6")) {
+                    break;
+                }
+                if (node.textContent) {
+                    var t = node.textContent.replace(/\s+/g, " ").trim();
+                    if (t) parts.push(t);
+                }
+                node = node.nextElementSibling;
+            }
+            return parts.join(" ").toLowerCase();
+        };
+
+        var score = function (q, text, body) {
+            q = q.toLowerCase();
+            text = text.toLowerCase();
+            var bodyScore = -1;
+            if (body && q.length > 1 && body.indexOf(q) !== -1) {
+                bodyScore = body.indexOf(q);
+            }
             if (!q) return 1;
             if (text.indexOf(q) !== -1) return 100 - text.indexOf(q);
             var qi = 0, score = 0, lastIdx = -1;
@@ -972,12 +1372,15 @@
                     qi++;
                 }
             }
-            return qi === q.length ? score : -1;
+            if (qi === q.length) return score;
+            /* Fall back to body-content match so full-text search works */
+            if (bodyScore >= 0) return 20 - Math.min(bodyScore, 20);
+            return -1;
         };
 
         var render = function (q) {
             var scored = items
-                .map(function (it) { return { it: it, s: score(q, it.title) }; })
+                .map(function (it) { return { it: it, s: score(q, it.title, it.body) }; })
                 .filter(function (x) { return x.s >= 0; })
                 .sort(function (a, b) { return b.s - a.s; })
                 .slice(0, 12)
@@ -999,7 +1402,12 @@
                 title.textContent = it.title;
                 var kind = document.createElement("span");
                 kind.className = "cmdk-item-kind cmdk-kind-" + it.kind.toLowerCase();
-                kind.textContent = it.kind;
+                if (it.page && it.kind !== "Page") {
+                    kind.textContent = it.page;
+                    kind.title = it.kind;
+                } else {
+                    kind.textContent = it.kind;
+                }
                 li.appendChild(title);
                 li.appendChild(kind);
                 li.addEventListener("mouseenter", function () {
@@ -1230,6 +1638,7 @@
     (function () {
         var LIMIT = 20;
         document.querySelectorAll("pre").forEach(function (pre) {
+            if (pre.closest(".callout, .no-copy")) return;
             var raw = pre.dataset.raw || pre.textContent;
             var lines = raw.split("\n").length;
             if (lines <= LIMIT) return;
@@ -1289,7 +1698,7 @@
         editLink.rel = "noopener";
         editLink.textContent = "Edit on GitHub \u2197";
         var page = location.pathname.split("/").pop();
-        editLink.href = "https://github.com/L9Lenny/caddy-analyzer/edit/main/docs/" + page;
+        editLink.href = "https://github.com/lenny-ts/caddy-analyzer/edit/main/docs/" + page;
 
         feedback.appendChild(editLink);
         wrap.appendChild(feedback);
@@ -1366,6 +1775,7 @@
         var gutter = document.createElement("span");
         gutter.className = "code-gutter";
         document.querySelectorAll("pre:not(.collapsible)").forEach(function (pre) {
+            if (pre.closest(".callout, .no-copy")) return;
             var raw = pre.dataset.raw || pre.textContent;
             var lines = raw.split("\n").length;
             if (lines < 3) return;
@@ -1540,12 +1950,18 @@
         var title = document.querySelector(".hero-title");
         var sub = document.querySelector(".hero-sub");
         var titleText = title ? title.textContent : "";
+        var subRaw = sub ? sub.innerHTML : "";
+        var subPlain = sub ? sub.textContent : "";
         var GLYPHS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789#$%&*<>{}[]/\\|=+";
+
+        /* Hide the subtitle immediately so it is only revealed via the
+           typewriter after the title decrypts (no flash of full text). */
+        if (sub && !prefersReduced) {
+            sub.textContent = "";
+        }
 
         function startSub() {
             if (!sub || prefersReduced) return;
-            var raw = sub.innerHTML;
-            var plain = sub.textContent;
             sub.textContent = "";
             var sc = document.createElement("span");
             sc.className = "typewriter-caret";
@@ -1553,13 +1969,13 @@
             sub.appendChild(sc);
             var j = 0;
             var typeSub = function () {
-                if (j < plain.length) {
-                    sub.textContent = plain.slice(0, j + 1);
+                if (j < subPlain.length) {
+                    sub.textContent = subPlain.slice(0, j + 1);
                     sub.appendChild(sc);
                     j++;
                     setTimeout(typeSub, 18);
                 } else {
-                    sub.innerHTML = raw;
+                    sub.innerHTML = subRaw;
                 }
             };
             setTimeout(typeSub, 200);
@@ -1875,6 +2291,7 @@
                 printLine("  caddy-analyze -f html -o report.html --detect access.log", "tdim");
             },
             detect: async function () {
+                bumpStats(1569, 2);
                 REPORT_HEADER();
                 await sleep(200);
                 printLine("[ALERT] THREAT ALERTS DETECTED (2 suspicious IPs)", "l-err");
@@ -1900,6 +2317,7 @@
                 printLine("Hint: Run 'sudo caddy-analyze guard' to auto-block malicious IPs via iptables", "tdim");
             },
             top: async function (args) {
+                bumpStats(1569, 0);
                 var dim = (args[0] || "ip").toLowerCase();
                 var dims = { path: "Top Requested Paths:", ip: "Top Remote IPs:", ua: "Top User-Agents:", status: "Top Status Codes:", method: "Top Methods:", host: "Top Hosts:", bandwidth: "Top Paths by Bandwidth:" };
                 if (!dims[dim]) { printLine("invalid dimension: " + dim + " (path, ip, ua, status, method, host, bandwidth)", "l-warn"); return; }
@@ -1933,6 +2351,7 @@
                 }
             },
             tail: async function () {
+                bumpStats(7, 0);
                 printLine("tailing access.log (streaming…)", "tk");
                 var rows = [
                     ["23:06:06", "404", "WARN", "GET", "/h/printtasks", "1.70 KB, 3.95ms", "2.58.137.2", "macOS/Safari", "\u2192 Admin"],
@@ -1966,6 +2385,7 @@
                 await sleep(600);
                 printLine("thresholds: auth 10 · 404s 40 · rps 200 · window 1m · ban 10m", "tdim");
                 await sleep(500);
+                bumpStats(159, 1);
                 printLine("[GUARD] 2.58.137.2 exceeded auth-failure limit (159\u00d7 401/403) \u2192 BANNED via iptables", "l-err");
                 await sleep(400);
                 printLine("[GUARD] rule added: iptables -A CADDY_ANALYZER -s 2.58.137.2 -j DROP (expires in 10m)", "l-err");
@@ -1988,6 +2408,7 @@
                 printLine("unbanned " + ip + " — only caddy-analyzer rules were touched", "l-ok");
             },
             diff: async function (args) {
+                bumpStats(5000, 0);
                 printLine("comparing before.log vs after.log…", "tk");
                 await sleep(500);
                 printLine("  RPS     1,219  \u2192  1,284   (+5.3%)  ", "tdim");
@@ -2019,6 +2440,59 @@
         };
 
         var KNOWN = ["help", "detect", "top", "tail", "guard", "block", "unban", "diff", "status", "export-sigma", "clear"];
+
+        var COMPLETE_DIMS = { top: ["ip", "path", "ua", "status", "method", "host", "bandwidth"] };
+
+        var autocomplete = function () {
+            var cur = hidden.value;
+            var parts = cur.split(/\s+/);
+            var last = parts[parts.length - 1];
+            var cmd = parts[0];
+
+            if (parts.length === 1) {
+                var bin = ["caddy-analyze", "caddy-analyzer"];
+                var match = bin.filter(function (b) { return b.indexOf(last) === 0; });
+                if (!match.length) return;
+                hidden.value = match[0] + " ";
+                echo.textContent = hidden.value;
+                return;
+            }
+
+            var name = null;
+            for (var i = 0; i < parts.length; i++) {
+                if (KNOWN.indexOf(parts[i]) !== -1) { name = parts[i]; break; }
+            }
+            if (!name) return;
+
+            if (parts[0] === "caddy-analyze" || /^\.?\/?caddy-analysis?$/.test(parts[0])) {
+                var cmds = KNOWN.filter(function (k) { return k.indexOf(last) === 0; });
+                if (cmds.length === 1) {
+                    parts[parts.length - 1] = cmds[0];
+                    hidden.value = parts.join(" ") + " ";
+                    echo.textContent = hidden.value;
+                } else if (cmds.length > 1) {
+                    flashCmds(cmds);
+                }
+                return;
+            }
+
+            var dims = COMPLETE_DIMS[name];
+            if (dims && parts[parts.length - 2] === name) {
+                var dMatch = dims.filter(function (d) { return d.indexOf(last) === 0; });
+                if (dMatch.length === 1) {
+                    parts[parts.length - 1] = dMatch[0];
+                    hidden.value = parts.join(" ") + " ";
+                    echo.textContent = hidden.value;
+                } else if (dMatch.length > 1) {
+                    flashCmds(dMatch);
+                }
+            }
+        };
+
+        var flashCmds = function (options) {
+            printLine(" " + options.join("  "), "tdim");
+            body.scrollTop = body.scrollHeight;
+        };
 
         var extractArgs = function (tokens) {
             var args = [];
@@ -2072,18 +2546,31 @@
             var step = function () {
                 if (i >= DEMO.length) return;
                 var d = DEMO[i];
-                echo.textContent = d[0];
                 hidden.value = "";
-                (function (d) {
+                typeLine(d[0], function () {
                     setTimeout(function () {
                         echo.textContent = "";
+                        hidden.value = "";
                         runCommand(d[0]);
-                    }, 1200);
-                }(d));
-                i++;
-                setTimeout(step, 13000);
+                        i++;
+                        setTimeout(step, 13500);
+                    }, 400);
+                });
             };
             step();
+        };
+
+        var typeLine = function (cmd, done) {
+            var idx = 0;
+            var timer = setInterval(function () {
+                idx += 1;
+                hidden.value = cmd.slice(0, idx);
+                echo.textContent = hidden.value;
+                if (idx >= cmd.length) {
+                    clearInterval(timer);
+                    done();
+                }
+            }, 45);
         };
 
         var focused = false;
@@ -2097,10 +2584,61 @@
             focused = false;
             term.classList.remove("term-focused");
         });
+
+        /* --- macOS-style traffic-light dots --- */
+        var statsEl = document.getElementById("term-stats");
+        var stats = { reqs: 0, blocks: 0 };
+        var bumpStats = function (r, b) {
+            if (b) stats.blocks += b;
+            if (r) stats.reqs += r;
+            if (statsEl) {
+                statsEl.textContent =
+                    "reqs " + stats.reqs.toLocaleString("en-US") +
+                    " · blocks " + stats.blocks;
+            }
+        };
+        var red = term.querySelector(".d-red");
+        var yellow = term.querySelector(".d-yellow");
+        var green = term.querySelector(".d-green");
+        if (red) {
+            red.addEventListener("click", function (e) {
+                e.stopPropagation();
+                COMMANDS.clear();
+            });
+            red.addEventListener("keydown", function (e) {
+                if (e.key === "Enter" || e.key === " ") { e.preventDefault(); COMMANDS.clear(); }
+            });
+        }
+        if (yellow) {
+            yellow.addEventListener("click", function (e) {
+                e.stopPropagation();
+                term.classList.toggle("term-min");
+            });
+            yellow.addEventListener("keydown", function (e) {
+                if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    term.classList.toggle("term-min");
+                }
+            });
+        }
+        if (green) {
+            green.addEventListener("click", function (e) {
+                e.stopPropagation();
+                focusTerm();
+            });
+            green.addEventListener("keydown", function (e) {
+                if (e.key === "Enter" || e.key === " ") { e.preventDefault(); focusTerm(); }
+            });
+        }
         hidden.addEventListener("input", function () {
             echo.textContent = hidden.value;
         });
         hidden.addEventListener("keydown", function (e) {
+            if (e.key === "Tab") {
+                e.preventDefault();
+                autocomplete();
+                return;
+            }
             if (e.key === "Enter") {
                 var v = hidden.value;
                 echo.textContent = "";

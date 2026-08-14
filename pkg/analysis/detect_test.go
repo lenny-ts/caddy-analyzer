@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/L9Lenny/caddy-analyzer/pkg/types"
+	"github.com/lenny-ts/caddy-analyzer/pkg/types"
 )
 
 func TestDetectorSignatures(t *testing.T) {

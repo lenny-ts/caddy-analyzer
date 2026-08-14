@@ -8,7 +8,7 @@ set -euo pipefail
 # caddy-analyze static binary installer
 # Supports: Linux (amd64, arm64, armv7, 386), macOS (amd64, arm64)
 
-REPO="L9Lenny/caddy-analyzer"
+REPO="lenny-ts/caddy-analyzer"
 BINARY_NAME="caddy-analyze"
 
 OS="$(uname -s | tr '[:upper:]' '[:lower:]')"

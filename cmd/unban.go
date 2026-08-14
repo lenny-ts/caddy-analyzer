@@ -6,8 +6,8 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/L9Lenny/caddy-analyzer/pkg/audit"
-	"github.com/L9Lenny/caddy-analyzer/pkg/guard"
+	"github.com/lenny-ts/caddy-analyzer/pkg/audit"
+	"github.com/lenny-ts/caddy-analyzer/pkg/guard"
 )
 
 var unbanCmd = &cobra.Command{

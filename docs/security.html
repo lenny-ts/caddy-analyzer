@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="view-transition" content="same-origin">
     <title>Threat Engine Guide — caddy-analyzer</title>
     <meta name="description" content="26-category evasion-resistant threat detection engine: SQLi, XSS, Log4j, RCE, JWT, beaconing, path traversal. MITRE ATT&CK tagged, Sigma export, IOC defanging, iptables auto-blocking.">
     <meta name="theme-color" content="#0a0a0c">
@@ -10,8 +11,8 @@
     <meta property="og:title" content="Threat Engine Guide — caddy-analyzer">
     <meta property="og:description" content="26-category threat detection: SQLi, XSS, Log4j, RCE, JWT, beaconing. MITRE tagged, Sigma export, iptables firewall guard.">
     <meta property="og:type" content="website">
-    <meta property="og:url" content="https://l9lenny.github.io/caddy-analyzer/docs/security.html">
-    <meta property="og:image" content="https://l9lenny.github.io/caddy-analyzer/docs/og-image.svg">
+    <meta property="og:url" content="https://lenny-ts.github.io/caddy-analyzer/security.html">
+    <meta property="og:image" content="https://lenny-ts.github.io/caddy-analyzer/og-image.png">
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="Threat Engine Guide — caddy-analyzer">
     <meta name="twitter:description" content="26-category threat detection: SQLi, XSS, Log4j, RCE, JWT, beaconing. MITRE tagged, Sigma export, iptables firewall guard.">
@@ -19,11 +20,13 @@
     <meta name="doc:modified" content="2026-08-05T23:34:51+00:00">
     <meta name="color-scheme" content="dark light">
     <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="apple-touch-icon.png">
+    <link rel="canonical" href="https://lenny-ts.github.io/caddy-analyzer/security.html">
     <link rel="dns-prefetch" href="//github.com">
     <link rel="dns-prefetch" href="//pkg.go.dev">
     <link rel="preconnect" href="//github.com">
     <link rel="prefetch" href="tui-html.html">
-    <link rel="stylesheet" href="styles.min.css">
+    <link rel="stylesheet" href="styles.min.css?v=25">
     <script type="speculationrules">{"prefetch":[{"where":{"href_matches":"/*.html"},"eagerness":"moderate"}]}</script>
 </head>
 <body>
@@ -126,7 +129,7 @@
                 <div class="threat-card">
                     <h3 class="threat-name"><span class="threat-icon" aria-hidden="true">☕</span>Log4j / JNDI</h3>
                     <p class="threat-patterns"><code>${jndi:ldap://</code>, <code>${env:</code>, <code>${lower:jndi</code>, <code>${::-j}</code></p>
-                    <p class="threat-meta"><span class="mitre-tag">T1190</span> <span class="mitre-tag">T1059</span> <span class="conf-tag">conf 8–9</span></p>
+                    <p class="threat-meta"><span class="mitre-tag">T1190</span> <span class="mitre-tag">T1059</span> <span class="conf-tag">conf 5–10</span></p>
                 </div>
                 <div class="threat-card">
                     <h3 class="threat-name"><span class="threat-icon" aria-hidden="true">📄</span>XXE / XInclude</h3>
@@ -136,7 +139,7 @@
                 <div class="threat-card">
                     <h3 class="threat-name"><span class="threat-icon" aria-hidden="true">↪️</span>Open Redirect</h3>
                     <p class="threat-patterns"><code>?url=http://</code>, <code>?redirect=//</code>, <code>//evil.com</code>, <code>?url=/\</code></p>
-                    <p class="threat-meta"><span class="mitre-tag">T1566.002</span> <span class="conf-tag">conf 6–8</span></p>
+                    <p class="threat-meta"><span class="mitre-tag">T1566.002</span> <span class="conf-tag">conf 7</span></p>
                 </div>
                 <div class="threat-card">
                     <h3 class="threat-name"><span class="threat-icon" aria-hidden="true">🔑</span>LDAP Injection</h3>
@@ -146,7 +149,7 @@
                 <div class="threat-card">
                     <h3 class="threat-name"><span class="threat-icon" aria-hidden="true">🧭</span>XPath Injection</h3>
                     <p class="threat-patterns"><code>]|//*</code>, <code>.//*</code></p>
-                    <p class="threat-meta"><span class="mitre-tag">T1190</span> <span class="conf-tag">conf 6–8</span></p>
+                    <p class="threat-meta"><span class="mitre-tag">T1190</span> <span class="conf-tag">conf 7</span></p>
                 </div>
                 <div class="threat-card">
                     <h3 class="threat-name"><span class="threat-icon" aria-hidden="true">↩️</span>CRLF / Log Injection</h3>
@@ -171,17 +174,17 @@
                 <div class="threat-card">
                     <h3 class="threat-name"><span class="threat-icon" aria-hidden="true">🎟️</span>JWT Abuse</h3>
                     <p class="threat-patterns"><code>"alg":"none"</code> bypass, JWT token in URI, <code>kid</code> path traversal, Bearer token leak</p>
-                    <p class="threat-meta"><span class="mitre-tag">T1550.001</span> <span class="mitre-tag">T1190</span> <span class="conf-tag">conf 6–8</span></p>
+                    <p class="threat-meta"><span class="mitre-tag">T1550.001</span> <span class="mitre-tag">T1190</span> <span class="conf-tag">conf 4–10</span></p>
                 </div>
                 <div class="threat-card">
                     <h3 class="threat-name"><span class="threat-icon" aria-hidden="true">🔢</span>Object Enumeration (BOLA/IDOR)</h3>
                     <p class="threat-patterns">Sequential ID enumeration per path template (≥10 distinct IDs on <code>/api/users/{id}</code>)</p>
-                    <p class="threat-meta"><span class="mitre-tag">T1595.002</span> <span class="mitre-tag">T1190</span> <span class="conf-tag">conf 6–7 · behavioral</span></p>
+                    <p class="threat-meta"><span class="mitre-tag">T1595.002</span> <span class="mitre-tag">T1190</span> <span class="conf-tag">conf 7 · behavioral</span></p>
                 </div>
                 <div class="threat-card">
                     <h3 class="threat-name"><span class="threat-icon" aria-hidden="true">🛰️</span>Beaconing / C2</h3>
                     <p class="threat-patterns">Periodic callback detection (inter-arrival CV &lt; 0.25, 10–50 samples per path)</p>
-                    <p class="threat-meta"><span class="mitre-tag">T1071.001</span> <span class="mitre-tag">T1573</span> <span class="conf-tag">conf 7 · behavioral</span></p>
+                    <p class="threat-meta"><span class="mitre-tag">T1071.001</span> <span class="mitre-tag">T1573</span> <span class="conf-tag">conf 6 · behavioral</span></p>
                 </div>
                 <div class="threat-card">
                     <h3 class="threat-name"><span class="threat-icon" aria-hidden="true">📦</span>LFI Wrapper Abuse</h3>
@@ -191,12 +194,12 @@
                 <div class="threat-card">
                     <h3 class="threat-name"><span class="threat-icon" aria-hidden="true">🔐</span>Sensitive File Probes</h3>
                     <p class="threat-patterns"><code>.env</code>, <code>.git/config</code>, <code>id_rsa</code>, <code>dump.sql</code>, <code>phpinfo.php</code></p>
-                    <p class="threat-meta"><span class="mitre-tag">T1083</span> <span class="mitre-tag">T1552.001</span> <span class="conf-tag">conf 6–9</span></p>
+                    <p class="threat-meta"><span class="mitre-tag">T1083</span> <span class="mitre-tag">T1552.001</span> <span class="conf-tag">conf 4–9</span></p>
                 </div>
                 <div class="threat-card">
                     <h3 class="threat-name"><span class="threat-icon" aria-hidden="true">🛠️</span>Admin Probes</h3>
                     <p class="threat-patterns"><code>/phpmyadmin</code>, <code>/actuator/*</code>, <code>/h2-console</code>, <code>/swagger-ui</code></p>
-                    <p class="threat-meta"><span class="mitre-tag">T1595.002</span> <span class="conf-tag">conf 6–8</span></p>
+                    <p class="threat-meta"><span class="mitre-tag">T1595.002</span> <span class="conf-tag">conf 5–9</span></p>
                 </div>
                 <div class="threat-card">
                     <h3 class="threat-name"><span class="threat-icon" aria-hidden="true">📰</span>WordPress Probes</h3>
@@ -206,12 +209,12 @@
                 <div class="threat-card">
                     <h3 class="threat-name"><span class="threat-icon" aria-hidden="true">🖥️</span>CGI Probes</h3>
                     <p class="threat-patterns"><code>/cgi-bin/</code>, <code>.cgi</code>, <code>.fcgi</code></p>
-                    <p class="threat-meta"><span class="mitre-tag">T1595.002</span> <span class="conf-tag">conf 6–8</span></p>
+                    <p class="threat-meta"><span class="mitre-tag">T1595.002</span> <span class="conf-tag">conf 5–7</span></p>
                 </div>
                 <div class="threat-card">
                     <h3 class="threat-name"><span class="threat-icon" aria-hidden="true">🔭</span>Scanner Tools</h3>
                     <p class="threat-patterns"><code>sqlmap</code>, <code>nuclei</code>, <code>gobuster</code>, <code>ffuf</code>, <code>wpscan</code>, <code>masscan</code>, <code>hydra</code>, <code>metasploit</code>, <code>shodan</code></p>
-                    <p class="threat-meta"><span class="mitre-tag">T1595</span> <span class="conf-tag">conf 8–10</span></p>
+                    <p class="threat-meta"><span class="mitre-tag">T1595</span> <span class="conf-tag">conf 9</span></p>
                 </div>
             </div>
         </section>
@@ -229,7 +232,9 @@
             <p>Use <code>--audit-log &lt;path&gt;</code> to record every block and unblock action as a JSON-lines file. Each entry includes timestamp, action, IP, reason, ban duration, and the user who ran the command. The file is created with <code>0600</code> permissions. Available on <code>guard</code>, <code>block</code>, and <code>unban</code> subcommands.</p>
 <pre>sudo caddy-analyze guard --audit-log /var/log/caddy-analyzer/audit.jsonl docker://my-caddy
 # Example entry:
-{"ts":"2025-01-15T14:29:01Z","action":"block","ip":"203.0.113.5","reason":"threshold_exceeded","duration":"24h0m0s","user":"root"}</pre>
+{"ts":"2025-01-15T14:29:01Z","action":"block","ip":"203.0.113.5","reason":"12 malicious request(s)","duration":"24h0m0s","user":"root"}
+# Other reasons you may see: "<N> auth failures", "<N> not found", "<N> requests",
+# "<N> requests from <CIDR> (distributed scan)", "cred_stuffing", "threat_intel: <source> score=<n> (...)"</pre>
 
             <h3>State Persistence</h3>
             <p>Use <code>--state-file &lt;path&gt;</code> to persist blocked-IP state across guard restarts. When the guard daemon restarts, it reloads previously blocked IPs, cleans up expired bans, and resumes enforcement. Without this flag, all bans are lost on restart. The <code>block</code> and <code>unban</code> commands also accept <code>--state-file</code> to sync manual blocks/unbans with the guard's persisted state.</p>
@@ -285,14 +290,14 @@ caddy-analyze top ip --defang access.log
 caddy-analyze tail --defang access.log</pre>
         </section>
 
-        <div class="footer reveal">
-            <p>caddy-analyzer is open-source software released under the <a href="https://github.com/L9Lenny/caddy-analyzer/blob/main/LICENSE">MIT License</a>.</p>
-        </div>
+        <footer class="footer reveal">
+            <p>caddy-analyzer is open-source software released under the <a href="https://github.com/lenny-ts/caddy-analyzer/blob/main/LICENSE">MIT License</a>.</p>
+        </footer>
 
     </main>
 
     <button class="back-to-top" aria-label="Back to top">↑</button>
-    <script src="docs.min.js" defer></script>
+    <script src="docs.min.js?v=25" defer></script>
 
 </body>
 </html>

@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="view-transition" content="same-origin">
     <title>TUI & HTML Reports — caddy-analyzer</title>
     <meta name="description" content="6-tab interactive terminal dashboard (--watch) and standalone dark-mode HTML web reports (-f html). Live streaming, real-time threat detection, shareable outputs.">
     <meta name="theme-color" content="#0a0a0c">
@@ -10,8 +11,8 @@
     <meta property="og:title" content="TUI & HTML Reports — caddy-analyzer">
     <meta property="og:description" content="6-tab interactive TUI dashboard and standalone dark-mode HTML web reports.">
     <meta property="og:type" content="website">
-    <meta property="og:url" content="https://l9lenny.github.io/caddy-analyzer/docs/tui-html.html">
-    <meta property="og:image" content="https://l9lenny.github.io/caddy-analyzer/docs/og-image.svg">
+    <meta property="og:url" content="https://lenny-ts.github.io/caddy-analyzer/tui-html.html">
+    <meta property="og:image" content="https://lenny-ts.github.io/caddy-analyzer/og-image.png">
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="TUI & HTML Reports — caddy-analyzer">
     <meta name="twitter:description" content="6-tab interactive TUI dashboard and standalone dark-mode HTML web reports.">
@@ -19,11 +20,13 @@
     <meta name="doc:modified" content="2026-07-29T16:47:05+00:00">
     <meta name="color-scheme" content="dark light">
     <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="apple-touch-icon.png">
+    <link rel="canonical" href="https://lenny-ts.github.io/caddy-analyzer/tui-html.html">
     <link rel="dns-prefetch" href="//github.com">
     <link rel="dns-prefetch" href="//pkg.go.dev">
     <link rel="preconnect" href="//github.com">
     <link rel="prefetch" href="index.html">
-    <link rel="stylesheet" href="styles.min.css">
+    <link rel="stylesheet" href="styles.min.css?v=25">
     <script type="speculationrules">{"prefetch":[{"where":{"href_matches":"/*.html"},"eagerness":"moderate"}]}</script>
 </head>
 <body>
@@ -63,7 +66,7 @@
                 <div class="feature-card">
                     <span class="feature-icon" aria-hidden="true">📊</span>
                     <h3>1 · Summary</h3>
-                    <p>Overview of total requests, RPS, 5xx error rate, latency percentiles, and traffic classification.</p>
+                    <p>Overview of total requests, RPS, status-code breakdown (2xx–5xx), response sizes, and latency percentiles (min/avg/max, P50, P95).</p>
                 </div>
                 <div class="feature-card">
                     <span class="feature-icon" aria-hidden="true">🌊</span>
@@ -72,23 +75,23 @@
                 </div>
                 <div class="feature-card">
                     <span class="feature-icon" aria-hidden="true">🚨</span>
-                    <h3>3 · Security Alerts</h3>
-                    <p>Real-time threat alerts (SQLi, XSS, RCE, probe attempts).</p>
+                    <h3>3 · Security</h3>
+                    <p>Security status: shows "CLEAR", or lists the top suspicious client IPs by number of detected malicious requests.</p>
                 </div>
                 <div class="feature-card">
                     <span class="feature-icon" aria-hidden="true">🌐</span>
                     <h3>4 · Top IPs</h3>
-                    <p>Sortable table of top requesting client IP addresses.</p>
+                    <p>Table of the top 20 requesting client IP addresses (ranked by request count).</p>
                 </div>
                 <div class="feature-card">
                     <span class="feature-icon" aria-hidden="true">🛤️</span>
                     <h3>5 · Top Paths</h3>
-                    <p>Table of top requested HTTP endpoints.</p>
+                    <p>Table of the top 20 requested HTTP endpoints (ranked by request count).</p>
                 </div>
                 <div class="feature-card">
                     <span class="feature-icon" aria-hidden="true">🤖</span>
                     <h3>6 · User Agents</h3>
-                    <p>Classification table of user agents (browsers vs bots).</p>
+                    <p>Numbered list of the top 15 user agents (ranked by request count).</p>
                 </div>
             </div>
 
@@ -110,7 +113,8 @@
                         <tr><td><code>q</code>, <code>Ctrl+C</code>, <code>Esc</code></td><td>Quit the dashboard</td></tr>
                     </tbody>
                 </table>
-            </div>
+                </div>
+                <p>The dashboard auto-resets its internal counters every 5 minutes so long <code>--watch</code> sessions don't accumulate unbounded state; <code>r</code> resets immediately.</p>
         </section>
 
         <section class="reveal">
@@ -129,19 +133,19 @@ caddy-analyze -f csv -o report.csv /var/log/caddy/access.log</pre>
         </section>
 
         <section class="reveal">
-            <h2>Interactive HTML Report Preview</h2>
+            <h2>4. Interactive HTML Report Preview</h2>
             <p>Live preview of the standalone HTML report format:</p>
-            <iframe src="demo.html" title="HTML Report Preview" loading="lazy"></iframe>
+            <iframe src="demo.html" title="HTML Report Preview" width="1280" height="720" loading="lazy"></iframe>
         </section>
 
-        <div class="footer reveal">
-            <p>caddy-analyzer is open-source software released under the <a href="https://github.com/L9Lenny/caddy-analyzer/blob/main/LICENSE">MIT License</a>.</p>
-        </div>
+        <footer class="footer reveal">
+            <p>caddy-analyzer is open-source software released under the <a href="https://github.com/lenny-ts/caddy-analyzer/blob/main/LICENSE">MIT License</a>.</p>
+        </footer>
 
     </main>
 
     <button class="back-to-top" aria-label="Back to top">↑</button>
-    <script src="docs.min.js" defer></script>
+    <script src="docs.min.js?v=25" defer></script>
 
 </body>
 </html>

@@ -1,5 +1,5 @@
 /* caddy-analyzer docs — stale-while-revalidate service worker */
-var CACHE = "caddy-docs-v5";
+var CACHE = "caddy-docs-v29";
 var ASSETS = [
     "index.html",
     "installation.html",
@@ -8,10 +8,17 @@ var ASSETS = [
     "security.html",
     "tui-html.html",
     "404.html",
-    "styles.min.css",
-    "docs.min.js",
+    "demo.html",
+    "search-index.json",
+    "styles.min.css?v=25",
+    "docs.min.js?v=25",
     "manifest.json",
-    "og-image.svg"
+    "og-image.svg",
+    "og-image.png",
+    "icon.svg",
+    "icon-192.png",
+    "icon-512.png",
+    "apple-touch-icon.png"
 ];
 
 self.addEventListener("install", function (e) {

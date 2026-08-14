@@ -15,6 +15,9 @@ npx --yes esbuild docs/styles.css --minify --outfile=docs/styles.min.css
 echo "Minifying JS..."
 npx --yes esbuild docs/docs.js --minify --outfile=docs/docs.min.js
 
+echo "Building search index..."
+node tools/build-search-index.js
+
 echo "Done."
 echo "  styles.css  $(wc -c < docs/styles.css) -> $(wc -c < docs/styles.min.css) bytes"
 echo "  docs.js     $(wc -c < docs/docs.js) -> $(wc -c < docs/docs.min.js) bytes"
