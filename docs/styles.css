@@ -378,6 +378,7 @@ a:focus-visible, button:focus-visible {
     font-weight: 700;
     letter-spacing: -0.02em;
     line-height: 1.05;
+    min-height: 1.1em;
     background: linear-gradient(110deg, var(--grad-1), var(--grad-2) 40%, var(--grad-3));
     background-size: 200% 100%;
     -webkit-background-clip: text;
@@ -396,6 +397,7 @@ a:focus-visible, button:focus-visible {
     max-width: 640px;
     margin: 0 auto 2rem;
     text-wrap: pretty;
+    min-height: 3.2em;
 }
 .hero-badges {
     display: flex;
@@ -3247,6 +3249,7 @@ main h3.glitch-hover code {
     align-items: center;
     gap: .4rem;
     padding-bottom: .4rem;
+    min-height: 1.6em;
 }
 .term-echo { min-height: 1.1em; color: var(--text); white-space: pre; }
 .term-cursor {
