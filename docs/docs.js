@@ -390,7 +390,7 @@
         var crumbs = trail[current] || ["Overview"];
 
         var pageHeader = document.querySelector(".page-header");
-        if (pageHeader) {
+        if (pageHeader && !pageHeader.querySelector(".breadcrumb")) {
             var breadcrumb = document.createElement("nav");
             breadcrumb.className = "breadcrumb";
             breadcrumb.setAttribute("aria-label", "Breadcrumb");
@@ -411,13 +411,15 @@
             breadcrumb.appendChild(ul);
             pageHeader.insertBefore(breadcrumb, pageHeader.firstChild);
 
-            var meta = document.createElement("p");
-            meta.className = "doc-meta";
-            meta.innerHTML =
-                '<a href="' + REPO + '/releases" rel="noopener">' + VERSION + "</a>" +
-                ' · updated <time datetime="' + UPDATED + '">' + UPDATED + "</time>" +
-                ' · <a href="' + REPO + '" rel="noopener">GitHub</a>';
-            pageHeader.appendChild(meta);
+            if (!pageHeader.querySelector(".doc-meta")) {
+                var meta = document.createElement("p");
+                meta.className = "doc-meta";
+                meta.innerHTML =
+                    '<a href="' + REPO + '/releases" rel="noopener">' + VERSION + "</a>" +
+                    ' · updated <time datetime="' + UPDATED + '">' + UPDATED + "</time>" +
+                    ' · <a href="' + REPO + '" rel="noopener">GitHub</a>';
+                pageHeader.appendChild(meta);
+            }
         }
     })();
 
@@ -1311,7 +1313,9 @@
                 })
                 .catch(function () { indexState = "failed"; });
         };
-        loadIndex();
+        /* Deferred: fetch the cross-page index only when the palette is first
+           opened, so search-index.json is not part of the initial page-load
+           critical path. */
 
         var buildItems = function () {
             items = PAGES.slice();
@@ -1449,6 +1453,7 @@
         };
 
         var open = function () {
+            loadIndex();
             buildItems();
             input.value = "";
             render("");
@@ -2193,6 +2198,7 @@
     (function () {
         var hero = document.querySelector(".hero");
         if (!hero) return;
+        if (hero.parentNode.querySelector(".ticker-strip")) return;
         var next = hero.nextElementSibling;
         var items = [
             ["<strong>26</strong> threat categories"],
