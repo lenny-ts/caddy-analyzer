@@ -206,6 +206,7 @@
         window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     var coarsePointer = window.matchMedia &&
         window.matchMedia("(pointer: coarse)").matches;
+    var isErrorPage = document.body.classList.contains("error-page");
 
     /* ----- Page order for prev/next navigation + keyboard shortcuts ----- */
     var PAGES = [
@@ -611,7 +612,7 @@
        reduced-motion.
        =================================================================== */
     (function () {
-        if (prefersReduced || coarsePointer) return;
+        if (prefersReduced || coarsePointer || isErrorPage) return;
 
         var glow = document.createElement("div");
         glow.className = "cursor-glow";
@@ -662,7 +663,7 @@
        PAGE-ENTRY SHEEN SWEEP — cinematic light sweep once on load
        ===================================================================== */
     (function () {
-        if (prefersReduced) return;
+        if (prefersReduced || isErrorPage) return;
         var sheen = document.createElement("div");
         sheen.className = "page-sheen";
         sheen.setAttribute("aria-hidden", "true");
@@ -674,7 +675,7 @@
        STARFIELD / PARTICLES — site-wide drifting canvas
        ===================================================================== */
     (function () {
-        if (prefersReduced || coarsePointer) return;
+        if (prefersReduced || coarsePointer || isErrorPage) return;
         var canvas = document.createElement("canvas");
         canvas.className = "starfield-canvas";
         canvas.setAttribute("aria-hidden", "true");
@@ -770,7 +771,7 @@
        SPARKLE TRAIL — gradient sparkles following the cursor
        ===================================================================== */
     (function () {
-        if (prefersReduced || coarsePointer) return;
+        if (prefersReduced || coarsePointer || isErrorPage) return;
         var host = document.createElement("div");
         host.className = "sparkle-trail";
         host.setAttribute("aria-hidden", "true");
@@ -805,7 +806,7 @@
        PER-PAGE BACKGROUND — logo watermark on all pages (CSS-only)
        ===================================================================== */
     (function () {
-        if (prefersReduced) return;
+        if (prefersReduced || isErrorPage) return;
 
         var scan = document.createElement("div");
         scan.className = "scanlines";
@@ -1014,7 +1015,8 @@
         var panel = document.createElement("div");
         panel.className = "kbd-panel";
 
-        var h3 = document.createElement("h3");
+        var h3 = document.createElement("div");
+        h3.className = "kbd-panel-title";
         h3.textContent = "Keyboard Shortcuts";
         panel.appendChild(h3);
 
@@ -1875,7 +1877,7 @@
        NPROGRESS-STYLE LOAD BAR
        =================================================================== */
     (function () {
-        if (prefersReduced) return;
+        if (prefersReduced || isErrorPage) return;
         var bar = document.createElement("div");
         bar.className = "load-bar";
         var fill = document.createElement("div");
@@ -1909,7 +1911,7 @@
        SKELETON LOADER — shimmer overlay, removed on load
        =================================================================== */
     (function () {
-        if (prefersReduced) return;
+        if (prefersReduced || isErrorPage) return;
         var main = document.querySelector("main");
         if (!main) return;
         var overlay = document.createElement("div");

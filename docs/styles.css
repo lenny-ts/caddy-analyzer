@@ -1776,7 +1776,7 @@ pre .tok-command { color: #48d1cc; }
 .kbd-overlay.open .kbd-panel {
     transform: translateY(0) scale(1);
 }
-.kbd-panel h3 {
+.kbd-panel h3, .kbd-panel .kbd-panel-title {
     margin: 0 0 1.2rem;
     font-size: 1.1rem;
     color: var(--text);
