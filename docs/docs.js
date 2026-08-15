@@ -822,7 +822,7 @@
     })();
 
     /* =====================================================================
-       PER-PAGE BACKGROUND — logo watermark on all pages (CSS-only)
+       PER-PAGE BACKGROUND — scanlines overlay + pause-on-hidden
        ===================================================================== */
     (function () {
         if (prefersReduced || isErrorPage) return;
@@ -831,17 +831,6 @@
         scan.className = "scanlines";
         scan.setAttribute("aria-hidden", "true");
         document.body.appendChild(scan);
-
-        /* Pause CSS animations when tab hidden to save CPU/GPU */
-        document.addEventListener("visibilitychange", function () {
-            document.body.style.animationPlayState = document.hidden ? "paused" : "running";
-            var animated = document.querySelectorAll(
-                ".bg-logo-watermark, .bg-logo-watermark span, .aurora, .aurora *"
-            );
-            animated.forEach(function (el) {
-                el.style.animationPlayState = document.hidden ? "paused" : "running";
-            });
-        });
     })();
 
     /* ===================================================================
