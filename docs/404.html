@@ -27,12 +27,14 @@
                     document.documentElement.setAttribute("data-theme", "light");
             } catch (e) {}
         })();
+        document.documentElement.classList.add("decor-paused");
     </script>
-    <meta name="doc:modified" content="2026-08-15T00:09:21+02:00">
+    <meta name="doc:modified" content="2026-08-15T13:06:49+02:00">
     <link rel="manifest" href="manifest.json">
     <link rel="apple-touch-icon" href="apple-touch-icon.png">
     <link rel="canonical" href="https://lenny-ts.github.io/caddy-analyzer/index.html">
-    <link rel="stylesheet" href="styles.min.css?v=25">
+    <link rel="preload" as="style" href="styles.min.css?v=25" onload="this.onload=null;this.rel='stylesheet'">
+    <noscript><link rel="stylesheet" href="styles.min.css?v=25"></noscript>
     <style>
         body.error-page {
             min-height: 100vh;

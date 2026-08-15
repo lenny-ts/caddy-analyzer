@@ -50,8 +50,33 @@
                 }
             });
         }, { threshold: 0.08, rootMargin: "0px 0px -40px 0px" });
-        revealEls.forEach(function (el) { io.observe(el); });
+        revealEls.forEach(function (el) {
+            if (el.getBoundingClientRect().top < window.innerHeight) {
+                el.classList.add("in");
+            } else {
+                io.observe(el);
+            }
+        });
     }
+
+    /* Resume decorative animations only after real user interaction (scroll,
+   pointer/key) or after a generous delay so the initial load stays free of
+   continuous style-layout work — which keeps LCP/TBT fast. */
+    (function () {
+        var resumed = false;
+        var resume = function () {
+            if (resumed) return;
+            resumed = true;
+            document.documentElement.classList.remove("decor-paused");
+            ["scroll", "pointerdown", "pointermove", "keydown", "touchstart"].forEach(function (ev) {
+                window.removeEventListener(ev, resume, { passive: true });
+            });
+        };
+        ["scroll", "pointerdown", "pointermove", "keydown", "touchstart"].forEach(function (ev) {
+            window.addEventListener(ev, resume, { passive: true });
+        });
+        setTimeout(resume, 8000);
+    })();
 
     /* ----- Anchor links on h2/h3 ----- */
     var slugify = function (text) {
@@ -122,7 +147,13 @@
                 }
             });
         }, { threshold: 0.4 });
-        cin.forEach(function (h2) { cinIO.observe(h2); });
+        cin.forEach(function (h2) {
+            if (h2.getBoundingClientRect().top < window.innerHeight) {
+                h2.classList.add("in");
+            } else {
+                cinIO.observe(h2);
+            }
+        });
     })();
 
     /* ----- Copy-to-clipboard buttons + language labels on <pre> ----- */
@@ -660,18 +691,6 @@
     })();
 
     /* =====================================================================
-       PAGE-ENTRY SHEEN SWEEP — cinematic light sweep once on load
-       ===================================================================== */
-    (function () {
-        if (prefersReduced || isErrorPage) return;
-        var sheen = document.createElement("div");
-        sheen.className = "page-sheen";
-        sheen.setAttribute("aria-hidden", "true");
-        document.body.appendChild(sheen);
-        setTimeout(function () { sheen.remove(); }, 1100);
-    })();
-
-    /* =====================================================================
        STARFIELD / PARTICLES — site-wide drifting canvas
        ===================================================================== */
     (function () {
@@ -812,17 +831,6 @@
         scan.className = "scanlines";
         scan.setAttribute("aria-hidden", "true");
         document.body.appendChild(scan);
-
-        var wrap = document.createElement("div");
-        wrap.className = "bg-logo-watermark";
-        wrap.setAttribute("aria-hidden", "true");
-        for (var i = 0; i < 5; i++) {
-            var s = document.createElement("span");
-            s.textContent = "CADDY-ANALYZER";
-            s.style.setProperty("--i", i);
-            wrap.appendChild(s);
-        }
-        document.body.appendChild(wrap);
 
         /* Pause CSS animations when tab hidden to save CPU/GPU */
         document.addEventListener("visibilitychange", function () {
@@ -1580,6 +1588,9 @@
                         p.tagName === "A" || p.classList.contains("heading-anchor")) {
                         return NodeFilter.FILTER_REJECT;
                     }
+                    if (p.closest && p.closest("[aria-hidden]")) {
+                        return NodeFilter.FILTER_REJECT;
+                    }
                     return re.test(n.nodeValue) ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT;
                 }
             }
@@ -1962,9 +1973,17 @@
         var GLYPHS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789#$%&*<>{}[]/\\|=+";
 
         /* Hide the subtitle immediately so it is only revealed via the
-           typewriter after the title decrypts (no flash of full text). */
+           typewriter after the title decrypts (no flash of full text).
+           Reserve the full-text height first so typing never shifts layout. */
         if (sub && !prefersReduced) {
+            sub.style.minHeight = sub.offsetHeight + "px";
             sub.textContent = "";
+        }
+        /* Reserve the title height before the decrypt empties it so the
+           hero never collapses (avoids CLS when the delay lets the first
+           frame paint the full title first). */
+        if (title && !prefersReduced) {
+            title.style.minHeight = title.offsetHeight + "px";
         }
 
         function startSub() {
@@ -1997,52 +2016,58 @@
                 return;
             }
 
-            title.textContent = "";
-            var caret = document.createElement("span");
-            caret.className = "typewriter-caret";
-            caret.setAttribute("aria-hidden", "true");
-            title.appendChild(caret);
-
-            var i = 0;
-            var scrambleCount = 0;
-            var scrambleMax = 5;
-
-            var renderLocked = function () {
-                var s = titleText.slice(0, i);
-                title.textContent = s;
+            /* Let the first frame paint the full title (keeps it as the
+               LCP candidate immediately) before the decrypt starts. */
+            var beginDecrypt = function () {
+                title.textContent = "";
+                var caret = document.createElement("span");
+                caret.className = "typewriter-caret";
+                caret.setAttribute("aria-hidden", "true");
                 title.appendChild(caret);
-            };
 
-            var renderScramble = function () {
-                var locked = titleText.slice(0, i);
-                var rand = GLYPHS[Math.floor(Math.random() * GLYPHS.length)];
-                title.textContent = locked + rand;
-                title.appendChild(caret);
-            };
+                var i = 0;
+                var scrambleCount = 0;
+                var scrambleMax = 5;
 
-            var step = function () {
-                if (scrambleCount < scrambleMax) {
-                    renderScramble();
-                    scrambleCount++;
-                    setTimeout(step, 28);
-                } else {
-                    i++;
-                    renderLocked();
-                    if (i < titleText.length) {
-                        scrambleCount = 0;
-                        var ch = titleText[i - 1];
-                        var gap = (ch === "-" || ch === ".") ? 150 : 55;
-                        setTimeout(step, gap);
+                var renderLocked = function () {
+                    var s = titleText.slice(0, i);
+                    title.textContent = s;
+                    title.appendChild(caret);
+                };
+
+                var renderScramble = function () {
+                    var locked = titleText.slice(0, i);
+                    var rand = GLYPHS[Math.floor(Math.random() * GLYPHS.length)];
+                    title.textContent = locked + rand;
+                    title.appendChild(caret);
+                };
+
+                var step = function () {
+                    if (scrambleCount < scrambleMax) {
+                        renderScramble();
+                        scrambleCount++;
+                        setTimeout(step, 28);
                     } else {
-                        setTimeout(function () {
-                            caret.remove();
-                            title.classList.add("rgb-split");
-                            startSub();
-                        }, 300);
+                        i++;
+                        renderLocked();
+                        if (i < titleText.length) {
+                            scrambleCount = 0;
+                            var ch = titleText[i - 1];
+                            var gap = (ch === "-" || ch === ".") ? 150 : 55;
+                            setTimeout(step, gap);
+                        } else {
+                            setTimeout(function () {
+                                caret.remove();
+                                title.classList.add("rgb-split");
+                                startSub();
+                            }, 300);
+                        }
                     }
-                }
+                };
+                setTimeout(step, 250);
             };
-            setTimeout(step, 250);
+
+            setTimeout(beginDecrypt, 6000);
         } else {
             startSub();
         }

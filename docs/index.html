@@ -18,19 +18,19 @@
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="caddy-analyzer — Documentation">
     <meta name="twitter:description" content="Caddy v2 log analysis with 26-category threat detection, real-time firewall guard, TUI dashboard, and HTML reports.">
-    <script>try{var t=localStorage.getItem('caddy-docs-theme');if(t==='light')document.documentElement.setAttribute('data-theme','light');else if(t!=='dark'&&window.matchMedia&&window.matchMedia('(prefers-color-scheme: light)').matches)document.documentElement.setAttribute('data-theme','light');}catch(e){}</script>
-    <meta name="doc:modified" content="2026-08-15T00:22:31+02:00">
+    <script>try{var t=localStorage.getItem('caddy-docs-theme');if(t==='light')document.documentElement.setAttribute('data-theme','light');else if(t!=='dark'&&window.matchMedia&&window.matchMedia('(prefers-color-scheme: light)').matches)document.documentElement.setAttribute('data-theme','light');}catch(e){}
+    document.documentElement.classList.add('decor-paused');</script>
+    <meta name="doc:modified" content="2026-08-15T04:09:21+02:00">
     <meta name="color-scheme" content="dark light">
     <link rel="manifest" href="manifest.json">
     <link rel="dns-prefetch" href="//github.com">
     <link rel="dns-prefetch" href="//pkg.go.dev">
     <link rel="dns-prefetch" href="//img.shields.io">
     <link rel="dns-prefetch" href="//raw.githubusercontent.com">
-    <link rel="preconnect" href="//raw.githubusercontent.com" crossorigin="anonymous">
-    <link rel="preconnect" href="//img.shields.io">
-    <link rel="preload" as="image" href="https://raw.githubusercontent.com/lenny-ts/caddy-analyzer/main/assets/mascot.svg" fetchpriority="high">
+    <link rel="preload" as="image" href="mascot.svg" fetchpriority="high">
     <link rel="prefetch" href="installation.html">
-    <link rel="stylesheet" href="styles.min.css?v=25">
+    <link rel="preload" as="style" href="styles.min.css?v=25" onload="this.onload=null;this.rel='stylesheet'">
+    <noscript><link rel="stylesheet" href="styles.min.css?v=25"></noscript>
     <script type="speculationrules">{"prefetch":[{"where":{"href_matches":"/*.html"},"eagerness":"moderate"}]}</script>
 </head>
 <body>
@@ -46,22 +46,22 @@
 
     <main class="wrap" id="main">
 
-        <section class="hero reveal">
+        <section class="hero">
             <div class="hero-inner">
                 <div class="hero-left">
                     <span class="hero-mascot-wrap" aria-hidden="true">
                         <span class="hero-mascot-glow"></span>
-                        <img class="hero-mascot" src="https://raw.githubusercontent.com/lenny-ts/caddy-analyzer/main/assets/mascot.svg" alt="caddy-analyzer mascot" fetchpriority="high" decoding="async" width="130" height="130">
+                        <img class="hero-mascot" src="mascot.svg" alt="caddy-analyzer mascot" fetchpriority="high" decoding="async" width="130" height="130">
                     </span>
                     <h1 class="hero-title">caddy-analyzer</h1>
                     <p class="hero-sub">Official Documentation &amp; User Manual — Caddy v2 access log analysis with a 26-category evasion-resistant threat engine and real-time <code>iptables</code> firewall guard.</p>
 
                     <div class="hero-badges">
-                        <a href="https://go.dev"><img width="88" height="20" src="https://img.shields.io/badge/Go-1.25-38bdf8?style=flat-square&logo=go" alt="Go Version"></a>
+                        <a href="https://go.dev"><img width="77" height="20" src="https://img.shields.io/badge/Go-1.25-38bdf8?style=flat-square&logo=go" alt="Go Version"></a>
                         <a href="https://pkg.go.dev/github.com/lenny-ts/caddy-analyzer"><img width="120" height="20" src="https://pkg.go.dev/badge/github.com/lenny-ts/caddy-analyzer.svg" alt="Go Reference"></a>
                         <a href="https://github.com/lenny-ts/caddy-analyzer/actions"><img width="90" height="20" src="https://github.com/lenny-ts/caddy-analyzer/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
-                        <a href="LICENSE"><img width="100" height="20" src="https://img.shields.io/badge/License-MIT-purple.svg?style=flat-square" alt="License"></a>
-                        <a href="https://github.com/lenny-ts/caddy-analyzer/releases"><img width="110" height="20" src="https://img.shields.io/github/v/release/lenny-ts/caddy-analyzer?style=flat-square&color=fbbf24" alt="Release"></a>
+                        <a href="LICENSE"><img width="82" height="20" src="https://img.shields.io/badge/License-MIT-purple.svg?style=flat-square" alt="License"></a>
+                        <a href="https://github.com/lenny-ts/caddy-analyzer/releases"><img width="94" height="20" src="https://img.shields.io/github/v/release/lenny-ts/caddy-analyzer?style=flat-square&color=fbbf24" alt="Release"></a>
                     </div>
 
                     <div class="cta-row">
@@ -252,7 +252,7 @@
                             <text x="85" y="59" text-anchor="middle" font-size="9" fill="var(--text-dim,#a8b0bd)">6-tab · --watch</text>
                         </g>
                         <g transform="translate(680,93)">
-                            <a xlink:href="demo.html">
+                            <a href="demo.html" xlink:href="demo.html">
                                 <rect width="170" height="64" rx="12" style="fill:var(--surface,#16161a)" stroke="var(--accent-2,#38bdf8)" stroke-width="1.5" class="arch-link"/>
                                 <text x="85" y="26" text-anchor="middle" font-size="18">📄</text>
                                 <text x="85" y="46" text-anchor="middle" font-weight="600" font-size="12.5">HTML Report</text>
