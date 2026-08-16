@@ -327,7 +327,7 @@ type TopSections struct {
 }
 
 func DefaultTopSections() TopSections {
-	return TopSections{Path: true, IP: true, UA: true, Method: true, Status: true, Host: true}
+	return TopSections{Path: true, IP: true, UA: true, Method: true, Status: true, Host: true, Country: true, ASN: true}
 }
 
 func (e *LogEntry) Path() string {
