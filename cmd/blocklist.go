@@ -27,10 +27,14 @@ Actions:
   init       Save current blocklist settings (from flags) to the config file.
 
 Default feeds (disabled with --no-default-blocklists):
-  • Spamhaus DROP    https://www.spamhaus.org/drop/drop.txt
-  • FireHOL level1   https://iplists.firehol.org/files/firehol_level1.netset
-  • CINS Army        http://cinsscore.com/list/ci-badguys.txt
-  • Tor exit nodes   https://check.torproject.org/torbulkexitlist
+  • Spamhaus DROP v4    https://www.spamhaus.org/drop/drop_v4.json
+  • Spamhaus DROP v6    https://www.spamhaus.org/drop/drop_v6.json
+  • FireHOL level1      https://iplists.firehol.org/files/firehol_level1.netset
+  • FireHOL level2      https://iplists.firehol.org/files/firehol_level2.netset
+  • CINS Army           http://cinsscore.com/list/ci-badguys.txt
+  • Tor exit nodes      https://check.torproject.org/torbulkexitlist
+  • Emerging Threats    https://rules.emergingthreats.net/blockrules/compromised-ips.txt
+  • AbuseIPDB (mirror)  https://raw.githubusercontent.com/borestad/blocklist-abuseipdb/main/abuseipdb-s100-7d.ipv4
 
 Custom feeds are added with --blocklist-config and removed with
 --blocklist-remove. The cache lives in --cache-dir (default
@@ -61,7 +65,7 @@ var (
 
 func init() {
 	blocklistCmd.Flags().StringVarP(&blocklistCacheDir, "cache-dir", "", defaultBlocklistCacheDir(), "Directory for cached blocklist files")
-	blocklistCmd.Flags().BoolVarP(&blocklistNoDefaults, "no-default-blocklists", "", false, "Disable default feeds (Spamhaus, FireHOL, CINS, Tor)")
+	blocklistCmd.Flags().BoolVarP(&blocklistNoDefaults, "no-default-blocklists", "", false, "Disable default feeds (Spamhaus, FireHOL, CINS, Tor, ET, AbuseIPDB)")
 	blocklistCmd.Flags().StringSliceVarP(&blocklistConfigFiles, "blocklist-config", "", nil, "Path(s) to JSON file(s) with extra sources: [{\"name\":\"x\",\"url\":\"y\"}]")
 	blocklistCmd.Flags().StringSliceVarP(&blocklistRemoveSources, "blocklist-remove", "", nil, "Remove named sources from the configuration")
 	blocklistCmd.Flags().StringVarP(&blocklistConfigFormat, "format", "f", "table", "Output format for list/config: table, json")

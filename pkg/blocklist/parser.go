@@ -1,12 +1,13 @@
 package blocklist
 
 import (
+	"encoding/json"
 	"net"
 	"strings"
 )
 
 // parseEntries extracts valid CIDR/IP entries from the raw blocklist body.
-// It handles all common blocklist formats:
+// It handles all common plain-text blocklist formats:
 //   - CIDR notation (e.g. "1.2.3.0/24")
 //   - Bare IPv4/IPv6 addresses (auto-promoted to /32 or /128)
 //   - Inline comments after ";", "#", or whitespace
@@ -23,6 +24,39 @@ func parseEntries(body []byte) []net.IPNet {
 			continue
 		}
 		_, ipnet, err := net.ParseCIDR(cidr)
+		if err != nil {
+			continue
+		}
+		entries = append(entries, *ipnet)
+	}
+	return entries
+}
+
+// parseJSONEntries extracts CIDR entries from a JSON Lines (NDJSON) body
+// where each line is a JSON object with a "cidr" field. This is the
+// format used by Spamhaus DROP feeds (drop_v4.json, drop_v6.json):
+//
+//	{"cidr":"1.2.3.0/24","sblid":"SBL123456","rir":"apnic"}
+//
+// Lines that are blank, not valid JSON, or lack a parseable "cidr"
+// field are silently skipped.
+func parseJSONEntries(body []byte) []net.IPNet {
+	var entries []net.IPNet
+	for _, line := range strings.Split(string(body), "\n") {
+		line = strings.TrimSpace(line)
+		if line == "" {
+			continue
+		}
+		var obj struct {
+			CIDR string `json:"cidr"`
+		}
+		if err := json.Unmarshal([]byte(line), &obj); err != nil {
+			continue
+		}
+		if obj.CIDR == "" {
+			continue
+		}
+		_, ipnet, err := net.ParseCIDR(obj.CIDR)
 		if err != nil {
 			continue
 		}

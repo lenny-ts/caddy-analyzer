@@ -79,7 +79,7 @@ Detection:
   • 404 surge — directory scanning / enumeration
   • Request threshold — generic high-volume
   • Pattern detection — 26 categories: SQLi, NoSQLi, XSS, SSTI, SSRF, RCE, path traversal, LFI wrappers, GraphQL, Log4j/JNDI, XXE, open redirect, LDAP/XPath/CRLF/SSI injection, prototype pollution, probes, scanners, UA rotation, JWT abuse, object enumeration, beaconing (confidence >= --detect-confidence)
-  • Blocklist feeds (Spamhaus DROP, FireHOL, CINS, Tor exits) — immediate block
+  • Blocklist feeds (Spamhaus DROP, FireHOL, CINS, Tor, Emerging Threats, AbuseIPDB) — immediate block
   • Country block (--country-block) — immediate block by GeoIP country code
 
 Set any threshold to 0 to disable it. Blockade is temporary (default 10m).

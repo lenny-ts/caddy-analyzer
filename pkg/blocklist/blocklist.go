@@ -49,11 +49,18 @@ type Stats struct {
 // DefaultSources are the blocklist feeds enabled out of the box.
 // The user can disable them with --no-default-blocklists and/or add
 // custom sources via --blocklist-config.
+//
+// The Format field selects the parser: "json" for JSON Lines (NDJSON)
+// bodies, "" (empty) for plain-text IP/CIDR lists.
 var DefaultSources = []Source{
-	{Name: "spamhaus-drop", URL: "https://www.spamhaus.org/drop/drop.txt"},
+	{Name: "spamhaus-drop-v4", URL: "https://www.spamhaus.org/drop/drop_v4.json", Format: "json"},
+	{Name: "spamhaus-drop-v6", URL: "https://www.spamhaus.org/drop/drop_v6.json", Format: "json"},
 	{Name: "firehol-level1", URL: "https://iplists.firehol.org/files/firehol_level1.netset"},
+	{Name: "firehol-level2", URL: "https://iplists.firehol.org/files/firehol_level2.netset"},
 	{Name: "cins-army", URL: "http://cinsscore.com/list/ci-badguys.txt"},
 	{Name: "tor-exit-nodes", URL: "https://check.torproject.org/torbulkexitlist"},
+	{Name: "emerging-threats", URL: "https://rules.emergingthreats.net/blockrules/compromised-ips.txt"},
+	{Name: "abuseipdb", URL: "https://raw.githubusercontent.com/borestad/blocklist-abuseipdb/main/abuseipdb-s100-7d.ipv4"},
 }
 
 // Manager coordinates fetching, caching, and lookups across multiple
@@ -145,7 +152,12 @@ func (m *Manager) refreshSource(src Source) SourceStatus {
 		m.statuses[src.Name] = st
 		return st
 	}
-	entries := parseEntries(body)
+	var entries []net.IPNet
+	if src.Format == "json" {
+		entries = parseJSONEntries(body)
+	} else {
+		entries = parseEntries(body)
+	}
 	ranger := cidranger.NewPCTrieRanger()
 	for _, e := range entries {
 		_ = ranger.Insert(cidranger.NewBasicRangerEntry(e))

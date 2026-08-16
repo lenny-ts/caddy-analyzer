@@ -320,8 +320,8 @@ func TestManagerContainsInvalidIP(t *testing.T) {
 }
 
 func TestDefaultSources(t *testing.T) {
-	if len(DefaultSources) < 4 {
-		t.Fatalf("expected at least 4 default sources, got %d", len(DefaultSources))
+	if len(DefaultSources) < 8 {
+		t.Fatalf("expected at least 8 default sources, got %d", len(DefaultSources))
 	}
 	names := map[string]bool{}
 	for _, s := range DefaultSources {
@@ -330,11 +330,87 @@ func TestDefaultSources(t *testing.T) {
 		}
 		names[s.Name] = true
 	}
-	expected := []string{"spamhaus-drop", "firehol-level1", "cins-army", "tor-exit-nodes"}
+	expected := []string{
+		"spamhaus-drop-v4",
+		"spamhaus-drop-v6",
+		"firehol-level1",
+		"firehol-level2",
+		"cins-army",
+		"tor-exit-nodes",
+		"emerging-threats",
+		"abuseipdb",
+	}
 	for _, e := range expected {
 		if !names[e] {
 			t.Errorf("missing default source: %s", e)
 		}
+	}
+}
+
+func TestParseJSONEntries(t *testing.T) {
+	body := []byte(`{"cidr":"1.2.3.0/24","sblid":"SBL123456","rir":"apnic"}
+{"cidr":"5.6.7.8/32","sblid":"SBL123457","rir":"ripencc"}
+{"cidr":"2001:db8::/32","sblid":"SBL123458","rir":"ripencc"}
+
+`)
+	entries := parseJSONEntries(body)
+	if len(entries) != 3 {
+		t.Fatalf("expected 3 entries, got %d: %v", len(entries), entries)
+	}
+	want := []string{"1.2.3.0/24", "5.6.7.8/32", "2001:db8::/32"}
+	for i, e := range entries {
+		if e.String() != want[i] {
+			t.Errorf("entry %d = %s, want %s", i, e.String(), want[i])
+		}
+	}
+}
+
+func TestParseJSONEntriesEmptyAndGarbage(t *testing.T) {
+	body := []byte(`{"not_cidr":"foo"}
+{"cidr":""}
+garbage line
+
+{"cidr":"10.0.0.0/8"}`)
+	entries := parseJSONEntries(body)
+	if len(entries) != 1 {
+		t.Fatalf("expected 1 valid entry, got %d: %v", len(entries), entries)
+	}
+	if entries[0].String() != "10.0.0.0/8" {
+		t.Errorf("entry = %s, want 10.0.0.0/8", entries[0].String())
+	}
+}
+
+func TestManagerRefreshJSONFormat(t *testing.T) {
+	tmp := t.TempDir()
+	src := []Source{
+		{Name: "jsonsrc", URL: "http://example.com/drop.json", Format: "json"},
+	}
+	m, err := NewManager(src, tmp)
+	if err != nil {
+		t.Fatalf("NewManager: %v", err)
+	}
+	m.SetFetcher(func(url string) ([]byte, error) {
+		return []byte(`{"cidr":"10.0.0.0/8","sblid":"SBL1","rir":"apnic"}
+{"cidr":"172.16.0.0/12","sblid":"SBL2","rir":"ripencc"}
+`), nil
+	})
+	statuses := m.Refresh()
+	if len(statuses) != 1 {
+		t.Fatalf("expected 1 status, got %d", len(statuses))
+	}
+	if statuses[0].Entries != 2 {
+		t.Fatalf("expected 2 entries, got %d", statuses[0].Entries)
+	}
+	if statuses[0].Error != "" {
+		t.Fatalf("unexpected error: %s", statuses[0].Error)
+	}
+	hit, source := m.Contains("10.1.2.3")
+	if !hit || source != "jsonsrc" {
+		t.Errorf("expected hit from jsonsrc, got %v %s", hit, source)
+	}
+	hit, _ = m.Contains("8.8.8.8")
+	if hit {
+		t.Error("expected no hit for 8.8.8.8")
 	}
 }
 
