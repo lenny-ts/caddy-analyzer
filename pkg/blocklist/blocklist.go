@@ -20,7 +20,7 @@ const fetchTimeout = 30 * time.Second
 
 // userAgent identifies the tool in blocklist fetch requests. Some
 // feeds (Spamhaus in particular) reject empty or generic UA strings.
-const userAgent = "caddy-analyzer/1.0 (+https://github.com/L9Lenny/caddy-analyzer)"
+const userAgent = "caddy-analyzer/1.0 (+https://github.com/lenny-ts/caddy-analyzer)"
 
 // Source describes a single blocklist feed.
 type Source struct {

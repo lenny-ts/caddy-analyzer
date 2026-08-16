@@ -14,10 +14,10 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/L9Lenny/caddy-analyzer/pkg/analysis"
-	"github.com/L9Lenny/caddy-analyzer/pkg/blocklist"
-	"github.com/L9Lenny/caddy-analyzer/pkg/parser"
-	"github.com/L9Lenny/caddy-analyzer/pkg/types"
+	"github.com/lenny-ts/caddy-analyzer/pkg/analysis"
+	"github.com/lenny-ts/caddy-analyzer/pkg/blocklist"
+	"github.com/lenny-ts/caddy-analyzer/pkg/parser"
+	"github.com/lenny-ts/caddy-analyzer/pkg/types"
 )
 
 // chainName is a dedicated iptables/ip6tables chain so that unban and

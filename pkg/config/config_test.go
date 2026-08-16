@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/L9Lenny/caddy-analyzer/pkg/blocklist"
+	"github.com/lenny-ts/caddy-analyzer/pkg/blocklist"
 )
 
 func TestCreateDefault(t *testing.T) {

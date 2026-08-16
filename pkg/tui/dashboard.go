@@ -9,10 +9,10 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 
-	"github.com/L9Lenny/caddy-analyzer/pkg/analysis"
-	"github.com/L9Lenny/caddy-analyzer/pkg/output"
-	"github.com/L9Lenny/caddy-analyzer/pkg/parser"
-	"github.com/L9Lenny/caddy-analyzer/pkg/types"
+	"github.com/lenny-ts/caddy-analyzer/pkg/analysis"
+	"github.com/lenny-ts/caddy-analyzer/pkg/output"
+	"github.com/lenny-ts/caddy-analyzer/pkg/parser"
+	"github.com/lenny-ts/caddy-analyzer/pkg/types"
 )
 
 type TickMsg time.Time

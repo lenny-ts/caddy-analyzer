@@ -6,7 +6,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/L9Lenny/caddy-analyzer/pkg/blocklist"
+	"github.com/lenny-ts/caddy-analyzer/pkg/blocklist"
 )
 
 type Config struct {

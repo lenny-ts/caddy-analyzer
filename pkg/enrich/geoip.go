@@ -12,7 +12,7 @@ import (
 
 	"github.com/oschwald/maxminddb-golang"
 
-	"github.com/L9Lenny/caddy-analyzer/pkg/types"
+	"github.com/lenny-ts/caddy-analyzer/pkg/types"
 )
 
 const (

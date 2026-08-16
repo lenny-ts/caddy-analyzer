@@ -7,7 +7,7 @@ Thank you for your interest in contributing to `caddy-analyzer`! We welcome cont
 1. Prerequisites: [Go](https://go.dev) (v1.25+).
 2. Clone the repository:
    ```bash
-   git clone https://github.com/L9Lenny/caddy-analyzer.git
+   git clone https://github.com/lenny-ts/caddy-analyzer.git
    cd caddy-analyzer
    ```
 3. Run tests:

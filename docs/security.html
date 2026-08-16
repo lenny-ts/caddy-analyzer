@@ -3,297 +3,334 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="view-transition" content="same-origin">
     <title>Threat Engine Guide — caddy-analyzer</title>
-    <style>
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            background: #111111;
-            color: #d1d5db;
-            line-height: 1.6;
-            max-width: 900px;
-            margin: 0 auto;
-            padding: 2rem 1rem;
-        }
-
-        h1, h2, h3 { color: #ffffff; font-weight: 600; }
-        h1 { font-size: 1.8rem; border-bottom: 1px solid #282828; padding-bottom: 0.5rem; margin-bottom: 0.5rem; }
-        .subtitle { color: #9ca3af; font-size: 1.05rem; margin-bottom: 2rem; }
-        a { color: #60a5fa; text-decoration: none; }
-        a:hover { text-decoration: underline; }
-
-        nav.doc-nav {
-            display: flex;
-            gap: 0.75rem;
-            flex-wrap: wrap;
-            margin-bottom: 2rem;
-            border-bottom: 1px solid #222222;
-            padding-bottom: 1rem;
-        }
-
-        nav.doc-nav a {
-            background: #181818;
-            border: 1px solid #282828;
-            color: #d1d5db;
-            padding: 0.4rem 0.8rem;
-            border-radius: 4px;
-            font-size: 0.85rem;
-            font-family: monospace;
-        }
-
-        nav.doc-nav a:hover, nav.doc-nav a.active {
-            border-color: #60a5fa;
-            color: #ffffff;
-            background: #222222;
-        }
-
-        pre, code {
-            font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
-            font-size: 0.88em;
-        }
-
-        pre {
-            background: #181818;
-            border: 1px solid #282828;
-            border-radius: 4px;
-            padding: 1rem;
-            overflow-x: auto;
-            color: #e5e7eb;
-            margin: 1rem 0 1.5rem 0;
-        }
-
-        p { margin-bottom: 1rem; }
-        ul { margin: 0 0 1.5rem 1.5rem; }
-        li { margin-bottom: 0.4rem; }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin: 1rem 0 2rem 0;
-            font-size: 0.9rem;
-        }
-
-        th, td {
-            text-align: left;
-            padding: 0.65rem 0.85rem;
-            border-bottom: 1px solid #282828;
-        }
-
-        th { color: #ffffff; border-bottom: 2px solid #30363d; background: #181818; }
-        td code { color: #58a6ff; }
-
-        .footer {
-            margin-top: 4rem;
-            padding-top: 1.5rem;
-            border-top: 1px solid #222222;
-            color: #6b7280;
-            font-size: 0.85rem;
-        }
-    </style>
+    <meta name="description" content="26-category evasion-resistant threat detection engine: SQLi, XSS, Log4j, RCE, JWT, beaconing, path traversal. MITRE ATT&CK tagged, Sigma export, IOC defanging, iptables auto-blocking.">
+    <meta name="theme-color" content="#0a0a0c">
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E🛡️%3C/text%3E%3C/svg%3E">
+    <meta property="og:title" content="Threat Engine Guide — caddy-analyzer">
+    <meta property="og:description" content="26-category threat detection: SQLi, XSS, Log4j, RCE, JWT, beaconing. MITRE tagged, Sigma export, iptables firewall guard.">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://lenny-ts.github.io/caddy-analyzer/security.html">
+    <meta property="og:image" content="https://lenny-ts.github.io/caddy-analyzer/og-image.png">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Threat Engine Guide — caddy-analyzer">
+    <meta name="twitter:description" content="26-category threat detection: SQLi, XSS, Log4j, RCE, JWT, beaconing. MITRE tagged, Sigma export, iptables firewall guard.">
+    <script>try{var t=localStorage.getItem('caddy-docs-theme');if(t==='light')document.documentElement.setAttribute('data-theme','light');else if(t!=='dark'&&window.matchMedia&&window.matchMedia('(prefers-color-scheme: light)').matches)document.documentElement.setAttribute('data-theme','light');}catch(e){}</script>
+    <meta name="doc:modified" content="2026-08-15T15:51:05+02:00">
+    <meta name="color-scheme" content="dark light">
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="apple-touch-icon.png">
+    <link rel="canonical" href="https://lenny-ts.github.io/caddy-analyzer/security.html">
+    <link rel="dns-prefetch" href="//github.com">
+    <link rel="dns-prefetch" href="//pkg.go.dev">
+    <link rel="preconnect" href="//github.com">
+    <link rel="prefetch" href="tui-html.html">
+    <link rel="stylesheet" href="styles.min.css?v=25">
+    <script type="speculationrules">{"prefetch":[{"where":{"href_matches":"/*.html"},"eagerness":"moderate"}]}</script>
 </head>
 <body>
 
-    <h1>Threat Engine & Security Inspector</h1>
-    <div class="subtitle">Built-in attack detection engine, signature rules, and firewall defense</div>
+    <a href="#main" class="skip-link">Skip to content</a>
+    <div class="scroll-progress"></div>
+    <div class="aurora" aria-hidden="true">
+        <i class="aurora-blob-3"></i>
+        <i class="aurora-beam"></i>
+        <i class="aurora-vignette"></i>
+    </div>
+    <div class="grid-overlay"></div>
 
-    <nav class="doc-nav">
-        <a href="index.html">Overview</a>
-        <a href="installation.html">Installation</a>
-        <a href="sources.html">Log Sources</a>
-        <a href="subcommands.html">Subcommands</a>
-        <a href="security.html" class="active">Threat Detector</a>
-        <a href="tui-html.html">TUI & HTML Reports</a>
-    </nav>
+    <main class="wrap" id="main">
 
-    <h2>1. Running Threat Detection (--detect)</h2>
-    <p>Enable the security detection engine using the <code>--detect</code> / <code>-d</code> flag:</p>
-    <pre>caddy-analyze --detect /var/log/caddy/access.log</pre>
+        <div class="page-header reveal">
+            <nav class="breadcrumb" aria-label="Breadcrumb">
+                <ol>
+                    <li><a href="index.html">Overview</a></li>
+                    <li><a class="breadcrumb-current" aria-current="page" href="security.html">Security Threats</a></li>
+                </ol>
+            </nav>
+            <p class="doc-meta"><a href="https://github.com/lenny-ts/caddy-analyzer/releases" rel="noopener">v0.3.0</a> &middot; updated <time datetime="2026-08-14">2026-08-14</time> &middot; <a href="https://github.com/lenny-ts/caddy-analyzer" rel="noopener">GitHub</a></p>
+            <h1>Threat Engine &amp; Security Inspector</h1>
+            <p class="subtitle">Built-in attack detection engine, signature rules, and firewall defense</p>
+        </div>
 
-    <h3>Per-IP Suspicious Request Details</h3>
-    <p>The security report shows the actual suspicious requests per offending IP, including detection type, description, HTTP method, and path:</p>
-    <pre>  - 192.168.1.100     15 malicious requests
-       [sql_injection] SQL injection attempt GET /search?id=1' OR '1'='1
-       [scanner] Scanner / automated tool detected GET /admin</pre>
-    <p>This information is available in all output formats (table, JSON, CSV, HTML).</p>
+        <nav class="doc-nav reveal" aria-label="Documentation">
+            <a href="index.html">Overview</a>
+            <a href="installation.html">Installation</a>
+            <a href="sources.html">Log Sources</a>
+            <a href="subcommands.html">Subcommands</a>
+            <a href="security.html" class="active" aria-current="page">Threat Detector</a>
+            <a href="tui-html.html">TUI &amp; HTML Reports</a>
+        </nav>
 
-    <h2>2. URL Unescaping & Evasion Prevention</h2>
-    <p>Before evaluating detection rules, <code>caddy-analyze</code> automatically unescapes URL percent-encodings (e.g., converting <code>%2e%2e%2f</code> to <code>../</code> and <code>%3Cscript%3E</code> to <code>&lt;script&gt;</code>) to prevent attackers from bypassing security rules using URL encoding tricks. Additionally, a second pass matches against the <strong>raw (non-unescaped) URI</strong> to catch multibyte-encoded traversal sequences (<code>%c0%ae%c0%ae%c0%af</code>, <code>%252e%252e%252f</code>) and internal host probe attempts that would be lost after unescaping.</p>
+        <section class="reveal">
+            <h2>1. Running Threat Detection (--detect)</h2>
+            <p>Enable the security detection engine using the <code>--detect</code> / <code>-d</code> flag:</p>
+<pre>caddy-analyze --detect /var/log/caddy/access.log</pre>
 
-    <h3>Memory Bounding</h3>
-    <p>The detection engine bounds memory usage on huge logs via two mechanisms:</p>
-    <ul>
-        <li><strong>LRU IP eviction</strong> — at most 100,000 distinct client IPs are tracked (configurable via <code>Detector.SetIPCap</code>). When the cap is reached, the least recently used IP is evicted. Actively-used IPs are never dropped, preserving detection accuracy for real attackers.</li>
-        <li><strong>Per-IP path cap</strong> — at most 1,000 distinct paths per IP are tracked for beaconing/object-enumeration detection, preventing an attacker with many endpoints from exhausting memory.</li>
-    </ul>
+            <h3>Per-IP Suspicious Request Details</h3>
+            <p>The security report shows the actual suspicious requests per offending IP, including detection type, description, HTTP method, and path:</p>
+<pre>  - 192.168.1.100     15 malicious requests
+        [sql_injection] SQL injection attempt GET /search?id=1' OR '1'='1
+        [scanner] Scanner / automated tool detected GET /admin</pre>
+            <p>This information is available in all output formats (table, JSON, CSV, HTML).</p>
+        </section>
 
-    <h2>3. Threat Rule Specification (26 Categories)</h2>
+        <section class="reveal">
+            <h2>2. URL Unescaping &amp; Evasion Prevention</h2>
+            <p>Before evaluating detection rules, <code>caddy-analyze</code> automatically unescapes URL percent-encodings (e.g., converting <code>%2e%2e%2f</code> to <code>../</code> and <code>%3Cscript%3E</code> to <code>&lt;script&gt;</code>) to prevent attackers from bypassing security rules using URL encoding tricks. Additionally, a second pass matches against the <strong>raw (non-unescaped) URI</strong> to catch multibyte-encoded traversal sequences (<code>%c0%ae%c0%ae%c0%af</code>, <code>%252e%252e%252f</code>) and internal host probe attempts that would be lost after unescaping.</p>
 
-    <table>
-        <thead>
-            <tr>
-                <th>Category</th>
-                <th>Example Patterns</th>
-            </tr>
-        </thead>
-        <tbody>
-            <tr>
-                <td><strong>SQL Injection</strong></td>
-                <td><code>UNION SELECT</code>, <code>OR 1=1</code>, <code>pg_sleep</code>, <code>INTO OUTFILE</code>, <code>@@version</code></td>
-            </tr>
-            <tr>
-                <td><strong>NoSQL Injection</strong></td>
-                <td><code>$ne</code>, <code>$gt</code>, <code>$regex</code>, <code>$where</code>, <code>$nin</code>, <code>%24ne</code></td>
-            </tr>
-            <tr>
-                <td><strong>XSS</strong></td>
-                <td><code>&lt;script</code>, <code>onerror=</code>, <code>onfocus=</code>, <code>alert(</code>, <code>document.cookie</code>, <code>data:text/html</code></td>
-            </tr>
-            <tr>
-                <td><strong>SSTI</strong></td>
-                <td><code>__class__</code>, <code>__mro__</code>, <code>freemarker</code>, <code>nunjucks</code>, <code>{{7*7}}</code>, <code>os.popen</code>, <code>&lt;#assign</code>, <code>&lt;%=</code>, <code>__${...}__</code></td>
-            </tr>
-            <tr>
-                <td><strong>SSRF</strong></td>
-                <td><code>169.254.169.254</code>, <code>0x7f000001</code>, <code>gopher://</code>, <code>dict://</code>, <code>redis://</code></td>
-            </tr>
-            <tr>
-                <td><strong>RCE</strong></td>
-                <td><code>/bin/sh</code>, <code>whoami</code>, <code>/dev/tcp/</code>, <code>powershell</code>, <code>certutil</code>, <code>eval()</code>, <code>rO0AB</code>, <code>_$$ND_FUNC$$_</code></td>
-            </tr>
-            <tr>
-                <td><strong>Path Traversal / LFI</strong></td>
-                <td><code>../</code>, <code>..%00</code>, <code>/etc/passwd</code>, <code>/proc/self/*</code>, <code>php://input</code></td>
-            </tr>
-            <tr>
-                <td><strong>GraphQL Introspection</strong></td>
-                <td><code>__schema</code>, <code>__type</code>, <code>IntrospectionQuery</code></td>
-            </tr>
-            <tr>
-                <td><strong>Log4j / JNDI</strong></td>
-                <td><code>${jndi:ldap://</code>, <code>${env:</code>, <code>${lower:jndi</code>, <code>${::-j}</code></td>
-            </tr>
-            <tr>
-                <td><strong>XXE / XInclude</strong></td>
-                <td><code>&lt;!ENTITY</code>, <code>SYSTEM</code>, <code>PUBLIC</code>, <code>xi:include</code>, <code>xpointer</code></td>
-            </tr>
-            <tr>
-                <td><strong>Open Redirect</strong></td>
-                <td><code>?url=http://</code>, <code>?redirect=//</code>, <code>//evil.com</code>, <code>?url=/\</code></td>
-            </tr>
-            <tr>
-                <td><strong>LDAP Injection</strong></td>
-                <td><code>(&amp;(</code>, <code>(|(</code>, <code>)(|(</code>, URL-encoded operators</td>
-            </tr>
-            <tr>
-                <td><strong>XPath Injection</strong></td>
-                <td><code>]|//*</code>, <code>.//*</code></td>
-            </tr>
-            <tr>
-                <td><strong>CRLF / Log Injection</strong></td>
-                <td><code>%0d%0aSet-Cookie:</code>, <code>%0d%0aLocation:</code>, literal CRLF, <code>%E5%98%8A%E5%98%8D</code></td>
-            </tr>
-            <tr>
-                <td><strong>Prototype Pollution</strong></td>
-                <td><code>__proto__</code>, <code>constructor.prototype</code>, JSON payloads</td>
-            </tr>
-            <tr>
-                <td><strong>SSI Injection</strong></td>
-                <td><code>&lt;!--#exec cmd=</code>, <code>#include virtual=</code>, <code>#echo var=</code></td>
-            </tr>
-            <tr>
-                <td><strong>User-Agent Rotation</strong></td>
-                <td>Behavioral heuristic — IPs rotating ≥10 distinct UAs (credential stuffing, evasive scanners)</td>
-            </tr>
-            <tr>
-                <td><strong>JWT Abuse</strong></td>
-                <td><code>"alg":"none"</code> bypass, JWT token in URI, <code>kid</code> path traversal, Bearer token leak</td>
-            </tr>
-            <tr>
-                <td><strong>Object Enumeration (BOLA/IDOR)</strong></td>
-                <td>Sequential ID enumeration per path template (≥10 distinct IDs on <code>/api/users/{id}</code>)</td>
-            </tr>
-            <tr>
-                <td><strong>Beaconing / C2</strong></td>
-                <td>Periodic callback detection (inter-arrival CV &lt; 0.25, 10-50 samples per path)</td>
-            </tr>
-            <tr>
-                <td><strong>LFI Wrapper Abuse</strong></td>
-                <td><code>phar://</code>, <code>data://</code>, <code>expect://</code>, <code>compress.zlib</code></td>
-            </tr>
-            <tr>
-                <td><strong>Sensitive File Probes</strong></td>
-                <td><code>.env</code>, <code>.git/config</code>, <code>id_rsa</code>, <code>dump.sql</code>, <code>phpinfo.php</code></td>
-            </tr>
-            <tr>
-                <td><strong>Admin Probes</strong></td>
-                <td><code>/phpmyadmin</code>, <code>/actuator/*</code>, <code>/h2-console</code>, <code>/swagger-ui</code></td>
-            </tr>
-            <tr>
-                <td><strong>WordPress Probes</strong></td>
-                <td><code>/wp-content/plugins/</code>, <code>/xmlrpc.php</code>, <code>/wp-json/wp/v2/</code></td>
-            </tr>
-            <tr>
-                <td><strong>CGI Probes</strong></td>
-                <td><code>/cgi-bin/</code>, <code>.cgi</code>, <code>.fcgi</code></td>
-            </tr>
-            <tr>
-                <td><strong>Scanner Tools</strong></td>
-                <td><code>sqlmap</code>, <code>nuclei</code>, <code>gobuster</code>, <code>ffuf</code>, <code>wpscan</code>, <code>masscan</code>, <code>hydra</code>, <code>metasploit</code>, <code>shodan</code></td>
-            </tr>
-        </tbody>
-    </table>
+            <h3>Memory Bounding</h3>
+            <p>The detection engine bounds memory usage on huge logs via two mechanisms:</p>
+            <ul>
+                <li><strong>LRU IP eviction</strong> — at most 100,000 distinct client IPs are tracked (configurable via <code>Detector.SetIPCap</code>). When the cap is reached, the least recently used IP is evicted. Actively-used IPs are never dropped, preserving detection accuracy for real attackers.</li>
+                <li><strong>Per-IP path cap</strong> — at most 1,000 distinct paths per IP are tracked for beaconing/object-enumeration detection, preventing an attacker with many endpoints from exhausting memory.</li>
+            </ul>
+        </section>
 
-    <h2>4. Real-time Firewall Guard Daemon (guard)</h2>
-    <p>The <code>guard</code> subcommand monitors log streams and automatically adds offending IPs to Linux <code>iptables</code> DROP rules when attack thresholds are exceeded:</p>
-    <pre>sudo caddy-analyze guard --limit 50 --window 1m docker://my-caddy</pre>
+        <section class="reveal">
+            <h2>3. Threat Rule Specification (26 Categories)</h2>
+            <p>Every detection carries a confidence score (1–10) based on pattern specificity, and MITRE ATT&amp;CK technique IDs for SOC mapping. The engine ships <strong>171 signature patterns</strong> across the 26 categories below. The patterns listed under each card are <strong>representative examples</strong> — each card also shows the real number of signatures it contains (e.g. SQL injection matches 19 distinct rule families, from <code>UNION SELECT</code> and comment-bypass to time-based blind and out-of-band exfiltration).</p>
 
-    <h3>Audit Logging</h3>
-    <p>Use <code>--audit-log &lt;path&gt;</code> to record every block and unblock action as a JSON-lines file. Each entry includes timestamp, action, IP, reason, ban duration, and the user who ran the command. The file is created with <code>0600</code> permissions. Available on <code>guard</code>, <code>block</code>, and <code>unban</code> subcommands.</p>
-    <pre>sudo caddy-analyze guard --audit-log /var/log/caddy-analyzer/audit.jsonl docker://my-caddy
+            <div class="threat-grid">
+                <div class="threat-card">
+                    <h3 class="threat-name"><span class="threat-icon" aria-hidden="true">💉</span>SQL Injection</h3>
+                    <p class="threat-patterns"><code>UNION SELECT</code>, <code>OR 1=1</code>, <code>pg_sleep</code>, <code>INTO OUTFILE</code>, <code>@@version</code>, etc.</p>
+                    <p class="sig-count">19 signatures</p>
+                    <p class="threat-meta"><span class="mitre-tag">T1190</span> <span class="conf-tag">conf 6–10</span></p>
+                </div>
+                <div class="threat-card">
+                    <h3 class="threat-name"><span class="threat-icon" aria-hidden="true">🍃</span>NoSQL Injection</h3>
+                    <p class="threat-patterns"><code>$ne</code>, <code>$gt</code>, <code>$regex</code>, <code>$where</code>, <code>$nin</code>, <code>%24ne</code>, etc.</p>
+                    <p class="sig-count">3 signatures</p>
+                    <p class="threat-meta"><span class="mitre-tag">T1190</span> <span class="conf-tag">conf 7–8</span></p>
+                </div>
+                <div class="threat-card">
+                    <h3 class="threat-name"><span class="threat-icon" aria-hidden="true">📜</span>XSS</h3>
+                    <p class="threat-patterns"><code>&lt;script</code>, <code>onerror=</code>, <code>onfocus=</code>, <code>alert(</code>, <code>document.cookie</code>, <code>data:text/html</code>, etc.</p>
+                    <p class="sig-count">18 signatures</p>
+                    <p class="threat-meta"><span class="mitre-tag">T1059.007</span> <span class="mitre-tag">T1189</span> <span class="conf-tag">conf 2–9</span></p>
+                </div>
+                <div class="threat-card">
+                    <h3 class="threat-name"><span class="threat-icon" aria-hidden="true">🧩</span>SSTI</h3>
+                    <p class="threat-patterns"><code>__class__</code>, <code>__mro__</code>, <code>freemarker</code>, <code>nunjucks</code>, <code>{{7*7}}</code>, <code>os.popen</code>, <code>&lt;#assign</code>, <code>&lt;%=</code>, <code>__${...}__</code>, etc.</p>
+                    <p class="sig-count">6 signatures</p>
+                    <p class="threat-meta"><span class="mitre-tag">T1190</span> <span class="conf-tag">conf 8–9</span></p>
+                </div>
+                <div class="threat-card">
+                    <h3 class="threat-name"><span class="threat-icon" aria-hidden="true">🌐</span>SSRF</h3>
+                    <p class="threat-patterns"><code>169.254.169.254</code>, <code>0x7f000001</code>, <code>gopher://</code>, <code>dict://</code>, <code>redis://</code>, etc.</p>
+                    <p class="sig-count">11 signatures</p>
+                    <p class="threat-meta"><span class="mitre-tag">T1190</span> <span class="conf-tag">conf 6–10</span></p>
+                </div>
+                <div class="threat-card">
+                    <h3 class="threat-name"><span class="threat-icon" aria-hidden="true">⚡</span>RCE</h3>
+                    <p class="threat-patterns"><code>/bin/sh</code>, <code>whoami</code>, <code>/dev/tcp/</code>, <code>powershell</code>, <code>certutil</code>, <code>eval()</code>, <code>rO0AB</code>, <code>_$$ND_FUNC$$_</code>, etc.</p>
+                    <p class="sig-count">23 signatures</p>
+                    <p class="threat-meta"><span class="mitre-tag">T1059</span> <span class="mitre-tag">T1190</span> <span class="conf-tag">conf 7–10</span></p>
+                </div>
+                <div class="threat-card">
+                    <h3 class="threat-name"><span class="threat-icon" aria-hidden="true">📂</span>Path Traversal / LFI</h3>
+                    <p class="threat-patterns"><code>../</code>, <code>..%00</code>, <code>/etc/passwd</code>, <code>/proc/self/*</code>, <code>php://input</code>, etc.</p>
+                    <p class="sig-count">10 signatures</p>
+                    <p class="threat-meta"><span class="mitre-tag">T1083</span> <span class="conf-tag">conf 6–9</span></p>
+                </div>
+                <div class="threat-card">
+                    <h3 class="threat-name"><span class="threat-icon" aria-hidden="true">🔍</span>GraphQL Introspection</h3>
+                    <p class="threat-patterns"><code>__schema</code>, <code>__type</code>, <code>IntrospectionQuery</code>, etc.</p>
+                    <p class="sig-count">3 signatures</p>
+                    <p class="threat-meta"><span class="mitre-tag">T1595.002</span> <span class="conf-tag">conf 6–8</span></p>
+                </div>
+                <div class="threat-card">
+                    <h3 class="threat-name"><span class="threat-icon" aria-hidden="true">☕</span>Log4j / JNDI</h3>
+                    <p class="threat-patterns"><code>${jndi:ldap://</code>, <code>${env:</code>, <code>${lower:jndi</code>, <code>${::-j}</code>, etc.</p>
+                    <p class="sig-count">4 signatures</p>
+                    <p class="threat-meta"><span class="mitre-tag">T1190</span> <span class="mitre-tag">T1059</span> <span class="conf-tag">conf 5–10</span></p>
+                </div>
+                <div class="threat-card">
+                    <h3 class="threat-name"><span class="threat-icon" aria-hidden="true">📄</span>XXE / XInclude</h3>
+                    <p class="threat-patterns"><code>&lt;!ENTITY</code>, <code>SYSTEM</code>, <code>PUBLIC</code>, <code>xi:include</code>, <code>xpointer</code>, etc.</p>
+                    <p class="sig-count">6 signatures</p>
+                    <p class="threat-meta"><span class="mitre-tag">T1190</span> <span class="conf-tag">conf 8–9</span></p>
+                </div>
+                <div class="threat-card">
+                    <h3 class="threat-name"><span class="threat-icon" aria-hidden="true">↪️</span>Open Redirect</h3>
+                    <p class="threat-patterns"><code>?url=http://</code>, <code>?redirect=//</code>, <code>//evil.com</code>, <code>?url=/\</code>, etc.</p>
+                    <p class="sig-count">5 signatures</p>
+                    <p class="threat-meta"><span class="mitre-tag">T1566.002</span> <span class="conf-tag">conf 7</span></p>
+                </div>
+                <div class="threat-card">
+                    <h3 class="threat-name"><span class="threat-icon" aria-hidden="true">🔑</span>LDAP Injection</h3>
+                    <p class="threat-patterns"><code>(&amp;(</code>, <code>(|(</code>, <code>)(|(</code>, URL-encoded operators, etc.</p>
+                    <p class="sig-count">2 signatures</p>
+                    <p class="threat-meta"><span class="mitre-tag">T1190</span> <span class="conf-tag">conf 7–8</span></p>
+                </div>
+                <div class="threat-card">
+                    <h3 class="threat-name"><span class="threat-icon" aria-hidden="true">🧭</span>XPath Injection</h3>
+                    <p class="threat-patterns"><code>]|//*</code>, <code>.//*</code>, etc.</p>
+                    <p class="sig-count">2 signatures</p>
+                    <p class="threat-meta"><span class="mitre-tag">T1190</span> <span class="conf-tag">conf 7</span></p>
+                </div>
+                <div class="threat-card">
+                    <h3 class="threat-name"><span class="threat-icon" aria-hidden="true">↩️</span>CRLF / Log Injection</h3>
+                    <p class="threat-patterns"><code>%0d%0aSet-Cookie:</code>, <code>%0d%0aLocation:</code>, literal CRLF, <code>%E5%98%8A%E5%98%8D</code>, etc.</p>
+                    <p class="sig-count">4 signatures</p>
+                    <p class="threat-meta"><span class="mitre-tag">T1190</span> <span class="mitre-tag">T1059</span> <span class="conf-tag">conf 5–8</span></p>
+                </div>
+                <div class="threat-card">
+                    <h3 class="threat-name"><span class="threat-icon" aria-hidden="true">🧬</span>Prototype Pollution</h3>
+                    <p class="threat-patterns"><code>__proto__</code>, <code>constructor.prototype</code>, JSON payloads, etc.</p>
+                    <p class="sig-count">2 signatures</p>
+                    <p class="threat-meta"><span class="mitre-tag">T1190</span> <span class="mitre-tag">T1059.007</span> <span class="conf-tag">conf 7–8</span></p>
+                </div>
+                <div class="threat-card">
+                    <h3 class="threat-name"><span class="threat-icon" aria-hidden="true">📡</span>SSI Injection</h3>
+                    <p class="threat-patterns"><code>&lt;!--#exec cmd=</code>, <code>#include virtual=</code>, <code>#echo var=</code>, etc.</p>
+                    <p class="sig-count">3 signatures</p>
+                    <p class="threat-meta"><span class="mitre-tag">T1190</span> <span class="mitre-tag">T1059</span> <span class="conf-tag">conf 7–9</span></p>
+                </div>
+                <div class="threat-card">
+                    <h3 class="threat-name"><span class="threat-icon" aria-hidden="true">🔄</span>User-Agent Rotation</h3>
+                    <p class="threat-patterns">Behavioral heuristic — IPs rotating ≥10 distinct UAs (credential stuffing, evasive scanners), etc.</p>
+                    <p class="sig-count">behavioral heuristic</p>
+                    <p class="threat-meta"><span class="mitre-tag">T1595.001</span> <span class="conf-tag">conf 6 · behavioral</span></p>
+                </div>
+                <div class="threat-card">
+                    <h3 class="threat-name"><span class="threat-icon" aria-hidden="true">🎟️</span>JWT Abuse</h3>
+                    <p class="threat-patterns"><code>"alg":"none"</code> bypass, JWT token in URI, <code>kid</code> path traversal, Bearer token leak, etc.</p>
+                    <p class="sig-count">7 signatures</p>
+                    <p class="threat-meta"><span class="mitre-tag">T1550.001</span> <span class="mitre-tag">T1190</span> <span class="conf-tag">conf 4–10</span></p>
+                </div>
+                <div class="threat-card">
+                    <h3 class="threat-name"><span class="threat-icon" aria-hidden="true">🔢</span>Object Enumeration (BOLA/IDOR)</h3>
+                    <p class="threat-patterns">Sequential ID enumeration per path template (≥10 distinct IDs on <code>/api/users/{id}</code>), etc.</p>
+                    <p class="sig-count">behavioral heuristic</p>
+                    <p class="threat-meta"><span class="mitre-tag">T1595.002</span> <span class="mitre-tag">T1190</span> <span class="conf-tag">conf 7 · behavioral</span></p>
+                </div>
+                <div class="threat-card">
+                    <h3 class="threat-name"><span class="threat-icon" aria-hidden="true">🛰️</span>Beaconing / C2</h3>
+                    <p class="threat-patterns">Periodic callback detection (inter-arrival CV &lt; 0.25, 10–50 samples per path), etc.</p>
+                    <p class="sig-count">behavioral heuristic</p>
+                    <p class="threat-meta"><span class="mitre-tag">T1071.001</span> <span class="mitre-tag">T1573</span> <span class="conf-tag">conf 6 · behavioral</span></p>
+                </div>
+                <div class="threat-card">
+                    <h3 class="threat-name"><span class="threat-icon" aria-hidden="true">📦</span>LFI Wrapper Abuse</h3>
+                    <p class="threat-patterns"><code>phar://</code>, <code>data://</code>, <code>expect://</code>, <code>compress.zlib</code>, etc.</p>
+                    <p class="sig-count">2 signatures</p>
+                    <p class="threat-meta"><span class="mitre-tag">T1083</span> <span class="mitre-tag">T1190</span> <span class="conf-tag">conf 8–9</span></p>
+                </div>
+                <div class="threat-card">
+                    <h3 class="threat-name"><span class="threat-icon" aria-hidden="true">🔐</span>Sensitive File Probes</h3>
+                    <p class="threat-patterns"><code>.env</code>, <code>.git/config</code>, <code>id_rsa</code>, <code>dump.sql</code>, <code>phpinfo.php</code>, etc.</p>
+                    <p class="sig-count">17 signatures</p>
+                    <p class="threat-meta"><span class="mitre-tag">T1083</span> <span class="mitre-tag">T1552.001</span> <span class="conf-tag">conf 4–9</span></p>
+                </div>
+                <div class="threat-card">
+                    <h3 class="threat-name"><span class="threat-icon" aria-hidden="true">🛠️</span>Admin Probes</h3>
+                    <p class="threat-patterns"><code>/phpmyadmin</code>, <code>/actuator/*</code>, <code>/h2-console</code>, <code>/swagger-ui</code>, etc.</p>
+                    <p class="sig-count">13 signatures</p>
+                    <p class="threat-meta"><span class="mitre-tag">T1595.002</span> <span class="conf-tag">conf 5–9</span></p>
+                </div>
+                <div class="threat-card">
+                    <h3 class="threat-name"><span class="threat-icon" aria-hidden="true">📰</span>WordPress Probes</h3>
+                    <p class="threat-patterns"><code>/wp-content/plugins/</code>, <code>/xmlrpc.php</code>, <code>/wp-json/wp/v2/</code>, etc.</p>
+                    <p class="sig-count">8 signatures</p>
+                    <p class="threat-meta"><span class="mitre-tag">T1595.002</span> <span class="conf-tag">conf 6–8</span></p>
+                </div>
+                <div class="threat-card">
+                    <h3 class="threat-name"><span class="threat-icon" aria-hidden="true">🖥️</span>CGI Probes</h3>
+                    <p class="threat-patterns"><code>/cgi-bin/</code>, <code>.cgi</code>, <code>.fcgi</code>, etc.</p>
+                    <p class="sig-count">2 signatures</p>
+                    <p class="threat-meta"><span class="mitre-tag">T1595.002</span> <span class="conf-tag">conf 5–7</span></p>
+                </div>
+                <div class="threat-card">
+                    <h3 class="threat-name"><span class="threat-icon" aria-hidden="true">🔭</span>Scanner Tools</h3>
+                    <p class="threat-patterns"><code>sqlmap</code>, <code>nuclei</code>, <code>gobuster</code>, <code>ffuf</code>, <code>wpscan</code>, <code>masscan</code>, <code>hydra</code>, <code>metasploit</code>, <code>shodan</code>, etc.</p>
+                    <p class="sig-count">1 rule · 73 tools</p>
+                    <p class="threat-meta"><span class="mitre-tag">T1595</span> <span class="conf-tag">conf 9</span></p>
+                </div>
+            </div>
+        </section>
+
+        <section class="reveal">
+            <h2>4. Real-time Firewall Guard Daemon (guard)</h2>
+            <p>The <code>guard</code> subcommand monitors log streams and automatically adds offending IPs to Linux <code>iptables</code> DROP rules when attack thresholds are exceeded:</p>
+            <div class="callout callout-danger">
+                <p class="callout-label">⚑ Root required</p>
+                <strong><code>guard</code> requires root/sudo</strong> because it modifies <code>iptables</code> rules. Run with <code>sudo</code> or as root, or integrate as a <a href="installation.html#6-systemd-service-guard-integration">systemd service</a>.
+            </div>
+<pre>sudo caddy-analyze guard --limit 50 --window 1m docker://my-caddy</pre>
+
+            <h3>Audit Logging</h3>
+            <p>Use <code>--audit-log &lt;path&gt;</code> to record every block and unblock action as a JSON-lines file. Each entry includes timestamp, action, IP, reason, ban duration, and the user who ran the command. The file is created with <code>0600</code> permissions. Available on <code>guard</code>, <code>block</code>, and <code>unban</code> subcommands.</p>
+<pre>sudo caddy-analyze guard --audit-log /var/log/caddy-analyzer/audit.jsonl docker://my-caddy
 # Example entry:
-{"ts":"2025-01-15T14:29:01Z","action":"block","ip":"203.0.113.5","reason":"threshold_exceeded","duration":"24h0m0s","user":"root"}</pre>
+{"ts":"2025-01-15T14:29:01Z","action":"block","ip":"203.0.113.5","reason":"12 malicious request(s)","duration":"24h0m0s","user":"root"}
+# Other reasons you may see: "<N> auth failures", "<N> not found", "<N> requests",
+# "<N> requests from <CIDR> (distributed scan)", "cred_stuffing", "threat_intel: <source> score=<n> (...)"</pre>
 
-    <h3>State Persistence</h3>
-    <p>Use <code>--state-file &lt;path&gt;</code> to persist blocked-IP state across guard restarts. When the guard daemon restarts, it reloads previously blocked IPs, cleans up expired bans, and resumes enforcement. Without this flag, all bans are lost on restart. The <code>block</code> and <code>unban</code> commands also accept <code>--state-file</code> to sync manual blocks/unbans with the guard's persisted state.</p>
-    <pre>sudo caddy-analyze guard --state-file /var/lib/caddy-analyzer/blocked.json docker://my-caddy
+            <h3>State Persistence</h3>
+            <p>Use <code>--state-file &lt;path&gt;</code> to persist blocked-IP state across guard restarts. When the guard daemon restarts, it reloads previously blocked IPs, cleans up expired bans, and resumes enforcement. Without this flag, all bans are lost on restart. The <code>block</code> and <code>unban</code> commands also accept <code>--state-file</code> to sync manual blocks/unbans with the guard's persisted state.</p>
+<pre>sudo caddy-analyze guard --state-file /var/lib/caddy-analyzer/blocked.json docker://my-caddy
 sudo caddy-analyze block --state-file /var/lib/caddy-analyzer/blocked.json 203.0.113.5
 sudo caddy-analyze unban --state-file /var/lib/caddy-analyzer/blocked.json 203.0.113.5</pre>
 
-    <h3>IP Allowlist (Never Block)</h3>
-    <p>Use <code>--never-block</code> to specify IPs/CIDRs that should never be banned, protecting trusted gateways, proxies, or health-check IPs from false-positive blocks. Use <code>--never-block-file</code> to load a larger allowlist from a file (one IP/CIDR per line, <code>#</code> comments supported). The two flags can be combined — entries are merged.</p>
-    <pre>sudo caddy-analyze guard \
+            <h3>IP Allowlist (Never Block)</h3>
+            <p>Use <code>--never-block</code> to specify IPs/CIDRs that should never be banned, protecting trusted gateways, proxies, or health-check IPs from false-positive blocks. Use <code>--never-block-file</code> to load a larger allowlist from a file (one IP/CIDR per line, <code>#</code> comments supported). The two flags can be combined — entries are merged.</p>
+<pre>sudo caddy-analyze guard \
   --never-block 10.0.0.0/8,192.168.1.1 \
   --never-block-file /etc/caddy-analyzer/allowlist.txt \
   docker://my-caddy</pre>
 
-    <h3>Pattern-Detection Blocking</h3>
-    <p>Besides rate and status thresholds, <code>guard</code> also blocks IPs whose requests match security patterns (SQLi, XSS, RCE, etc.). Use <code>--detect-confidence &lt;1-10&gt;</code> to set the minimum confidence score required to trigger a block (default <code>8</code>); detections below the threshold are reported in the audit log but not blocked. Pass <code>0</code> to disable pattern-based blocking entirely:</p>
-    <pre>sudo caddy-analyze guard --detect-confidence 8 docker://my-caddy
+            <h3>Pattern-Detection Blocking</h3>
+            <p>Besides rate and status thresholds, <code>guard</code> also blocks IPs whose requests match security patterns (SQLi, XSS, RCE, etc.). Use <code>--detect-confidence &lt;1-10&gt;</code> to set the minimum confidence score required to trigger a block (default <code>8</code>); detections below the threshold are reported in the audit log but not blocked. Pass <code>0</code> to disable pattern-based blocking entirely:</p>
+            <div class="callout callout-danger">
+                <p class="callout-label">⚠ Danger</p>
+                Setting <code>--detect-confidence 0</code> <strong>disables all pattern-based blocking</strong>. Only rate and status thresholds will trigger blocks. SQLi, XSS, RCE, and Log4j attacks will pass through unblocked if they don't exceed rate limits.
+            </div>
+<pre>sudo caddy-analyze guard --detect-confidence 8 docker://my-caddy
 # Block only very high-signal attacks (UNION SELECT, ${jndi:...})...
 sudo caddy-analyze guard --detect-confidence 9 docker://my-caddy
 # Disable pattern-based blocking (rate/status thresholds only)...
 sudo caddy-analyze guard --detect-confidence 0 docker://my-caddy</pre>
 
-    <h3>Confidence Scoring</h3>
-    <p>Every detection is assigned a confidence score from 1 (low) to 10 (high) based on the specificity and reliability of the matched pattern. High-confidence patterns (e.g. <code>UNION SELECT</code>, <code>${jndi:ldap://</code>) score 9-10, while broad or ambiguous patterns (e.g. <code>onerror=</code> which can appear in legitimate payloads) score 3-5. This allows downstream consumers to filter noise and prioritize high-signal detections.</p>
+            <h3>Confidence Scoring</h3>
+            <p>Every detection is assigned a confidence score from 1 (low) to 10 (high) based on the specificity and reliability of the matched pattern. High-confidence patterns (e.g. <code>UNION SELECT</code>, <code>${jndi:ldap://</code>) score 9–10, while broad or ambiguous patterns (e.g. <code>onerror=</code> which can appear in legitimate payloads) score 3–5. This allows downstream consumers to filter noise and prioritize high-signal detections.</p>
+        </section>
 
-    <h2>5. MITRE ATT&amp;CK Tags</h2>
-    <p>Every detection carries MITRE ATT&amp;CK technique IDs (e.g. <code>T1190</code> for Exploit Public-Facing Application, <code>T1595</code> for Active Scanning). This lets SOC analysts build ATT&amp;CK Navigator coverage layers from caddy-analyzer output and map detections to adversary techniques. Tags are included in JSON output and Sigma rules.</p>
+        <section class="reveal">
+            <h2>5. MITRE ATT&amp;CK Tags</h2>
+            <p>Every detection carries MITRE ATT&amp;CK technique IDs (e.g. <code>T1190</code> for Exploit Public-Facing Application, <code>T1595</code> for Active Scanning). This lets SOC analysts build ATT&amp;CK Navigator coverage layers from caddy-analyzer output and map detections to adversary techniques. Tags are included in JSON output and Sigma rules.</p>
+        </section>
 
-    <h2>6. Sigma Rule Export</h2>
-    <p>Export 23 detection categories as Sigma YAML rules for SIEM import (Splunk, Elastic, Sigma-compatible SIEMs). Rules include MITRE ATT&amp;CK tags, deterministic UUIDs, and dynamically-constructed detection conditions. Validate with <code>sigma check</code>.</p>
-    <pre>caddy-analyze export-sigma                    # stdout
+        <section class="reveal">
+            <h2>6. Sigma Rule Export</h2>
+            <p>Export 23 detection categories as Sigma YAML rules for SIEM import (Splunk, Elastic, Sigma-compatible SIEMs). Rules include MITRE ATT&amp;CK tags, deterministic UUIDs, and dynamically-constructed detection conditions. Validate with <code>sigma check</code>.</p>
+            <div class="callout callout-info">
+                <p class="callout-label">ℹ Note</p>
+                The 3 behavioral detections (<code>ua_rotation</code>, <code>object_enumeration</code>, <code>beaconing</code>) are <strong>not pattern-based</strong> and are not exported as Sigma rules. They require temporal analysis across multiple requests and cannot be expressed as static patterns.
+            </div>
+<pre>caddy-analyze export-sigma                    # stdout
 caddy-analyze export-sigma rules.yml          # file
 caddy-analyze export-sigma - | sigma check    # pipe to validator</pre>
+        </section>
 
-    <h2>7. IOC Defanging (--defang)</h2>
-    <p>Use <code>--defang</code> to defang IPs and URLs in all output formats for safe sharing of reports containing IOCs. IPs are defanged (<code>192.168.1.1</code> → <code>192[.]168[.]1[.]1</code>) and URL schemes are defanged (<code>http://</code> → <code>hxxp://</code>, <code>https://</code> → <code>hxxps://</code>). Works across all commands: report, detect, top, tail, diff, and log listing mode.</p>
-    <pre>caddy-analyze --detect --defang access.log
+        <section class="reveal">
+            <h2>7. IOC Defanging (--defang)</h2>
+            <p>Use <code>--defang</code> to defang IPs and URLs in all output formats for safe sharing of reports containing IOCs. IPs are defanged (<code>192.168.1.1</code> → <code>192[.]168[.]1[.]1</code>) and URL schemes are defanged (<code>http://</code> → <code>hxxp://</code>, <code>https://</code> → <code>hxxps://</code>). Works across all commands: report, detect, top, tail, diff, and log listing mode.</p>
+<pre>caddy-analyze --detect --defang access.log
 caddy-analyze top ip --defang access.log
 caddy-analyze tail --defang access.log</pre>
+        </section>
 
-    <div class="footer">
-        <p>caddy-analyzer is open-source software released under the <a href="https://github.com/L9Lenny/caddy-analyzer/blob/main/LICENSE">MIT License</a>.</p>
-    </div>
+        <footer class="footer reveal">
+            <p>caddy-analyzer is open-source software released under the <a href="https://github.com/lenny-ts/caddy-analyzer/blob/main/LICENSE">MIT License</a>.</p>
+        </footer>
+
+    </main>
+
+    <button class="back-to-top" aria-label="Back to top">↑</button>
+    <script src="docs.min.js?v=25" defer></script>
 
 </body>
 </html>

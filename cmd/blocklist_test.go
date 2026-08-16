@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/L9Lenny/caddy-analyzer/pkg/blocklist"
+	"github.com/lenny-ts/caddy-analyzer/pkg/blocklist"
 )
 
 func resetBlocklistFlags() {

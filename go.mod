@@ -1,6 +1,6 @@
-module github.com/L9Lenny/caddy-analyzer
+module github.com/lenny-ts/caddy-analyzer
 
-go 1.25.0
+go 1.25.13
 
 require (
 	github.com/charmbracelet/bubbles v1.0.0

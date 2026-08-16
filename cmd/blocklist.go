@@ -11,8 +11,8 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/L9Lenny/caddy-analyzer/pkg/blocklist"
-	"github.com/L9Lenny/caddy-analyzer/pkg/config"
+	"github.com/lenny-ts/caddy-analyzer/pkg/blocklist"
+	"github.com/lenny-ts/caddy-analyzer/pkg/config"
 )
 
 var blocklistCmd = &cobra.Command{

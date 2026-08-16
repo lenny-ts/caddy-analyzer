@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://lenny-ts.github.io/caddy-analyzer/sitemap.xml

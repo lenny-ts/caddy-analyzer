@@ -6,13 +6,13 @@
 </p>
 
 <p align="center">
-  <a href="https://go.dev"><img src="https://img.shields.io/badge/Go-1.24-38bdf8?style=flat-square&logo=go" alt="Go Version"></a>
-  <a href="https://pkg.go.dev/github.com/L9Lenny/caddy-analyzer"><img src="https://pkg.go.dev/badge/github.com/L9Lenny/caddy-analyzer.svg" alt="Go Reference"></a>
-  <a href="https://l9lenny.github.io/caddy-analyzer/"><img src="https://img.shields.io/badge/Documentation-238636?style=flat-square&logo=github" alt="Documentation"></a>
-  <a href="https://github.com/L9Lenny/caddy-analyzer/actions"><img src="https://github.com/L9Lenny/caddy-analyzer/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <a href="https://go.dev"><img src="https://img.shields.io/badge/Go-1.25-38bdf8?style=flat-square&logo=go" alt="Go Version"></a>
+  <a href="https://pkg.go.dev/github.com/lenny-ts/caddy-analyzer"><img src="https://pkg.go.dev/badge/github.com/lenny-ts/caddy-analyzer.svg" alt="Go Reference"></a>
+  <a href="https://lenny-ts.github.io/caddy-analyzer/"><img src="https://img.shields.io/badge/Documentation-238636?style=flat-square&logo=github" alt="Documentation"></a>
+  <a href="https://github.com/lenny-ts/caddy-analyzer/actions"><img src="https://github.com/lenny-ts/caddy-analyzer/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-purple.svg?style=flat-square" alt="License"></a>
-  <a href="https://github.com/L9Lenny/caddy-analyzer/releases"><img src="https://img.shields.io/github/v/release/L9Lenny/caddy-analyzer?style=flat-square&color=fbbf24" alt="Release"></a>
-  <a href="https://github.com/L9Lenny/caddy-analyzer"><img src="https://img.shields.io/github/stars/L9Lenny/caddy-analyzer?style=flat-square" alt="Stars"></a>
+  <a href="https://github.com/lenny-ts/caddy-analyzer/releases"><img src="https://img.shields.io/github/v/release/lenny-ts/caddy-analyzer?style=flat-square&color=fbbf24" alt="Release"></a>
+  <a href="https://github.com/lenny-ts/caddy-analyzer"><img src="https://img.shields.io/github/stars/lenny-ts/caddy-analyzer?style=flat-square" alt="Stars"></a>
 </p>
 
 <p align="center"><strong>🛡️ 26 attack categories · Dual-pass evasion-resistant engine · Real-time iptables firewall guard · Sigma export · MITRE ATT&CK tagged</strong></p>
@@ -31,32 +31,32 @@ Scans every Caddy v2 request against **26 attack categories** using a dual-pass 
 
 | Category | Covers | Example Patterns |
 |---|---|---|
-| **SQL Injection** | SQLi probes, blind injection, DB fingerprinting | `UNION SELECT`, `OR 1=1`, `pg_sleep`, `INTO OUTFILE`, `@@version` |
-| **NoSQL Injection** | MongoDB operators, JS eval injection | `$ne`, `$gt`, `$regex`, `$where`, `$nin`, `%24ne` |
-| **XSS** | Reflected/stored/DOM XSS, event handlers, protocol JS | `<script`, `onerror=`, `onfocus=`, `alert(`, `document.cookie`, `data:text/html` |
-| **SSTI** | Server-side template injection (Jinja2, Freemarker, ERB, Thymeleaf, Twig, etc.) | `__class__`, `__mro__`, `freemarker`, `nunjucks`, `{{7*7}}`, `os.popen`, `<#assign`, `<%=`, `__${...}__` |
-| **SSRF** | Cloud metadata, loopback/private IPs, protocol smuggling | `169.254.169.254`, `0x7f000001`, `gopher://`, `dict://`, `redis://` |
-| **RCE** | Shell injection, reverse shells, downloaders, LOLBins, deserialization | `/bin/sh`, `whoami`, `/dev/tcp/`, `powershell`, `certutil`, `eval()`, `rO0AB`, `_$$ND_FUNC$$_` |
-| **Path Traversal / LFI** | Directory traversal, null byte, `/proc/` filesystem, Windows system files | `../`, `..%00`, `/etc/passwd`, `/proc/self/*`, `php://input` |
-| **GraphQL Introspection** | Schema discovery queries | `__schema`, `__type`, `IntrospectionQuery` |
-| **Log4j / JNDI** | Log4Shell, JNDI lookups, env/sys access, obfuscated variants | `${jndi:ldap://`, `${env:`, `${lower:jndi`, `${::-j}` |
-| **XXE / XInclude** | XML entity expansion, external DTD, XInclude | `<!ENTITY`, `SYSTEM`, `PUBLIC`, `xi:include`, `xpointer` |
-| **Open Redirect** | URL parameter injection, protocol-relative URLs, backslash bypass | `?url=http://`, `?redirect=//`, `//evil.com`, `?url=/\` |
-| **LDAP Injection** | LDAP filter manipulation | `(&(`, `(|(`, `)(|(`, URL-encoded operators |
-| **XPath Injection** | XPath query manipulation | `]\|//*`, `.//*` |
-| **CRLF / Log Injection** | HTTP response header injection, log poisoning, Java ghost bits | `%0d%0aSet-Cookie:`, `%0d%0aLocation:`, literal CRLF, `%E5%98%8A%E5%98%8D` |
-| **Prototype Pollution** | JS prototype chain tampering | `__proto__`, `constructor.prototype`, JSON payloads |
-| **SSI Injection** | Server-side include directive injection | `<!--#exec cmd=`, `#include virtual=`, `#echo var=` |
-| **User-Agent Rotation** | Behavioral heuristic — IPs rotating ≥10 distinct UAs | credential stuffing, evasive scanners |
-| **JWT Abuse** | JWT alg:none bypass, token in URI, kid path traversal, Bearer token leak | `eyJ...` in URI, `"alg":"none"`, `kid":"../../../`, `Authorization: Bearer` |
-| **Object Enumeration** | BOLA/IDOR — sequential ID enumeration per path template | `/api/users/1`, `/api/users/2`, `/api/users/3` (≥10 distinct IDs) |
-| **Beaconing / C2** | Periodic callback detection (C2 beaconing) | inter-arrival CV < 0.25, 10-50 samples per path |
-| **LFI Wrapper Abuse** | PHP stream wrappers for file read/execution | `phar://`, `data://`, `expect://`, `compress.zlib` |
-| **Sensitive File Probes** | Credentials, backups, configs, source code, git exposure | `.env`, `.git/config`, `id_rsa`, `dump.sql`, `phpinfo.php` |
-| **Admin Probes** | DB admin panels, Spring Actuator, heapdumps, API docs, VCS metadata | `/phpmyadmin`, `/actuator/*`, `/h2-console`, `/swagger-ui` |
-| **WordPress Probes** | Plugin scanning, XML-RPC, rest API, backup directories | `/wp-content/plugins/`, `/xmlrpc.php`, `/wp-json/wp/v2/` |
-| **CGI Probes** | Legacy CGI script discovery | `/cgi-bin/`, `.cgi`, `.fcgi` |
-| **Scanner Tools** | 30+ scanner/user-agent signatures, automated tooling | `sqlmap`, `nuclei`, `gobuster`, `ffuf`, `wpscan`, `masscan`, `hydra`, `metasploit`, `shodan` |
+| **SQL Injection** | SQLi probes, blind injection, DB fingerprinting | `UNION SELECT`, `OR 1=1`, `pg_sleep`, `INTO OUTFILE`, `@@version`, etc. |
+| **NoSQL Injection** | MongoDB operators, JS eval injection | `$ne`, `$gt`, `$regex`, `$where`, `$nin`, `%24ne`, etc. |
+| **XSS** | Reflected/stored/DOM XSS, event handlers, protocol JS | `<script`, `onerror=`, `onfocus=`, `alert(`, `document.cookie`, `data:text/html`, etc. |
+| **SSTI** | Server-side template injection (Jinja2, Freemarker, ERB, Thymeleaf, Twig, etc.) | `__class__`, `__mro__`, `freemarker`, `nunjucks`, `{{7*7}}`, `os.popen`, `<#assign`, `<%=`, `__${...}__`, etc. |
+| **SSRF** | Cloud metadata, loopback/private IPs, protocol smuggling | `169.254.169.254`, `0x7f000001`, `gopher://`, `dict://`, `redis://`, etc. |
+| **RCE** | Shell injection, reverse shells, downloaders, LOLBins, deserialization | `/bin/sh`, `whoami`, `/dev/tcp/`, `powershell`, `certutil`, `eval()`, `rO0AB`, `_$$ND_FUNC$$_`, etc. |
+| **Path Traversal / LFI** | Directory traversal, null byte, `/proc/` filesystem, Windows system files | `../`, `..%00`, `/etc/passwd`, `/proc/self/*`, `php://input`, etc. |
+| **GraphQL Introspection** | Schema discovery queries | `__schema`, `__type`, `IntrospectionQuery`, etc. |
+| **Log4j / JNDI** | Log4Shell, JNDI lookups, env/sys access, obfuscated variants | `${jndi:ldap://`, `${env:`, `${lower:jndi`, `${::-j}`, etc. |
+| **XXE / XInclude** | XML entity expansion, external DTD, XInclude | `<!ENTITY`, `SYSTEM`, `PUBLIC`, `xi:include`, `xpointer`, etc. |
+| **Open Redirect** | URL parameter injection, protocol-relative URLs, backslash bypass | `?url=http://`, `?redirect=//`, `//evil.com`, `?url=/\`, etc. |
+| **LDAP Injection** | LDAP filter manipulation | `(&(`, `(|(`, `)(|(`, URL-encoded operators, etc. |
+| **XPath Injection** | XPath query manipulation | `]\|//*`, `.//*`, etc. |
+| **CRLF / Log Injection** | HTTP response header injection, log poisoning, Java ghost bits | `%0d%0aSet-Cookie:`, `%0d%0aLocation:`, literal CRLF, `%E5%98%8A%E5%98%8D`, etc. |
+| **Prototype Pollution** | JS prototype chain tampering | `__proto__`, `constructor.prototype`, JSON payloads, etc. |
+| **SSI Injection** | Server-side include directive injection | `<!--#exec cmd=`, `#include virtual=`, `#echo var=`, etc. |
+| **User-Agent Rotation** | Behavioral heuristic — IPs rotating ≥10 distinct UAs | credential stuffing, evasive scanners, etc. |
+| **JWT Abuse** | JWT alg:none bypass, token in URI, kid path traversal, Bearer token leak | `eyJ...` in URI, `"alg":"none"`, `kid":"../../../`, `Authorization: Bearer`, etc. |
+| **Object Enumeration** | BOLA/IDOR — sequential ID enumeration per path template | `/api/users/1`, `/api/users/2`, `/api/users/3` (≥10 distinct IDs), etc. |
+| **Beaconing / C2** | Periodic callback detection (C2 beaconing) | inter-arrival CV < 0.25, 10-50 samples per path, etc. |
+| **LFI Wrapper Abuse** | PHP stream wrappers for file read/execution | `phar://`, `data://`, `expect://`, `compress.zlib`, etc. |
+| **Sensitive File Probes** | Credentials, backups, configs, source code, git exposure | `.env`, `.git/config`, `id_rsa`, `dump.sql`, `phpinfo.php`, etc. |
+| **Admin Probes** | DB admin panels, Spring Actuator, heapdumps, API docs, VCS metadata | `/phpmyadmin`, `/actuator/*`, `/h2-console`, `/swagger-ui`, etc. |
+| **WordPress Probes** | Plugin scanning, XML-RPC, rest API, backup directories | `/wp-content/plugins/`, `/xmlrpc.php`, `/wp-json/wp/v2/`, etc. |
+| **CGI Probes** | Legacy CGI script discovery | `/cgi-bin/`, `.cgi`, `.fcgi`, etc. |
+| **Scanner Tools** | 30+ scanner/user-agent signatures, automated tooling | `sqlmap`, `nuclei`, `gobuster`, `ffuf`, `wpscan`, `masscan`, `hydra`, `metasploit`, `shodan`, etc. |
 
 Output example:
 
@@ -183,23 +183,23 @@ Active on `caddy-analyze` (offline mode), `top`, and `diff` (per-file with filen
 
 ```bash
 # Linux / macOS
-curl -sSfL https://raw.githubusercontent.com/L9Lenny/caddy-analyzer/main/install.sh | bash
+curl -sSfL https://raw.githubusercontent.com/lenny-ts/caddy-analyzer/main/install.sh | bash
 
 # Windows (PowerShell)
-iwr -useb https://raw.githubusercontent.com/L9Lenny/caddy-analyzer/main/install.ps1 | iex
+iwr -useb https://raw.githubusercontent.com/lenny-ts/caddy-analyzer/main/install.ps1 | iex
 
 # Go toolchain
-go install github.com/L9Lenny/caddy-analyzer/cmd/caddy-analyze@latest
+go install github.com/lenny-ts/caddy-analyzer/cmd/caddy-analyze@latest
 
 # Docker
-docker run --rm -v /var/log/caddy:/logs ghcr.io/L9Lenny/caddy-analyzer /logs/access.log
+docker run --rm -v /var/log/caddy:/logs ghcr.io/lenny-ts/caddy-analyzer /logs/access.log
 ```
 
 ---
 
 ## Documentation
 
-Full documentation is available at **[l9lenny.github.io/caddy-analyzer](https://l9lenny.github.io/caddy-analyzer/)**.
+Full documentation is available at **[lenny-ts.github.io/caddy-analyzer](https://lenny-ts.github.io/caddy-analyzer/)**.
 
 <details>
 <summary><strong>Command Reference</strong></summary>
@@ -295,7 +295,7 @@ Memory is bounded by LRU IP eviction (100K cap, configurable via `Detector.SetIP
 ## Development
 
 ```bash
-git clone https://github.com/L9Lenny/caddy-analyzer.git
+git clone https://github.com/lenny-ts/caddy-analyzer.git
 cd caddy-analyzer
 go build ./cmd/caddy-analyze
 go test ./...

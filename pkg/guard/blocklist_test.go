@@ -5,8 +5,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/L9Lenny/caddy-analyzer/pkg/blocklist"
-	"github.com/L9Lenny/caddy-analyzer/pkg/types"
+	"github.com/lenny-ts/caddy-analyzer/pkg/blocklist"
+	"github.com/lenny-ts/caddy-analyzer/pkg/types"
 )
 
 func newTestBlocklistMgr(t *testing.T, entries string) *blocklist.Manager {

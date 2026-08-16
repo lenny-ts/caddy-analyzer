@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="view-transition" content="same-origin">
+    <title>404 — Page Not Found | caddy-analyzer</title>
+    <meta name="description" content="The page you are looking for does not exist. Return to the caddy-analyzer documentation.">
+    <meta name="theme-color" content="#0a0a0c">
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E🛡️%3C/text%3E%3C/svg%3E">
+    <meta property="og:title" content="404 — caddy-analyzer">
+    <meta property="og:description" content="Page not found. Return to caddy-analyzer documentation.">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://lenny-ts.github.io/caddy-analyzer/404.html">
+    <meta property="og:image" content="https://lenny-ts.github.io/caddy-analyzer/og-image.png">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="404 — caddy-analyzer">
+    <meta name="twitter:description" content="Page not found. Return to caddy-analyzer documentation.">
+    <meta name="color-scheme" content="dark light">
+    <meta name="robots" content="noindex">
+    <script>
+        (function () {
+            try {
+                var t = localStorage.getItem("caddy-docs-theme");
+                if (t === "light") document.documentElement.setAttribute("data-theme", "light");
+                else if (t !== "dark" && window.matchMedia && window.matchMedia("(prefers-color-scheme: light)").matches)
+                    document.documentElement.setAttribute("data-theme", "light");
+            } catch (e) {}
+        })();
+        document.documentElement.classList.add("decor-paused");
+    </script>
+    <meta name="doc:modified" content="2026-08-15T15:51:05+02:00">
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="apple-touch-icon.png">
+    <link rel="canonical" href="https://lenny-ts.github.io/caddy-analyzer/index.html">
+    <link rel="stylesheet" href="styles.min.css?v=25">
+    <style>
+        body.error-page {
+            min-height: 100vh;
+            margin: 0;
+            padding: 1.5rem;
+            text-align: center;
+        }
+        .error-wrap {
+            max-width: 560px;
+            width: 100%;
+            position: relative;
+            z-index: 2;
+            flex: 1 0 auto;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-self: center;
+        }
+        .error-page .footer {
+            flex: 0 0 auto;
+            margin-top: 2.5rem;
+        }
+        .error-code {
+            font-family: var(--mono);
+            font-size: clamp(6rem, 22vw, 12rem);
+            font-weight: 800;
+            line-height: 0.9;
+            background: linear-gradient(135deg, var(--accent), #a78bfa, #f87171);
+            background-size: 200% 200%;
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            animation: error-gradient 4s ease infinite;
+            position: relative;
+            margin-bottom: 0.5rem;
+        }
+        .error-code::before, .error-code::after {
+            content: "404";
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%;
+            background: var(--bg);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            opacity: 0.8;
+        }
+        .error-code::before {
+            color: var(--accent);
+            -webkit-text-fill-color: var(--accent);
+            animation: glitch-1 2.5s infinite linear alternate-reverse;
+            clip-path: polygon(0 0, 100% 0, 100% 33%, 0 33%);
+        }
+        .error-code::after {
+            color: #f87171;
+            -webkit-text-fill-color: #f87171;
+            animation: glitch-2 3s infinite linear alternate-reverse;
+            clip-path: polygon(0 67%, 100% 67%, 100% 100%, 0 100%);
+        }
+        @keyframes error-gradient {
+            0%, 100% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+        }
+        @keyframes glitch-1 {
+            0%, 100% { transform: translate(0); }
+            20% { transform: translate(-3px, 1px); }
+            40% { transform: translate(2px, -1px); }
+            60% { transform: translate(-1px, 2px); }
+            80% { transform: translate(1px, -2px); }
+        }
+        @keyframes glitch-2 {
+            0%, 100% { transform: translate(0); }
+            25% { transform: translate(2px, -1px); }
+            50% { transform: translate(-2px, 1px); }
+            75% { transform: translate(1px, 2px); }
+        }
+        .error-title {
+            font-family: var(--sans);
+            font-size: 1.4rem;
+            color: var(--text);
+            margin: 0 0 0.6rem;
+            font-weight: 600;
+        }
+        .error-desc {
+            color: var(--text-dim);
+            font-size: 0.95rem;
+            line-height: 1.6;
+            margin-bottom: 2rem;
+        }
+        .error-actions {
+            display: flex;
+            gap: 0.8rem;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        .error-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            padding: 0.7rem 1.3rem;
+            border-radius: 10px;
+            font-family: var(--mono);
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-decoration: none;
+            transition: transform .2s, box-shadow .2s, background .2s;
+        }
+        .error-btn-primary {
+            background: var(--accent);
+            color: #0a0a0f;
+        }
+        [data-theme="light"] .error-btn-primary { color: #ffffff; }
+        .error-btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px -6px rgba(72,209,204,0.5);
+        }
+        .error-btn-secondary {
+            background: var(--surface);
+            color: var(--text);
+            border: 1px solid var(--border);
+        }
+        .error-btn-secondary:hover {
+            border-color: var(--accent);
+            transform: translateY(-2px);
+        }
+        .error-orbit {
+            position: fixed;
+            width: 600px;
+            height: 600px;
+            border-radius: 50%;
+            border: 1px dashed rgba(72,209,204,0.12);
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            animation: orbit-rotate 40s linear infinite;
+            pointer-events: none;
+            z-index: 0;
+        }
+        .error-orbit::before {
+            content: "";
+            position: absolute;
+            top: -4px; left: 50%;
+            width: 8px; height: 8px;
+            border-radius: 50%;
+            background: var(--accent);
+            box-shadow: 0 0 12px var(--accent);
+        }
+        @keyframes orbit-rotate {
+            from { transform: translate(-50%, -50%) rotate(0deg); }
+            to { transform: translate(-50%, -50%) rotate(360deg); }
+        }
+        @media (prefers-reduced-motion: reduce) {
+            .error-code, .error-code::before, .error-code::after,
+            .error-orbit { animation: none !important; }
+        }
+    </style>
+</head>
+<body class="error-page">
+    <a href="#main" class="skip-link">Skip to content</a>
+    <div class="scroll-progress"></div>
+    <div class="aurora" aria-hidden="true">
+        <i class="aurora-blob-3"></i>
+        <i class="aurora-beam"></i>
+        <i class="aurora-vignette"></i>
+    </div>
+    <div class="grid-overlay"></div>
+    <div class="error-orbit" aria-hidden="true"></div>
+    <main class="error-wrap" id="main">
+        <div class="error-code" aria-hidden="true">404</div>
+        <h1 class="error-title">Page not found</h1>
+        <p class="error-desc">The page you're looking for has drifted off into orbit, or never existed. Let's get you back to safety.</p>
+        <div class="error-actions">
+            <a href="index.html" class="error-btn error-btn-primary">&#9664; Back to docs</a>
+            <a href="https://github.com/lenny-ts/caddy-analyzer" class="error-btn error-btn-secondary" target="_blank" rel="noopener">GitHub &#8599;</a>
+        </div>
+    </main>
+    <footer class="footer reveal">
+        <p>caddy-analyzer is open-source software released under the <a href="https://github.com/lenny-ts/caddy-analyzer/blob/main/LICENSE">MIT License</a>.</p>
+    </footer>
+    <script src="docs.min.js?v=25" defer></script>
+</body>
+</html>

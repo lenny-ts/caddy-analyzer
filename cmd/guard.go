@@ -13,12 +13,12 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/L9Lenny/caddy-analyzer/pkg/audit"
-	"github.com/L9Lenny/caddy-analyzer/pkg/blocklist"
-	"github.com/L9Lenny/caddy-analyzer/pkg/config"
-	"github.com/L9Lenny/caddy-analyzer/pkg/enrich"
-	"github.com/L9Lenny/caddy-analyzer/pkg/guard"
-	"github.com/L9Lenny/caddy-analyzer/pkg/reader"
+	"github.com/lenny-ts/caddy-analyzer/pkg/audit"
+	"github.com/lenny-ts/caddy-analyzer/pkg/blocklist"
+	"github.com/lenny-ts/caddy-analyzer/pkg/config"
+	"github.com/lenny-ts/caddy-analyzer/pkg/enrich"
+	"github.com/lenny-ts/caddy-analyzer/pkg/guard"
+	"github.com/lenny-ts/caddy-analyzer/pkg/reader"
 )
 
 var (
