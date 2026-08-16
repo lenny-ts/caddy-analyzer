@@ -140,6 +140,9 @@ func (e *Engine) Process(entry *types.LogEntry) {
 
 	if entry.Geo.CountryCode != "" {
 		s.IncStrCount(s.CountryCounts, entry.Geo.CountryCode)
+		if entry.Geo.CountryName != "" {
+			s.CountryNames[entry.Geo.CountryCode] = entry.Geo.CountryName
+		}
 	}
 	if entry.Geo.ASN > 0 {
 		s.IncStrCount(s.ASNCounts, fmt.Sprintf("AS%d", entry.Geo.ASN))

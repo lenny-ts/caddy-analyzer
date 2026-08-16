@@ -140,6 +140,9 @@ func runTopCmd(cmd *cobra.Command, args []string) error {
 	}
 
 	items := topItems(dim, s, topN)
+	if dim == "country" || dim == "countries" {
+		items = output.RenameCountryItems(items, s.CountryNames)
+	}
 	if flagDefang {
 		for i := range items {
 			items[i].Key = output.Defang(items[i].Key)

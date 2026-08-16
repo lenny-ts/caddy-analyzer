@@ -351,9 +351,7 @@ func newGeoIPEnricher() *enrich.GeoIP {
 	enrich.SetAutoDownload(!flagNoAutoDL)
 	g, err := enrich.NewGeoIP(flagGeoIPDB)
 	if err != nil {
-		if flagGeoIPDB != "" {
-			fmt.Fprintf(os.Stderr, "warning: geoip-db: %v (continuing without GeoIP)\n", err)
-		}
+		fmt.Fprintf(os.Stderr, "warning: geoip: %v (continuing without GeoIP)\n", err)
 		return nil
 	}
 	return g

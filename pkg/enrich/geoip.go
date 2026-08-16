@@ -19,10 +19,12 @@ const (
 	geoCacheTTL     = 24 * time.Hour
 	geoCacheMaxSize = 50000
 
-	// dbipCountryURL is the DB-IP country-lite mmdb download URL.
-	dbipCountryURL = "https://download.dbip.com/dbip-country-lite.mmdb"
-	// dbipASNURL is the DB-IP ASN-lite mmdb download URL.
-	dbipASNURL = "https://download.dbip.com/dbip-asn-lite.mmdb"
+	// geoipCountryURL is the MaxMind GeoLite2 country mmdb download URL.
+	// Uses the P3TERX/GeoLite.mmdb GitHub release mirror, which repackages
+	// the official MaxMind GeoLite2 databases and is updated daily.
+	geoipCountryURL = "https://github.com/P3TERX/GeoLite.mmdb/releases/latest/download/GeoLite2-Country.mmdb"
+	// geoipASNURL is the MaxMind GeoLite2 ASN mmdb download URL.
+	geoipASNURL = "https://github.com/P3TERX/GeoLite.mmdb/releases/latest/download/GeoLite2-ASN.mmdb"
 )
 
 // autoDownload controls whether NewGeoIP auto-downloads the DB-IP lite
@@ -77,12 +79,16 @@ type asnRecordDBIP struct {
 // file when no explicit path is given. The first existing file wins.
 var geoIPSearchPaths = []string{
 	"GeoIP.mmdb",
+	"GeoLite2-Country.mmdb",
 	"dbip-country-lite.mmdb",
 	"dbip-city-lite.mmdb",
 	filepath.Join(os.Getenv("HOME"), ".config", "caddy-analyzer", "GeoIP.mmdb"),
+	filepath.Join(os.Getenv("HOME"), ".config", "caddy-analyzer", "GeoLite2-Country.mmdb"),
 	filepath.Join(os.Getenv("HOME"), ".config", "caddy-analyzer", "dbip-country-lite.mmdb"),
 	"/var/lib/caddy-analyzer/GeoIP.mmdb",
+	"/var/lib/caddy-analyzer/GeoLite2-Country.mmdb",
 	"/usr/share/GeoIP/GeoIP.mmdb",
+	"/usr/share/GeoIP/GeoLite2-Country.mmdb",
 	"/usr/share/GeoIP/dbip-country-lite.mmdb",
 }
 
@@ -145,27 +151,28 @@ func downloadFile(url, dest string) (retErr error) {
 	return nil
 }
 
-// autoDownloadGeoIP downloads the DB-IP country-lite and ASN-lite mmdb
-// files to the user config directory and returns their paths.
+// autoDownloadGeoIP downloads the MaxMind GeoLite2 country and ASN mmdb
+// files (via the P3TERX GitHub mirror) to the user config directory
+// and returns their paths.
 func autoDownloadGeoIP() (countryPath, asnPath string, err error) {
 	dir, err := userConfigDir()
 	if err != nil {
 		return "", "", err
 	}
-	countryPath = filepath.Join(dir, "dbip-country-lite.mmdb")
-	asnPath = filepath.Join(dir, "dbip-asn-lite.mmdb")
+	countryPath = filepath.Join(dir, "GeoLite2-Country.mmdb")
+	asnPath = filepath.Join(dir, "GeoLite2-ASN.mmdb")
 
 	if _, e := os.Stat(countryPath); e != nil {
-		fmt.Fprintf(os.Stderr, "Auto-downloading DB-IP country-lite mmdb to %s...\n", countryPath)
-		if err := downloadFile(dbipCountryURL, countryPath); err != nil {
+		fmt.Fprintf(os.Stderr, "Auto-downloading GeoLite2-Country mmdb to %s...\n", countryPath)
+		if err := downloadFile(geoipCountryURL, countryPath); err != nil {
 			return "", "", fmt.Errorf("auto-download GeoIP: %w", err)
 		}
 		fmt.Fprintf(os.Stderr, "  done.\n")
 	}
 
 	if _, e := os.Stat(asnPath); e != nil {
-		fmt.Fprintf(os.Stderr, "Auto-downloading DB-IP ASN-lite mmdb to %s...\n", asnPath)
-		if err := downloadFile(dbipASNURL, asnPath); err != nil {
+		fmt.Fprintf(os.Stderr, "Auto-downloading GeoLite2-ASN mmdb to %s...\n", asnPath)
+		if err := downloadFile(geoipASNURL, asnPath); err != nil {
 			// ASN is optional; country-only is still useful.
 			fmt.Fprintf(os.Stderr, "  warning: ASN download failed: %v\n", err)
 			return countryPath, "", nil

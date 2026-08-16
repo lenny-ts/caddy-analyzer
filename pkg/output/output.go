@@ -516,7 +516,7 @@ func (r *Report) printTable() error {
 				title = styleLabel.Render(title)
 			}
 			_, _ = fmt.Fprintf(w, "%s:\n", title)
-			printTopNWithBar(w, analysis.TopN(s.CountryCounts, r.top), total, useColor)
+			printTopNWithBar(w, renameItems(analysis.TopN(s.CountryCounts, r.top), s.CountryNames), total, useColor)
 		}
 		if r.sections.ASN && len(s.ASNCounts) > 0 {
 			_, _ = fmt.Fprintf(w, "\n")
@@ -883,7 +883,7 @@ func TopFieldAnalysis(engine *analysis.Engine, field types.TopField, n int, w io
 	case types.TopUserAgent:
 		printTop(w, "User Agents", analysis.TopN(s.UserAgentCounts, n))
 	case types.TopCountry:
-		printTop(w, "Countries", analysis.TopN(s.CountryCounts, n))
+		printTop(w, "Countries", renameItems(analysis.TopN(s.CountryCounts, n), s.CountryNames))
 	case types.TopASN:
 		printTop(w, "Autonomous Systems", analysis.TopN(s.ASNCounts, n))
 	}
@@ -899,6 +899,30 @@ func printTop(w io.Writer, title string, items []types.CountItem) {
 		_, _ = fmt.Fprintf(tw, "  %d.\t%s\t(%d)\n", i+1, stripANSI(item.Key), item.Count)
 	}
 	_ = tw.Flush()
+}
+
+// RenameCountryItems returns a copy of items with keys replaced by their
+// human-readable name from names when available; keys without a name
+// entry are left unchanged. Used to display country names (e.g.
+// "Italy") instead of ISO codes (e.g. "IT") in text output.
+func RenameCountryItems(items []types.CountItem, names map[string]string) []types.CountItem {
+	return renameItems(items, names)
+}
+
+// renameItems returns a copy of items with keys replaced by their
+// human-readable name from names when available; keys without a name
+// entry are left unchanged. Used to display country names (e.g.
+// "Italy") instead of ISO codes (e.g. "IT") in text output.
+func renameItems(items []types.CountItem, names map[string]string) []types.CountItem {
+	out := make([]types.CountItem, len(items))
+	for i, it := range items {
+		if name, ok := names[it.Key]; ok && name != "" {
+			out[i] = types.CountItem{Key: name, Count: it.Count}
+		} else {
+			out[i] = it
+		}
+	}
+	return out
 }
 
 func listStatus(s int) string {

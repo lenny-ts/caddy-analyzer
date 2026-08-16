@@ -255,6 +255,10 @@ type Stats struct {
 	// "US") and ASN strings (e.g. "AS15169") respectively.
 	CountryCounts map[string]int64
 	ASNCounts     map[string]int64
+	// CountryNames maps ISO country codes (e.g. "IT") to human-readable
+	// names (e.g. "Italy") for display. Populated by the GeoIP enricher
+	// alongside CountryCounts.
+	CountryNames map[string]string
 	// PathErrorCounts tracks 5xx responses per path. Used by the diff
 	// engine to surface NEW error paths (paths that errored in target but
 	// were absent or healthy in baseline) rather than any new path.
@@ -354,6 +358,7 @@ func NewStats() *Stats {
 		SuspiciousDetections: make(map[string][]DetectionRecord),
 		CountryCounts:        make(map[string]int64),
 		ASNCounts:            make(map[string]int64),
+		CountryNames:         make(map[string]string),
 		MinDuration:          1<<63 - 1,
 	}
 }
