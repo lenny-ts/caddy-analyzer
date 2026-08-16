@@ -141,6 +141,24 @@ func (m *Manager) Refresh() []SourceStatus {
 	return statuses
 }
 
+// RefreshWithProgress works like Refresh but invokes onFeed after each
+// source completes (success or failure), passing the 1-based index and
+// total count. Used to drive a progress bar in the CLI.
+func (m *Manager) RefreshWithProgress(onFeed func(idx, total int, st SourceStatus)) []SourceStatus {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	total := len(m.sources)
+	var statuses []SourceStatus
+	for i, src := range m.sources {
+		st := m.refreshSource(src)
+		statuses = append(statuses, st)
+		if onFeed != nil {
+			onFeed(i+1, total, st)
+		}
+	}
+	return statuses
+}
+
 func (m *Manager) refreshSource(src Source) SourceStatus {
 	body, err := m.httpFetch(src.URL)
 	if err != nil {

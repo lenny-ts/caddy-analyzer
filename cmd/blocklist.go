@@ -13,6 +13,7 @@ import (
 
 	"github.com/lenny-ts/caddy-analyzer/pkg/blocklist"
 	"github.com/lenny-ts/caddy-analyzer/pkg/config"
+	"github.com/lenny-ts/caddy-analyzer/pkg/progress"
 )
 
 var blocklistCmd = &cobra.Command{
@@ -143,7 +144,12 @@ func blocklistRefresh() error {
 		return fmt.Errorf("blocklist manager: %w", err)
 	}
 	fmt.Fprintf(os.Stderr, "Refreshing %d blocklist feed(s)...\n", len(sources))
-	statuses := mgr.Refresh()
+	bar := progress.New(os.Stderr, int64(len(sources)), "Refreshing")
+	statuses := mgr.RefreshWithProgress(func(idx, total int, st blocklist.SourceStatus) {
+		bar.Add(1)
+	})
+	bar.Done()
+
 	totalEntries := 0
 	active := 0
 	hadErr := false
