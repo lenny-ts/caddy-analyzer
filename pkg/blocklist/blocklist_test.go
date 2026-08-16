@@ -320,8 +320,8 @@ func TestManagerContainsInvalidIP(t *testing.T) {
 }
 
 func TestDefaultSources(t *testing.T) {
-	if len(DefaultSources) < 5 {
-		t.Fatalf("expected at least 5 default sources, got %d", len(DefaultSources))
+	if len(DefaultSources) < 4 {
+		t.Fatalf("expected at least 4 default sources, got %d", len(DefaultSources))
 	}
 	names := map[string]bool{}
 	for _, s := range DefaultSources {
@@ -330,7 +330,7 @@ func TestDefaultSources(t *testing.T) {
 		}
 		names[s.Name] = true
 	}
-	expected := []string{"spamhaus-drop", "spamhaus-edrop", "firehol-level1", "cins-army", "tor-exit-nodes"}
+	expected := []string{"spamhaus-drop", "firehol-level1", "cins-army", "tor-exit-nodes"}
 	for _, e := range expected {
 		if !names[e] {
 			t.Errorf("missing default source: %s", e)

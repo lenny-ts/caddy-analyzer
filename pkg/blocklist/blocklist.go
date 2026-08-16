@@ -51,9 +51,8 @@ type Stats struct {
 // custom sources via --blocklist-config.
 var DefaultSources = []Source{
 	{Name: "spamhaus-drop", URL: "https://www.spamhaus.org/drop/drop.txt"},
-	{Name: "spamhaus-edrop", URL: "https://www.spamhaus.org/drop/edrop.txt"},
 	{Name: "firehol-level1", URL: "https://iplists.firehol.org/files/firehol_level1.netset"},
-	{Name: "cins-army", URL: "https://cinsscore.com/list/ci_badguys"},
+	{Name: "cins-army", URL: "http://cinsscore.com/list/ci-badguys.txt"},
 	{Name: "tor-exit-nodes", URL: "https://check.torproject.org/torbulkexitlist"},
 }
 

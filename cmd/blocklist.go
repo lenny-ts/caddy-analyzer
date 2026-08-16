@@ -28,9 +28,8 @@ Actions:
 
 Default feeds (disabled with --no-default-blocklists):
   • Spamhaus DROP    https://www.spamhaus.org/drop/drop.txt
-  • Spamhaus EDROP   https://www.spamhaus.org/drop/edrop.txt
   • FireHOL level1   https://iplists.firehol.org/files/firehol_level1.netset
-  • CINS Army        https://cinsscore.com/list/ci_badguys
+  • CINS Army        http://cinsscore.com/list/ci-badguys.txt
   • Tor exit nodes   https://check.torproject.org/torbulkexitlist
 
 Custom feeds are added with --blocklist-config and removed with
