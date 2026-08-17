@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Guard country-block**: `--country-block CN,RU,IR` immediately blocks IPs by GeoIP country code. Fails fast if no mmdb is available.
 - **GeoIP enrichment**: offline mmdb lookup (no API key, no network at query time). `--geoip-db` with auto-discovery in cwd, `~/.config/caddy-analyzer/`, `/var/lib/caddy-analyzer/`, `/usr/share/GeoIP/`. Auto-downloads `GeoLite2-Country.mmdb` + `GeoLite2-ASN.mmdb` from the P3TERX mirror on first run; disable with `--no-auto-download`.
 - **`top country` / `top asn` dimensions** with human-readable country names ("Italy" instead of `IT`). Country and ASN sections now in the default report (auto-hidden when no GeoIP data).
+- **`--watch` (live dashboard) GeoIP tab**: new "Geo" view (key `7`) showing top client countries (human-readable names) and top ASN. Log entries are enriched inline as they stream in; the tab degrades to a disabled hint when no mmdb is available.
 - **Documentation site**: glassmorphism-design docs (index, subcommands, security, sources, installation) with TOC sidebar, back-to-top, Lighthouse-optimized performance.
 
 ### Fixed

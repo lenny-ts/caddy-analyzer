@@ -141,7 +141,7 @@ Caddy v2 uses a **structured JSON log format** that differs from the Common/Comb
 | **Threat Intel** | Offline GeoIP enrichment (MaxMind GeoLite2 / DB-IP mmdb, no API key) with auto-download. `top country` / `top asn` dimensions. Country/ASN sections in the default report. Auto-discovery in cwd, `~/.config/caddy-analyzer/`, `/var/lib/caddy-analyzer/`, `/usr/share/GeoIP/` |
 | **Traffic Analysis** | Classifies human users vs crawlers (Googlebot, Bingbot, Yandex, DuckDuckBot) and automated scrapers |
 | **Diff Engine** | Side-by-side comparison of two log files detecting 5xx spikes, RPS shifts, and latency regressions |
-| **TUI Dashboard** | 6-tab Bubbletea/Lipgloss interface with live streaming, security alerts, and top metrics |
+| **TUI Dashboard** | 7-tab Bubbletea/Lipgloss interface with live streaming, security alerts, top metrics, and GeoIP country/ASN |
 | **HTML Reports** | Standalone dark-mode single-file HTML reports for sharing with your team |
 | **Data Sources** | Local files, stdin, Docker (`docker://`), Kubernetes (`k8s://`), systemd journalctl (`journalctl://`) |
 | **Filtering** | Entry-level filters auto-switch to color-coded log listings. Supports CIDR, status classes, methods, path globs |
@@ -239,7 +239,7 @@ Subcommands:
 | `--detect` | `-d` | `false` | Enable security threat detection |
 | `--format` | `-f` | `table` | Output format: `table`, `json`, `csv`, `html` |
 | `--output` | `-o` | `""` | Write report to file |
-| `--watch` | `-w` | `false` | Launch 6-tab interactive TUI dashboard |
+| `--watch` | `-w` | `false` | Launch 7-tab interactive TUI dashboard (Summary, Realtime, Security, Top IPs/Paths, User Agents, Geo) |
 | `--top` | `-t` | `10` | Max top entries in tables (0 disables) |
 | `--from` | | `""` | Time filter start (RFC3339 or relative: `5m`, `1h`, `2d`) |
 | `--to` | | `""` | Time filter end (RFC3339) |

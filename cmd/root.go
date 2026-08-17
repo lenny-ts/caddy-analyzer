@@ -615,7 +615,12 @@ func runWatch(ctx context.Context, sources []types.LogSource) error {
 		close(linesCh)
 	}()
 
-	p := tea.NewProgram(tui.NewModel(linesCh), tea.WithAltScreen())
+	geoip := newGeoIPEnricher()
+	if geoip != nil {
+		defer func() { _ = geoip.Close() }()
+	}
+
+	p := tea.NewProgram(tui.NewModelWithGeoIP(linesCh, geoip), tea.WithAltScreen())
 	_, err := p.Run()
 	return err
 }

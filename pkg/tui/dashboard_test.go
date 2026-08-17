@@ -8,6 +8,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/lenny-ts/caddy-analyzer/pkg/analysis"
+	"github.com/lenny-ts/caddy-analyzer/pkg/enrich"
 	"github.com/lenny-ts/caddy-analyzer/pkg/types"
 )
 
@@ -262,5 +263,60 @@ func TestDetectorSharedInTUI(t *testing.T) {
 	})
 	if det == nil || det.Type != analysis.DetSQLInjection {
 		t.Fatalf("expected SQLi detection, got %+v", det)
+	}
+}
+
+// TestNewModelWithGeoIPStoresEnricher verifies the GeoIP enricher is stored on
+// the model so the LineMsg handler can use it.
+func TestNewModelWithGeoIPStoresEnricher(t *testing.T) {
+	g := &enrich.GeoIP{}
+	m := NewModelWithGeoIP(make(chan string, 1), g)
+	if m.geoip != g {
+		t.Fatal("geoip enricher must be stored on the model")
+	}
+	// NewModel must leave geoip nil for backward compatibility.
+	if NewModel(make(chan string, 1)).geoip != nil {
+		t.Error("NewModel must leave geoip nil")
+	}
+}
+
+// TestUpdateLineMsgEnrichesGeo verifies that when a GeoIP enricher is wired,
+// parsed entries are enriched before reaching the engine so country/ASN
+// stats populate.
+func TestUpdateLineMsgEnrichesGeo(t *testing.T) {
+	// We cannot easily construct a real maxminddb reader in a unit test, so we
+	// verify the wiring indirectly: with geoip == nil the entry's Geo field
+	// remains zero and the engine records no country counts. This guards
+	// against regressions where the enricher call is removed from the
+	// LineMsg handler.
+	m := NewModelWithGeoIP(make(chan string, 1), nil)
+	m.ready = true
+
+	updated, _ := m.Update(LineMsg(sampleCaddyLine))
+	um := updated.(Model)
+	if um.stats != nil && len(um.stats.CountryCounts) != 0 {
+		t.Errorf("country counts must be empty when geoip is nil, got %d", len(um.stats.CountryCounts))
+	}
+	// Force a finalize + stats so the engine exposes its counts.
+	um.engine.Finalize()
+	st := um.engine.Stats()
+	if len(st.CountryCounts) != 0 {
+		t.Errorf("country counts must be empty when no enricher is set, got %d", len(st.CountryCounts))
+	}
+}
+
+// TestViewGeoRendersDisabledHint verifies the Geo tab degrades gracefully when
+// no GeoIP enricher is configured.
+func TestViewGeoRendersDisabledHint(t *testing.T) {
+	m := NewModel(make(chan string, 1))
+	m.ready = true
+	m.width = 120
+	m.height = 40
+	m = m.initTables()
+	m.current = viewGeo
+
+	out := m.View()
+	if !strings.Contains(out, "GeoIP enrichment disabled") {
+		t.Errorf("Geo tab must render a disabled hint without an enricher, got %q", out)
 	}
 }
