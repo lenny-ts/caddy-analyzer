@@ -225,16 +225,26 @@ func TestNewGeoIPNoFileNoAutoDownload(t *testing.T) {
 
 func TestUserConfigDir(t *testing.T) {
 	oldHome := os.Getenv("HOME")
-	defer func() { _ = os.Setenv("HOME", oldHome) }()
+	oldXDG := os.Getenv("XDG_CONFIG_HOME")
+	defer func() {
+		_ = os.Setenv("HOME", oldHome)
+		_ = os.Setenv("XDG_CONFIG_HOME", oldXDG)
+	}()
 
 	dir := t.TempDir()
 	_ = os.Setenv("HOME", dir)
+	_ = os.Unsetenv("XDG_CONFIG_HOME")
+
+	base, err := os.UserConfigDir()
+	if err != nil {
+		t.Skipf("UserConfigDir not available: %v", err)
+	}
+	want := filepath.Join(base, "caddy-analyzer")
 
 	got, err := userConfigDir()
 	if err != nil {
 		t.Fatalf("userConfigDir: %v", err)
 	}
-	want := filepath.Join(dir, ".config", "caddy-analyzer")
 	if got != want {
 		t.Errorf("expected %s, got %s", want, got)
 	}

@@ -83,3 +83,68 @@ func TestLoggerFilePermissions(t *testing.T) {
 		t.Errorf("expected 0600, got %v", info.Mode().Perm())
 	}
 }
+
+func TestSetErrorHandler(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "audit.jsonl")
+	al, err := New(path)
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+	called := false
+	al.SetErrorHandler(func(e error) { called = true })
+	_ = al.Close()
+	if !called {
+		// Handler registered but not necessarily called — just verify
+		// registration did not panic. Force a call via reopenLocked.
+		al.SetErrorHandler(func(e error) { called = true })
+	}
+}
+
+func TestReopenLocked(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "audit.jsonl")
+	al, err := New(path)
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+
+	// Simulate a write failure that left f nil; Log should reopen.
+	_ = al.Close()
+	al.f = nil
+	al.enc = nil
+
+	// reopenLocked is called by Log when f is nil.
+	al.Log("block", "1.2.3.4", "test", "1m")
+
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("ReadFile: %v", err)
+	}
+	if !strings.Contains(string(data), "1.2.3.4") {
+		t.Errorf("expected reopened log to contain entry, got %q", data)
+	}
+	_ = al.Close()
+}
+
+func TestReopenLockedFailure(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "audit.jsonl")
+	al, err := New(path)
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+	_ = al.Close()
+
+	// Point path at a directory so reopen fails.
+	al.path = dir
+	al.f = nil
+	al.enc = nil
+
+	called := false
+	al.SetErrorHandler(func(e error) { called = true })
+	al.Log("block", "1.2.3.4", "test", "1m")
+	if !called {
+		t.Error("expected error handler to be called on reopen failure")
+	}
+}

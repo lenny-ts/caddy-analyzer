@@ -47,7 +47,7 @@ func (m *Manager) writeCache(src Source, entries []net.IPNet, fetchedAt time.Tim
 		return err
 	}
 	path := cachePath(m.cacheDir, src.Name)
-	return os.WriteFile(path, data, 0640)
+	return os.WriteFile(path, data, 0o600)
 }
 
 // loadFromCache populates the ranger and status for a source from its
