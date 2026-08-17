@@ -1948,11 +1948,10 @@
     })();
 
     /* ===================================================================
-       HERO TITLE DECRYPT — simultaneous scramble, reveal left→right
-       Every unrevealed position shows a random glyph at all times; the
-       reveal boundary sweeps across over a fixed duration. Ported from
-       the lenny-ts.github.io headline decode. RGB split fades in once
-       the title is whole.
+       HERO TITLE DECRYPT — per-char random scramble then lock
+       For each position: cycles random glyphs ~5 times at ~28ms, then
+       locks the real char and advances.  Produces the classic "hacker
+       decryption" effect.  RGB split fades in once the title is whole.
        =================================================================== */
     (function () {
         var title = document.querySelector(".hero-title");
@@ -1960,7 +1959,7 @@
         var titleText = title ? title.textContent : "";
         var subRaw = sub ? sub.innerHTML : "";
         var subPlain = sub ? sub.textContent : "";
-        var CHARSET = "ABCDEFGHJKLMNPQRSTUVWXYZ0123456789#%&/<>*+=-";
+        var GLYPHS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789#$%&*<>{}[]/\\|=+";
 
         /* Hide the subtitle immediately so it is only revealed via the
            typewriter after the title decrypts (no flash of full text).
@@ -1969,8 +1968,8 @@
             sub.style.minHeight = sub.offsetHeight + "px";
             sub.textContent = "";
         }
-        /* Reserve the title height before the decode empties it so the
-           hero never collapses (avoids CLS). */
+        /* Reserve the title height before the decrypt empties it so the
+           hero never collapses (avoids CLS when the decrypt starts). */
         if (title && !prefersReduced) {
             title.style.minHeight = title.offsetHeight + "px";
         }
@@ -1996,26 +1995,6 @@
             setTimeout(typeSub, 200);
         }
 
-        function randChar() { return CHARSET[(Math.random() * CHARSET.length) | 0]; }
-        function scramble(text, revealed) {
-            var out = "";
-            for (var i = 0; i < text.length; i++) {
-                out += i < revealed ? text[i] : text[i] === " " ? " " : randChar();
-            }
-            return out;
-        }
-        function decode(el, text, duration, done) {
-            var start = performance.now();
-            function tick(now) {
-                var p = Math.min(1, (now - start) / duration);
-                el.textContent = scramble(text, Math.floor(p * text.length));
-                if (p < 1) requestAnimationFrame(tick);
-                else { el.textContent = text; if (done) done(); }
-            }
-            el.textContent = scramble(text, 0);
-            requestAnimationFrame(tick);
-        }
-
         if (title) {
             title.setAttribute("data-text", titleText);
 
@@ -2025,10 +2004,56 @@
                 return;
             }
 
-            decode(title, titleText, 1600, function () {
-                title.classList.add("rgb-split");
-                startSub();
-            });
+            var beginDecrypt = function () {
+                title.textContent = "";
+                var caret = document.createElement("span");
+                caret.className = "typewriter-caret";
+                caret.setAttribute("aria-hidden", "true");
+                title.appendChild(caret);
+
+                var i = 0;
+                var scrambleCount = 0;
+                var scrambleMax = 5;
+
+                var renderLocked = function () {
+                    var s = titleText.slice(0, i);
+                    title.textContent = s;
+                    title.appendChild(caret);
+                };
+
+                var renderScramble = function () {
+                    var locked = titleText.slice(0, i);
+                    var rand = GLYPHS[Math.floor(Math.random() * GLYPHS.length)];
+                    title.textContent = locked + rand;
+                    title.appendChild(caret);
+                };
+
+                var step = function () {
+                    if (scrambleCount < scrambleMax) {
+                        renderScramble();
+                        scrambleCount++;
+                        setTimeout(step, 28);
+                    } else {
+                        i++;
+                        renderLocked();
+                        if (i < titleText.length) {
+                            scrambleCount = 0;
+                            var ch = titleText[i - 1];
+                            var gap = (ch === "-" || ch === ".") ? 150 : 55;
+                            setTimeout(step, gap);
+                        } else {
+                            setTimeout(function () {
+                                caret.remove();
+                                title.classList.add("rgb-split");
+                                startSub();
+                            }, 300);
+                        }
+                    }
+                };
+                setTimeout(step, 250);
+            };
+
+            beginDecrypt();
         } else {
             startSub();
         }
