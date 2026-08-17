@@ -2224,41 +2224,6 @@
         });
     })();
 
-    /* =====================================================================
-       TICKER STRIP — stats marquee under hero
-       ===================================================================== */
-    (function () {
-        var hero = document.querySelector(".hero");
-        if (!hero) return;
-        if (hero.parentNode.querySelector(".ticker-strip")) return;
-        var next = hero.nextElementSibling;
-        var items = [
-            ["<strong>26</strong> threat categories"],
-            ["<strong>6</strong> log sources"],
-            ["<strong>evasion-resistant</strong> engine"],
-            ["<strong>real-time</strong> iptables guard"],
-            ["<strong>TUI</strong> dashboard"],
-            ["<strong>HTML</strong> reports"],
-            ["<strong>mTLS</strong> ready"],
-            ["<strong>Go</strong> native binary"]
-        ];
-        var strip = document.createElement("div");
-        strip.className = "ticker-strip";
-        strip.setAttribute("aria-hidden", "true");
-        var track = document.createElement("div");
-        track.className = "ticker-track";
-        var html = "";
-        for (var rep = 0; rep < 2; rep++) {
-            items.forEach(function (it) {
-                html += '<span class="ticker-item">' + it[0] +
-                        '</span><span class="ticker-sep">/</span>';
-            });
-        }
-        track.innerHTML = html;
-        strip.appendChild(track);
-        hero.parentNode.insertBefore(strip, next);
-    })();
-
     /* ===================================================================
        INTERACTIVE SOC TERMINAL — real CLI surface of caddy-analyzer
        =================================================================== */
