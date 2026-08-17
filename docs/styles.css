@@ -2814,45 +2814,6 @@ main h3.glitch-hover code {
 }
 
 /* =====================================================================
-   MARQUEE / TICKER STATS STRIP
-   ===================================================================== */
-.ticker-strip {
-    overflow: hidden;
-    white-space: nowrap;
-    padding: .55rem 0;
-    border-top: 1px solid var(--border-soft);
-    border-bottom: 1px solid var(--border-soft);
-    background: var(--bg-soft);
-    position: relative;
-}
-.ticker-track {
-    display: inline-block;
-    padding-left: 100%;
-    animation: ticker-scroll 28s linear infinite;
-    will-change: transform;
-}
-.ticker-strip:hover .ticker-track { animation-play-state: paused; }
-.ticker-item {
-    display: inline-block;
-    margin: 0 1.5rem;
-    color: var(--text-dim);
-    font-family: var(--mono);
-    font-size: .85rem;
-}
-.ticker-item strong {
-    color: var(--accent);
-    font-weight: 700;
-}
-.ticker-sep {
-    color: var(--border);
-    margin: 0 .8rem;
-}
-@keyframes ticker-scroll {
-    0%   { transform: translateX(0); }
-    100% { transform: translateX(-100%); }
-}
-
-/* =====================================================================
    REDUCED MOTION + PRINT GUARDS — extend for new animations
    ===================================================================== */
 @media (prefers-reduced-motion: reduce) {
@@ -2864,7 +2825,6 @@ main h3.glitch-hover code {
         animation: none !important;
         -webkit-text-fill-color: var(--text);
     }
-    .ticker-track { animation: none !important; }
     .cta-gradient-border::before { animation: none !important; }
     .sheen-layer { animation: none !important; }
     .btn::after { animation: none !important; }
@@ -2872,7 +2832,7 @@ main h3.glitch-hover code {
 
 @media print {
     .load-bar, .confetti-canvas, .konami-glitch, .konami-shield,
-    .ticker-strip, .sheen-layer, .btn::after { display: none !important; }
+    .sheen-layer, .btn::after { display: none !important; }
     .feature-card, .doc-card, .threat-card, .stat,
     .page-nav-link, .callout, table, table.perf,
     nav.doc-nav, pre {
