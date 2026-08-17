@@ -17,7 +17,7 @@
     <meta name="twitter:title" content="Threat Engine Guide — caddy-analyzer">
     <meta name="twitter:description" content="26-category threat detection: SQLi, XSS, Log4j, RCE, JWT, beaconing. MITRE tagged, Sigma export, iptables guard, blocklist feeds, country-block.">
     <script>try{var t=localStorage.getItem('caddy-docs-theme');if(t==='light')document.documentElement.setAttribute('data-theme','light');}catch(e){}</script>
-    <meta name="doc:modified" content="2026-08-17T21:25:06+02:00">
+    <meta name="doc:modified" content="2026-08-17T21:57:18+02:00">
     <meta name="color-scheme" content="dark light">
     <link rel="manifest" href="manifest.json">
     <link rel="apple-touch-icon" href="apple-touch-icon.png">
@@ -26,7 +26,7 @@
     <link rel="dns-prefetch" href="//pkg.go.dev">
     <link rel="preconnect" href="//github.com">
     <link rel="prefetch" href="tui-html.html">
-    <link rel="stylesheet" href="styles.min.css?v=28">
+    <link rel="stylesheet" href="styles.min.css?v=29">
     <script type="speculationrules">{"prefetch":[{"where":{"href_matches":"/*.html"},"eagerness":"moderate"}]}</script>
 </head>
 <body>
@@ -42,6 +42,15 @@
 
     <main class="wrap" id="main">
 
+        <nav class="doc-nav reveal" aria-label="Documentation">
+            <a href="index.html">Overview</a>
+            <a href="installation.html">Installation</a>
+            <a href="sources.html">Log Sources</a>
+            <a href="subcommands.html">Subcommands</a>
+            <a href="security.html" class="active" aria-current="page">Threat Detector</a>
+            <a href="tui-html.html">TUI &amp; HTML Reports</a>
+        </nav>
+
         <div class="page-header reveal">
             <nav class="breadcrumb" aria-label="Breadcrumb">
                 <ol>
@@ -53,15 +62,6 @@
             <h1>Threat Engine &amp; Security Inspector</h1>
             <p class="subtitle">Built-in attack detection engine, signature rules, and firewall defense</p>
         </div>
-
-        <nav class="doc-nav reveal" aria-label="Documentation">
-            <a href="index.html">Overview</a>
-            <a href="installation.html">Installation</a>
-            <a href="sources.html">Log Sources</a>
-            <a href="subcommands.html">Subcommands</a>
-            <a href="security.html" class="active" aria-current="page">Threat Detector</a>
-            <a href="tui-html.html">TUI &amp; HTML Reports</a>
-        </nav>
 
         <section class="reveal">
             <h2>1. Running Threat Detection (--detect)</h2>
@@ -365,7 +365,7 @@ caddy-analyze tail --defang access.log</pre>
     </main>
 
     <button class="back-to-top" aria-label="Back to top">↑</button>
-    <script src="docs.min.js?v=28" defer></script>
+    <script src="docs.min.js?v=29" defer></script>
 
 </body>
 </html>

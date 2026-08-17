@@ -18,7 +18,7 @@
     <meta name="twitter:description" content="7-tab interactive TUI dashboard with live GeoIP enrichment, and standalone dark-mode HTML web reports.">
     <script>try{var t=localStorage.getItem('caddy-docs-theme');if(t==='light')document.documentElement.setAttribute('data-theme','light');}catch(e){}
     document.documentElement.classList.add('decor-paused');</script>
-    <meta name="doc:modified" content="2026-08-17T21:25:06+02:00">
+    <meta name="doc:modified" content="2026-08-17T21:57:18+02:00">
     <meta name="color-scheme" content="dark light">
     <link rel="manifest" href="manifest.json">
     <link rel="apple-touch-icon" href="apple-touch-icon.png">
@@ -27,7 +27,7 @@
     <link rel="dns-prefetch" href="//pkg.go.dev">
     <link rel="preconnect" href="//github.com">
     <link rel="prefetch" href="index.html">
-    <link rel="stylesheet" href="styles.min.css?v=28">
+    <link rel="stylesheet" href="styles.min.css?v=29">
     <script type="speculationrules">{"prefetch":[{"where":{"href_matches":"/*.html"},"eagerness":"moderate"}]}</script>
 </head>
 <body>
@@ -43,6 +43,15 @@
 
     <main class="wrap" id="main">
 
+        <nav class="doc-nav reveal" aria-label="Documentation">
+            <a href="index.html">Overview</a>
+            <a href="installation.html">Installation</a>
+            <a href="sources.html">Log Sources</a>
+            <a href="subcommands.html">Subcommands</a>
+            <a href="security.html">Threat Detector</a>
+            <a href="tui-html.html" class="active" aria-current="page">TUI &amp; HTML Reports</a>
+        </nav>
+
         <div class="page-header reveal">
             <nav class="breadcrumb" aria-label="Breadcrumb">
                 <ol>
@@ -54,15 +63,6 @@
             <h1>TUI Dashboard &amp; Output Reports</h1>
             <p class="subtitle">Interactive terminal user interface and standalone web export options</p>
         </div>
-
-        <nav class="doc-nav reveal" aria-label="Documentation">
-            <a href="index.html">Overview</a>
-            <a href="installation.html">Installation</a>
-            <a href="sources.html">Log Sources</a>
-            <a href="subcommands.html">Subcommands</a>
-            <a href="security.html">Threat Detector</a>
-            <a href="tui-html.html" class="active" aria-current="page">TUI &amp; HTML Reports</a>
-        </nav>
 
         <section class="reveal">
             <h2>1. 7-Tab Interactive TUI Dashboard (--watch)</h2>
@@ -158,7 +158,7 @@ caddy-analyze -f csv -o report.csv /var/log/caddy/access.log</pre>
     </main>
 
     <button class="back-to-top" aria-label="Back to top">↑</button>
-    <script src="docs.min.js?v=28" defer></script>
+    <script src="docs.min.js?v=29" defer></script>
 
 </body>
 </html>

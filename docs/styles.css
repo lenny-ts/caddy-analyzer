@@ -537,7 +537,7 @@ nav.doc-nav {
     gap: 0.4rem;
     flex-wrap: wrap;
     justify-content: center;
-    margin: 1.5rem -0.5rem 2.5rem;
+    margin: 0 -0.5rem 2rem;
     padding: 0.6rem;
     background: rgba(16,16,20,0.72);
     border: 1px solid var(--glass-border);
