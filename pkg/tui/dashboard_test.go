@@ -120,6 +120,7 @@ func TestUpdateKeyMessagesSwitchView(t *testing.T) {
 		{"4", viewTopIPs},
 		{"5", viewTopPaths},
 		{"6", viewTopUA},
+		{"7", viewGeo},
 	}
 	for _, c := range cases {
 		t.Run(c.key, func(t *testing.T) {
@@ -129,6 +130,35 @@ func TestUpdateKeyMessagesSwitchView(t *testing.T) {
 			um := updated.(Model)
 			if um.current != c.want {
 				t.Errorf("key %q: current = %v, want %v", c.key, um.current, c.want)
+			}
+		})
+	}
+}
+
+func TestUpdateNavigationKeysWrapViews(t *testing.T) {
+	cases := []struct {
+		name  string
+		start view
+		key   tea.KeyType
+		want  view
+	}{
+		{"right from geo", viewGeo, tea.KeyRight, viewSummary},
+		{"left from summary", viewSummary, tea.KeyLeft, viewGeo},
+		{"tab from geo", viewGeo, tea.KeyTab, viewSummary},
+		{"shift tab from summary", viewSummary, tea.KeyShiftTab, viewGeo},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			m := NewModel(make(chan string, 1))
+			m.ready = true
+			m.current = c.start
+			updated, _ := m.Update(tea.KeyMsg{Type: c.key})
+			um := updated.(Model)
+			if um.current != c.want {
+				t.Fatalf("current = %v, want %v", um.current, c.want)
+			}
+			if um.viewTabs() != (Model{current: c.want}).viewTabs() {
+				t.Fatal("tab highlight does not match wrapped view")
 			}
 		})
 	}
