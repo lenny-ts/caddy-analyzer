@@ -143,9 +143,13 @@ func TestUpdateNavigationKeysWrapViews(t *testing.T) {
 		want  view
 	}{
 		{"right from geo", viewGeo, tea.KeyRight, viewSummary},
+		{"right from realtime", viewRealtime, tea.KeyRight, viewSecurity},
 		{"left from summary", viewSummary, tea.KeyLeft, viewGeo},
+		{"left from top ua", viewTopUA, tea.KeyLeft, viewTopPaths},
 		{"tab from geo", viewGeo, tea.KeyTab, viewSummary},
+		{"tab from security", viewSecurity, tea.KeyTab, viewTopIPs},
 		{"shift tab from summary", viewSummary, tea.KeyShiftTab, viewGeo},
+		{"shift tab from geo", viewGeo, tea.KeyShiftTab, viewTopUA},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
