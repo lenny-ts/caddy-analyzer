@@ -5,20 +5,20 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="view-transition" content="same-origin">
     <title>Subcommands &amp; Flags Specification — caddy-analyzer</title>
-    <meta name="description" content="Complete reference for caddy-analyze subcommands: tail, top, diff, config, guard, block, unban, export-sigma. All flags and usage examples.">
+    <meta name="description" content="Complete reference for caddy-analyze subcommands: tail, top, diff, config, guard, blocklist, block, unban, export-sigma. All flags and usage examples.">
     <meta name="theme-color" content="#0a0a0c">
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E🛡️%3C/text%3E%3C/svg%3E">
     <meta property="og:title" content="Subcommands & Flags — caddy-analyzer">
-    <meta property="og:description" content="Complete CLI reference: tail, top, diff, config, guard, block, unban, export-sigma.">
+    <meta property="og:description" content="Complete CLI reference: tail, top, diff, config, guard, blocklist, block, unban, export-sigma.">
     <meta property="og:type" content="website">
     <meta property="og:url" content="https://lenny-ts.github.io/caddy-analyzer/subcommands.html">
     <meta property="og:image" content="https://lenny-ts.github.io/caddy-analyzer/og-image.png">
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="Subcommands & Flags — caddy-analyzer">
-    <meta name="twitter:description" content="Complete CLI reference: tail, top, diff, config, guard, block, unban, export-sigma.">
+    <meta name="twitter:description" content="Complete CLI reference: tail, top, diff, config, guard, blocklist, block, unban, export-sigma.">
     <script>try{var t=localStorage.getItem('caddy-docs-theme');if(t==='light')document.documentElement.setAttribute('data-theme','light');else if(t!=='dark'&&window.matchMedia&&window.matchMedia('(prefers-color-scheme: light)').matches)document.documentElement.setAttribute('data-theme','light');}catch(e){}
     document.documentElement.classList.add('decor-paused');</script>
-    <meta name="doc:modified" content="2026-08-15T15:51:05+02:00">
+    <meta name="doc:modified" content="2026-08-17T00:00:00+02:00">
     <meta name="color-scheme" content="dark light">
     <link rel="manifest" href="manifest.json">
     <link rel="apple-touch-icon" href="apple-touch-icon.png">
@@ -50,7 +50,7 @@
                     <li><a class="breadcrumb-current" aria-current="page" href="subcommands.html">Subcommands</a></li>
                 </ol>
             </nav>
-            <p class="doc-meta"><a href="https://github.com/lenny-ts/caddy-analyzer/releases" rel="noopener">v0.3.0</a> &middot; updated <time datetime="2026-08-14">2026-08-14</time> &middot; <a href="https://github.com/lenny-ts/caddy-analyzer" rel="noopener">GitHub</a></p>
+            <p class="doc-meta"><a href="https://github.com/lenny-ts/caddy-analyzer/releases" rel="noopener">v0.4.0</a> &middot; updated <time datetime="2026-08-17">2026-08-17</time> &middot; <a href="https://github.com/lenny-ts/caddy-analyzer" rel="noopener">GitHub</a></p>
             <h1>Subcommands &amp; Flags Specification</h1>
             <p class="subtitle">Complete technical reference for all CLI subcommands, flags, and options</p>
         </div>
@@ -66,7 +66,7 @@
 
         <section class="reveal">
             <h2>1. Comprehensive CLI Flags Reference</h2>
-            <p>The persistent flags below (from <code>--from</code> to <code>--namespace</code>) are inherited by every subcommand (<code>tail</code>, <code>top</code>, <code>diff</code>, <code>guard</code>, <code>config</code>, <code>block</code>, <code>unban</code>, <code>export-sigma</code>) and the main analysis run. The root-only flags <code>--watch</code>, <code>--follow</code>, <code>--interval</code>, <code>--detect</code>, and <code>--version</code> are available only on <code>caddy-analyze</code> itself (see the "Display &amp; Output" table below).</p>
+            <p>The persistent flags below (from <code>--from</code> to <code>--namespace</code>) are inherited by every subcommand (<code>tail</code>, <code>top</code>, <code>diff</code>, <code>guard</code>, <code>blocklist</code>, <code>config</code>, <code>block</code>, <code>unban</code>, <code>export-sigma</code>) and the main analysis run. The root-only flags <code>--watch</code>, <code>--follow</code>, <code>--interval</code>, <code>--detect</code>, and <code>--version</code> are available only on <code>caddy-analyze</code> itself (see the "Display &amp; Output" table below).</p>
 
             <h3>Time Range &amp; Request Filters</h3>
             <div class="table-wrap">
@@ -343,9 +343,11 @@ caddy-analyze tail --detect --defang journalctl://</pre>
             </div>
 
             <h3><code>top [dimension] [source] [flags]</code></h3>
-            <p>Inspects top metrics by dimension (<code>path</code>, <code>ip</code>, <code>ua</code>, <code>status</code>, <code>method</code>, <code>host</code>, <code>bandwidth</code>). Supports <code>-b, --by &lt;dim&gt;</code> flag and filters like <code>--5xx</code>, <code>--slow</code>, <code>--no-bots</code>. Output respects the shared format and file options (<code>-f json|csv</code>, <code>-o &lt;file&gt;</code>).</p>
+            <p>Inspects top metrics by dimension (<code>path</code>, <code>ip</code>, <code>ua</code>, <code>status</code>, <code>method</code>, <code>host</code>, <code>bandwidth</code>, <code>country</code>, <code>asn</code>). The <code>country</code> and <code>asn</code> dimensions require a GeoIP mmdb (see <code>--geoip-db</code>); country keys are displayed as human-readable names ("Italy") rather than ISO codes. Supports <code>-b, --by &lt;dim&gt;</code> flag and filters like <code>--5xx</code>, <code>--slow</code>, <code>--no-bots</code>. Output respects the shared format and file options (<code>-f json|csv</code>, <code>-o &lt;file&gt;</code>).</p>
 <pre>caddy-analyze top ip -f csv /var/log/caddy/access.log
-caddy-analyze top path --5xx -f json -o top.json /var/log/caddy/access.log</pre>
+caddy-analyze top path --5xx -f json -o top.json /var/log/caddy/access.log
+caddy-analyze top country /var/log/caddy/access.log
+caddy-analyze top asn /var/log/caddy/access.log</pre>
 
             <h3><code>diff &lt;log1&gt; &lt;log2&gt;</code></h3>
             <p>Compares two log files side-by-side to detect RPS shifts, 5xx error spikes, latency regressions, and new failing URIs between deployments. Supports the shared format and file options (<code>-f json|csv|html</code>, <code>-o &lt;file&gt;</code>) and standard filters.</p>
@@ -359,6 +361,94 @@ caddy-analyze top path --5xx -f json -o top.json /var/log/caddy/access.log</pre>
 <pre>caddy-analyze export-sigma                    # stdout
 caddy-analyze export-sigma rules.yml          # file
 caddy-analyze export-sigma - | sigma check    # pipe to validator</pre>
+
+            <h3><code>blocklist &lt;action&gt;</code></h3>
+            <p>Manages blocklist feeds used by the guard for immediate IP blocking. Feeds are downloaded, parsed (plain-text IP/CIDR or JSON Lines), and cached as a CIDR trie for O(1) lookup. Cache lives in <code>~/.cache/caddy-analyzer/blocklists/</code> (7-day TTL, configurable via <code>--cache-dir</code>).</p>
+            <div class="table-wrap">
+            <table>
+                <caption>blocklist subcommand actions</caption>
+                <thead>
+                    <tr>
+                        <th scope="col">Action</th>
+                        <th scope="col">Description</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code>refresh</code></td>
+                        <td>Download all configured feeds and update the local cache. Shows a per-feed progress bar on a TTY.</td>
+                    </tr>
+                    <tr>
+                        <td><code>list</code></td>
+                        <td>Show the status of every configured feed: name, entry count, cache age, status (ok / stale / error), URL.</td>
+                    </tr>
+                    <tr>
+                        <td><code>config</code></td>
+                        <td>Print the resolved source list (defaults + custom − removed) as a table or JSON (<code>-f json</code>).</td>
+                    </tr>
+                    <tr>
+                        <td><code>init</code></td>
+                        <td>Persist current blocklist flag settings to <code>caddy-analyzer.json</code> so the guard and <code>blocklist</code> subcommand pick them up automatically. Use <code>--global</code> to write the global config.</td>
+                    </tr>
+                </tbody>
+            </table>
+            </div>
+            <p>The 8 default feeds (disabled with <code>--no-default-blocklists</code>):</p>
+            <ul>
+                <li><strong>Spamhaus DROP v4</strong> — <code>https://www.spamhaus.org/drop/drop_v4.json</code> (JSON Lines)</li>
+                <li><strong>Spamhaus DROP v6</strong> — <code>https://www.spamhaus.org/drop/drop_v6.json</code> (JSON Lines)</li>
+                <li><strong>FireHOL level 1</strong> — <code>https://iplists.firehol.org/files/firehol_level1.netset</code></li>
+                <li><strong>FireHOL level 2</strong> — <code>https://iplists.firehol.org/files/firehol_level2.netset</code></li>
+                <li><strong>CINS Army</strong> — <code>http://cinsscore.com/list/ci-badguys.txt</code></li>
+                <li><strong>Tor exit nodes</strong> — <code>https://check.torproject.org/torbulkexitlist</code></li>
+                <li><strong>Emerging Threats</strong> — <code>https://rules.emergingthreats.net/blockrules/compromised-ips.txt</code></li>
+                <li><strong>AbuseIPDB (mirror)</strong> — <code>https://raw.githubusercontent.com/borestad/blocklist-abuseipdb/main/abuseipdb-s100-7d.ipv4</code></li>
+            </ul>
+            <div class="table-wrap">
+            <table>
+                <caption>blocklist subcommand flags</caption>
+                <thead>
+                    <tr>
+                        <th scope="col">Flag</th>
+                        <th scope="col">Default</th>
+                        <th scope="col">Description</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code>--cache-dir</code></td>
+                        <td><code>~/.cache/caddy-analyzer/blocklists</code></td>
+                        <td>Directory for cached blocklist files.</td>
+                    </tr>
+                    <tr>
+                        <td><code>--no-default-blocklists</code></td>
+                        <td><code>false</code></td>
+                        <td>Disable the 8 default feeds. Use with <code>--blocklist-config</code> for custom-only configurations.</td>
+                    </tr>
+                    <tr>
+                        <td><code>--blocklist-config</code></td>
+                        <td><code>""</code></td>
+                        <td>Path(s) to JSON file(s) with extra sources. Format: <code>[{"name":"x","url":"y","format":"json"}]</code> (<code>format</code> optional, defaults to plain-text).</td>
+                    </tr>
+                    <tr>
+                        <td><code>--blocklist-remove</code></td>
+                        <td><code>""</code></td>
+                        <td>Named sources to remove from the configuration (comma-separated).</td>
+                    </tr>
+                    <tr>
+                        <td><code>-f, --format</code></td>
+                        <td><code>table</code></td>
+                        <td>Output format for <code>list</code> / <code>config</code>: <code>table</code> or <code>json</code>.</td>
+                    </tr>
+                </tbody>
+            </table>
+            </div>
+<pre>caddy-analyze blocklist refresh
+caddy-analyze blocklist list
+caddy-analyze blocklist list -f json
+caddy-analyze blocklist config
+caddy-analyze blocklist init --no-default-blocklists --blocklist-config mylist.txt
+caddy-analyze blocklist init --global          # write to global config</pre>
 
             <h3><code>guard [source]</code> &amp; <code>block</code> / <code>unban</code></h3>
             <p>Monitors streaming logs and automatically adds offending IP addresses to Linux <code>iptables</code> DROP rules when attack thresholds are exceeded (<code>--limit 50 --window 1m</code>).</p>
@@ -462,7 +552,37 @@ caddy-analyze export-sigma - | sigma check    # pipe to validator</pre>
                         <td><code>--geoip-db</code></td>
                         <td>—</td>
                         <td><code>""</code></td>
-                        <td>Path to GeoIP mmdb file (DB-IP or MaxMind). Auto-discovers in cwd, <code>~/.config/caddy-analyzer</code>, <code>/var/lib</code>, <code>/usr/share/GeoIP</code> if empty. Enables <code>--top country</code> / <code>--top asn</code> dimensions.</td>
+                        <td>Path to GeoIP mmdb file (MaxMind GeoLite2 or DB-IP). Auto-discovers in cwd, <code>~/.config/caddy-analyzer</code>, <code>/var/lib/caddy-analyzer</code>, <code>/usr/share/GeoIP</code> if empty. On first run, <code>GeoLite2-Country.mmdb</code> and <code>GeoLite2-ASN.mmdb</code> are auto-downloaded to <code>~/.config/caddy-analyzer/</code> from the P3TERX mirror (disable with <code>--no-auto-download</code>). Enables <code>top country</code> / <code>top asn</code> dimensions and <code>--country-block</code>.</td>
+                    </tr>
+                    <tr>
+                        <td><code>--no-auto-download</code></td>
+                        <td>—</td>
+                        <td><code>false</code></td>
+                        <td>Disable automatic download of the GeoLite2 mmdb on first run (root + guard).</td>
+                    </tr>
+                    <tr>
+                        <td><code>--country-block</code></td>
+                        <td>—</td>
+                        <td><code>""</code></td>
+                        <td>Comma-separated ISO country codes to block immediately (e.g. <code>CN,RU,IR</code>). Requires a GeoIP mmdb; the guard fails fast if none is found.</td>
+                    </tr>
+                    <tr>
+                        <td><code>--no-blocklist</code></td>
+                        <td>—</td>
+                        <td><code>false</code></td>
+                        <td>Disable blocklist feed checking entirely. Rate, status, and pattern thresholds still apply.</td>
+                    </tr>
+                    <tr>
+                        <td><code>--blocklist-refresh</code></td>
+                        <td>—</td>
+                        <td><code>6h</code></td>
+                        <td>Background refresh interval for cached blocklist feeds. Minimum <code>1h</code>; <code>0</code> disables background refresh (feeds are loaded from cache only).</td>
+                    </tr>
+                    <tr>
+                        <td><code>--cache-dir</code></td>
+                        <td>—</td>
+                        <td><code>~/.cache/caddy-analyzer/blocklists</code></td>
+                        <td>Directory for cached blocklist files (shared with <code>blocklist</code> subcommand).</td>
                     </tr>
                     <tr>
                         <td><code>--ua-rotation</code></td>
@@ -484,7 +604,17 @@ caddy-analyze export-sigma - | sigma check    # pipe to validator</pre>
   --state-file /var/lib/caddy-analyzer/blocked.json \
   --never-block 10.0.0.0/8,192.168.1.1 \
   --never-block-file /etc/caddy-analyzer/allowlist.txt \
-  docker://my-caddy</pre>
+  docker://my-caddy
+
+# Block by country (requires GeoIP mmdb, auto-downloaded on first run)
+sudo caddy-analyze guard --country-block CN,RU,IR docker://my-caddy
+
+# Guard with custom blocklist config only (no default feeds)
+caddy-analyze blocklist init --no-default-blocklists --blocklist-config mylist.txt
+sudo caddy-analyze guard docker://my-caddy
+
+# Disable blocklist feeds, keep rate/status/pattern thresholds
+sudo caddy-analyze guard --no-blocklist docker://my-caddy</pre>
 
             <h4>Manual Block &amp; Unban</h4>
             <p>The <code>block &lt;ip...&gt;</code> and <code>unban &lt;ip...&gt;</code> subcommands manage iptables rules directly. Both accept <code>--audit-log</code> and <code>--state-file</code> (same defaults as guard) to sync manual blocks/unbans with the guard's persisted state — manual blocks survive guard restarts, manual unbans prevent re-blocking on restart. Both commands return non-zero exit code if any IP fails. <code>block</code> is idempotent: blocking an already-blocked IP is a no-op (no duplicate iptables rules).</p>

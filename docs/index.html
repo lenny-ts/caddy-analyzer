@@ -5,22 +5,22 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="view-transition" content="same-origin">
     <title>caddy-analyzer — Documentation</title>
-    <meta name="description" content="Caddy v2 access log analysis tool with 26-category evasion-resistant threat detection engine, real-time iptables firewall guard, TUI dashboard, and HTML reports.">
+    <meta name="description" content="Caddy v2 access log analysis tool with 26-category evasion-resistant threat detection engine, real-time iptables firewall guard with blocklist feeds and country-block, TUI dashboard, and HTML reports.">
     <meta name="theme-color" content="#0a0a0c">
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E🛡️%3C/text%3E%3C/svg%3E">
     <link rel="apple-touch-icon" href="apple-touch-icon.png">
     <link rel="canonical" href="https://lenny-ts.github.io/caddy-analyzer/">
     <meta property="og:title" content="caddy-analyzer — Documentation">
-    <meta property="og:description" content="Caddy v2 log analysis with 26-category threat detection, real-time firewall guard, TUI dashboard, and HTML reports.">
+    <meta property="og:description" content="Caddy v2 log analysis with 26-category threat detection, real-time firewall guard with blocklist feeds & country-block, TUI dashboard, and HTML reports.">
     <meta property="og:type" content="website">
     <meta property="og:url" content="https://lenny-ts.github.io/caddy-analyzer/">
     <meta property="og:image" content="https://lenny-ts.github.io/caddy-analyzer/og-image.png">
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="caddy-analyzer — Documentation">
-    <meta name="twitter:description" content="Caddy v2 log analysis with 26-category threat detection, real-time firewall guard, TUI dashboard, and HTML reports.">
+    <meta name="twitter:description" content="Caddy v2 log analysis with 26-category threat detection, real-time firewall guard with blocklist feeds & country-block, TUI dashboard, and HTML reports.">
     <script>try{var t=localStorage.getItem('caddy-docs-theme');if(t==='light')document.documentElement.setAttribute('data-theme','light');else if(t!=='dark'&&window.matchMedia&&window.matchMedia('(prefers-color-scheme: light)').matches)document.documentElement.setAttribute('data-theme','light');}catch(e){}
     document.documentElement.classList.add('decor-paused');</script>
-    <meta name="doc:modified" content="2026-08-15T15:51:05+02:00">
+    <meta name="doc:modified" content="2026-08-17T00:00:00+02:00">
     <meta name="color-scheme" content="dark light">
     <link rel="manifest" href="manifest.json">
     <link rel="dns-prefetch" href="//github.com">
@@ -53,7 +53,7 @@
                         <img class="hero-mascot" src="mascot.svg" alt="caddy-analyzer mascot" fetchpriority="high" decoding="async" width="130" height="130">
                     </span>
                     <h1 class="hero-title">caddy-analyzer</h1>
-                    <p class="hero-sub">Official Documentation &amp; User Manual — Caddy v2 access log analysis with a 26-category evasion-resistant threat engine and real-time <code>iptables</code> firewall guard.</p>
+                    <p class="hero-sub">Official Documentation &amp; User Manual — Caddy v2 access log analysis with a 26-category evasion-resistant threat engine, real-time <code>iptables</code> firewall guard, and blocklist/country-block enforcement.</p>
 
                     <div class="hero-badges">
                         <a href="https://go.dev"><img width="77" height="20" src="https://img.shields.io/badge/Go-1.25-38bdf8?style=flat-square&logo=go" alt="Go Version"></a>
@@ -105,7 +105,7 @@
 
         <div class="ticker-strip" aria-hidden="true">
             <div class="ticker-track">
-                <span class="ticker-item"><strong>26</strong> threat categories</span><span class="ticker-sep">/</span><span class="ticker-item"><strong>6</strong> log sources</span><span class="ticker-sep">/</span><span class="ticker-item"><strong>evasion-resistant</strong> engine</span><span class="ticker-sep">/</span><span class="ticker-item"><strong>real-time</strong> iptables guard</span><span class="ticker-sep">/</span><span class="ticker-item"><strong>TUI</strong> dashboard</span><span class="ticker-sep">/</span><span class="ticker-item"><strong>HTML</strong> reports</span><span class="ticker-sep">/</span><span class="ticker-item"><strong>mTLS</strong> ready</span><span class="ticker-sep">/</span><span class="ticker-item"><strong>Go</strong> native binary</span><span class="ticker-sep">/</span><span class="ticker-item"><strong>26</strong> threat categories</span><span class="ticker-sep">/</span><span class="ticker-item"><strong>6</strong> log sources</span><span class="ticker-sep">/</span><span class="ticker-item"><strong>evasion-resistant</strong> engine</span><span class="ticker-sep">/</span><span class="ticker-item"><strong>real-time</strong> iptables guard</span><span class="ticker-sep">/</span><span class="ticker-item"><strong>TUI</strong> dashboard</span><span class="ticker-sep">/</span><span class="ticker-item"><strong>HTML</strong> reports</span><span class="ticker-sep">/</span><span class="ticker-item"><strong>mTLS</strong> ready</span><span class="ticker-sep">/</span><span class="ticker-item"><strong>Go</strong> native binary</span><span class="ticker-sep">/</span>
+                <span class="ticker-item"><strong>26</strong> threat categories</span><span class="ticker-sep">/</span><span class="ticker-item"><strong>6</strong> log sources</span><span class="ticker-sep">/</span><span class="ticker-item"><strong>evasion-resistant</strong> engine</span><span class="ticker-sep">/</span><span class="ticker-item"><strong>real-time</strong> iptables guard</span><span class="ticker-sep">/</span><span class="ticker-item"><strong>8</strong> blocklist feeds</span><span class="ticker-sep">/</span><span class="ticker-item"><strong>country-block</strong> via GeoIP</span><span class="ticker-sep">/</span><span class="ticker-item"><strong>TUI</strong> dashboard</span><span class="ticker-sep">/</span><span class="ticker-item"><strong>HTML</strong> reports</span><span class="ticker-sep">/</span><span class="ticker-item"><strong>mTLS</strong> ready</span><span class="ticker-sep">/</span><span class="ticker-item"><strong>Go</strong> native binary</span><span class="ticker-sep">/</span><span class="ticker-item"><strong>26</strong> threat categories</span><span class="ticker-sep">/</span><span class="ticker-item"><strong>6</strong> log sources</span><span class="ticker-sep">/</span><span class="ticker-item"><strong>evasion-resistant</strong> engine</span><span class="ticker-sep">/</span><span class="ticker-item"><strong>real-time</strong> iptables guard</span><span class="ticker-sep">/</span><span class="ticker-item"><strong>8</strong> blocklist feeds</span><span class="ticker-sep">/</span><span class="ticker-item"><strong>country-block</strong> via GeoIP</span><span class="ticker-sep">/</span><span class="ticker-item"><strong>TUI</strong> dashboard</span><span class="ticker-sep">/</span><span class="ticker-item"><strong>HTML</strong> reports</span><span class="ticker-sep">/</span><span class="ticker-item"><strong>mTLS</strong> ready</span><span class="ticker-sep">/</span><span class="ticker-item"><strong>Go</strong> native binary</span><span class="ticker-sep">/</span>
             </div>
         </div>
 
@@ -148,13 +148,13 @@
                 <a class="doc-card" href="subcommands.html">
                     <div class="num">03 · CLI</div>
                     <strong>Subcommands Reference</strong>
-                    <span>Complete reference for <code>tail</code>, <code>top</code>, <code>diff</code>, <code>config</code>, <code>guard</code>, <code>block</code>, <code>unban</code>.</span>
+                    <span>Complete reference for <code>tail</code>, <code>top</code>, <code>diff</code>, <code>config</code>, <code>guard</code>, <code>blocklist</code>, <code>block</code>, <code>unban</code>.</span>
                     <div class="arrow">→ open</div>
                 </a>
                 <a class="doc-card" href="security.html">
                     <div class="num">04 · SECURITY</div>
                     <strong>Threat Engine &amp; Firewall Guard</strong>
-                    <span>26 categories (SQLi, XSS, Log4j, RCE, JWT, Beaconing…) with MITRE tags, Sigma export, IOC defanging, <code>iptables</code> auto-blocking.</span>
+                    <span>26 categories (SQLi, XSS, Log4j, RCE, JWT, Beaconing…) with MITRE tags, Sigma export, IOC defanging, <code>iptables</code> auto-blocking, 8 blocklist feeds, and GeoIP country-block.</span>
                     <div class="arrow">→ open</div>
                 </a>
                 <a class="doc-card" href="tui-html.html">
@@ -185,9 +185,19 @@
                     <p>Guard daemon auto-blocks malicious IPs via <code>iptables</code> with sliding-window limits.</p>
                 </div>
                 <div class="feature-card">
+                    <span class="feature-icon" aria-hidden="true">📰</span>
+                    <h3>Blocklist feeds &amp; country-block</h3>
+                    <p>8 default threat-intel feeds (Spamhaus, FireHOL, CINS, Tor, ET, AbuseIPDB) cached as a CIDR trie, plus <code>--country-block</code> GeoIP enforcement.</p>
+                </div>
+                <div class="feature-card">
                     <span class="feature-icon" aria-hidden="true">📊</span>
                     <h3>MITRE-tagged</h3>
                     <p>Every detection mapped to ATT&amp;CK technique IDs, exportable as Sigma rules for SIEM.</p>
+                </div>
+                <div class="feature-card">
+                    <span class="feature-icon" aria-hidden="true">🌍</span>
+                    <h3>GeoIP enrichment</h3>
+                    <p>Auto-downloaded GeoLite2 mmdb powers <code>top country</code> / <code>top asn</code> dimensions with human-readable country names.</p>
                 </div>
             </div>
         </section>
@@ -368,12 +378,23 @@ caddy-analyze tail --ip 192.168.1.100 --no-bots
 # Inspect top client IP addresses
 caddy-analyze top ip
 
+# Top countries / ASNs (requires GeoIP mmdb, auto-downloaded on first run)
+caddy-analyze top country
+caddy-analyze top asn
+
 # Compare baseline log vs current log
 caddy-analyze diff baseline.log current.log
 
 # Check or reset default log source configuration
 caddy-analyze config show
-caddy-analyze config reset</pre>
+caddy-analyze config reset
+
+# Manage threat-intel blocklist feeds
+caddy-analyze blocklist refresh
+caddy-analyze blocklist list
+
+# Guard: auto-block + enforce country block (requires root)
+sudo caddy-analyze guard --country-block CN,RU docker://my-caddy</pre>
             </details>
         </section>
 

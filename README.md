@@ -66,7 +66,7 @@ Output example:
        [scanner] Scanner / automated tool detected GET /admin
 ```
 
-> **Guard mode** (`caddy-analyze guard`) extends detection with automatic `iptables` banning — blocks offending IPs at the firewall on configurable thresholds. Uses a **sliding window** (per-IP, per-second buckets) so attackers cannot evade limits by straddling a tick boundary. Supports audit logging (`--audit-log`), state persistence across restarts (`--state-file`), an IP allowlist (`--never-block` / `--never-block-file`), distributed-scan defense (`--subnet-limit`), RPS anomaly alerting (`--rps-anomaly`), and `--trust-forwarded` for deployments behind a reverse proxy/CDN. Pattern-detection blocks are filtered by confidence via `--detect-confidence` (default 8, `0` disables).
+> **Guard mode** (`caddy-analyze guard`) extends detection with automatic `iptables` banning — blocks offending IPs at the firewall on configurable thresholds. Uses a **sliding window** (per-IP, per-second buckets) so attackers cannot evade limits by straddling a tick boundary. Supports audit logging (`--audit-log`), state persistence across restarts (`--state-file`), an IP allowlist (`--never-block` / `--never-block-file`), distributed-scan defense (`--subnet-limit`), RPS anomaly alerting (`--rps-anomaly`), and `--trust-forwarded` for deployments behind a reverse proxy/CDN. Pattern-detection blocks are filtered by confidence via `--detect-confidence` (default 8, `0` disables). **Blocklist feeds** (Spamhaus DROP, FireHOL, CINS, Tor, Emerging Threats, AbuseIPDB) trigger immediate blocks via a CIDR trie; `--country-block CN,RU,IR` blocks by GeoIP country code.
 
 ---
 
@@ -81,6 +81,8 @@ caddy-analyze --detect
 
 # Top-N metric inspector
 caddy-analyze top ip
+caddy-analyze top country
+caddy-analyze top asn
 
 # Real-time streaming with filters
 caddy-analyze tail --ip 10.0.0.0/8 --no-bots docker://my-caddy
@@ -96,6 +98,14 @@ caddy-analyze diff before.log after.log
 
 # Launch interactive TUI dashboard
 caddy-analyze --watch
+
+# Manage blocklist feeds (8 defaults: Spamhaus, FireHOL, CINS, Tor, ET, AbuseIPDB)
+caddy-analyze blocklist refresh
+caddy-analyze blocklist list
+caddy-analyze blocklist init --no-default-blocklists --blocklist-config mylist.txt
+
+# Real-time guard with blocklist + country-block
+sudo caddy-analyze guard --country-block CN,RU,IR docker://my-caddy
 ```
 
 ---
@@ -127,7 +137,8 @@ Caddy v2 uses a **structured JSON log format** that differs from the Common/Comb
 | **Parsing** | Native Caddy v2 structured JSON — no regex, no config required |
 | **Security** | 26 attack categories: SQLi, NoSQLi, XSS, SSTI, SSRF, RCE, path traversal/LFI, LFI wrapper abuse, GraphQL introspection, Log4j/JNDI, XXE/XInclude, open redirect, LDAP injection, XPath injection, CRLF injection, prototype pollution, SSI injection, UA rotation, JWT abuse, object enumeration (BOLA/IDOR), beaconing (C2), sensitive file probes, WordPress probes, CGI probes, admin probes, scanner tools |
 | **Detection Accuracy** | Dual-pass engine: URL-unescaped + raw URI matching catches multibyte-encoded and double-encoded bypass attempts. Confidence scoring (1-10) per detection. LRU IP eviction (100K cap) bounds memory on huge logs |
-| **Firewall** | `guard` daemon auto-blocks malicious IPs via `iptables` with configurable thresholds, ban duration, audit logging, state persistence (survives restarts), IP allowlist, and `block`/`unban` state sync |
+| **Firewall** | `guard` daemon auto-blocks malicious IPs via `iptables` with configurable thresholds, ban duration, audit logging, state persistence (survives restarts), IP allowlist, `block`/`unban` state sync, 8 default blocklist feeds (Spamhaus, FireHOL, CINS, Tor, ET, AbuseIPDB) with CIDR-trie lookup, and `--country-block` GeoIP filtering |
+| **Threat Intel** | Offline GeoIP enrichment (MaxMind GeoLite2 / DB-IP mmdb, no API key) with auto-download. `top country` / `top asn` dimensions. Country/ASN sections in the default report. Auto-discovery in cwd, `~/.config/caddy-analyzer/`, `/var/lib/caddy-analyzer/`, `/usr/share/GeoIP/` |
 | **Traffic Analysis** | Classifies human users vs crawlers (Googlebot, Bingbot, Yandex, DuckDuckBot) and automated scrapers |
 | **Diff Engine** | Side-by-side comparison of two log files detecting 5xx spikes, RPS shifts, and latency regressions |
 | **TUI Dashboard** | 6-tab Bubbletea/Lipgloss interface with live streaming, security alerts, and top metrics |
@@ -209,9 +220,10 @@ caddy-analyze [flags] [source...]
 
 Subcommands:
   tail                         Stream and colorize logs in real time
-  top <dimension>              Top-N metric inspector (path, ip, ua, status, method, host, bandwidth)
+  top <dimension>              Top-N metric inspector (path, ip, ua, status, method, host, bandwidth, country, asn)
   diff <baseline> <target>     Compare two log files
   guard                        Auto-block malicious IPs via iptables
+  blocklist <action>           Manage blocklist feeds (refresh, list, config, init)
   export-sigma                 Export detection rules as Sigma YAML (23 rules, MITRE ATT&CK tagged)
   config                       Manage default log source configuration
   block <ip...>                Manually block IP via iptables (--audit-log)
@@ -265,7 +277,15 @@ Subcommands:
 | `--subnet-limit` | | `0` | Block a /24 when its combined requests exceed this (guard). `0` disables; distributed-scan defense |
 | `--rps-anomaly` | | `0` | Alert when current RPS exceeds this factor over the EWMA baseline (guard). `0` disables; e.g. `5` = 5× spike |
 | `--cred-stuffing-limit` | | `0` | Alert when N distinct IPs fail auth on the same path (guard). `0` disables |
-| `--geoip-db` | | `""` | Path to GeoIP mmdb file (DB-IP or MaxMind). Auto-discovers if empty |
+| `--geoip-db` | | `""` | Path to GeoIP mmdb file (MaxMind GeoLite2 or DB-IP). Auto-discovers if empty |
+| `--no-auto-download` | | `false` | Disable automatic download of GeoLite2 mmdb on first run |
+| `--country-block` | | `""` | Comma-separated ISO country codes to block immediately (guard, e.g. `CN,RU,IR`). Requires GeoIP mmdb |
+| `--no-blocklist` | | `false` | Disable blocklist feed checking (guard) |
+| `--blocklist-refresh` | | `6h` | Background refresh interval for cached blocklist feeds (guard). Min `1h`; `0` disables |
+| `--cache-dir` | | `~/.cache/caddy-analyzer/blocklists` | Directory for cached blocklist files (guard, blocklist) |
+| `--no-default-blocklists` | | `false` | Disable default feeds (blocklist). Use with `--blocklist-config` for custom-only |
+| `--blocklist-config` | | `""` | Path(s) to JSON file(s) with extra blocklist sources (blocklist). Format: `[{"name":"x","url":"y"}]` |
+| `--blocklist-remove` | | `""` | Named sources to remove from the configuration (blocklist) |
 | `--version` | `-v` | `false` | Print version and exit |
 </details>
 
