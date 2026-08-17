@@ -67,7 +67,7 @@ var (
 	flagNoAutoDL   bool
 )
 
-var Version = "1.0.0"
+var Version = "0.4.0-dev"
 
 var rootCmd = &cobra.Command{
 	Use:   "caddy-analyze [flags] [source...]",
