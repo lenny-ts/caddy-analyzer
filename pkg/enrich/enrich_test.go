@@ -235,11 +235,16 @@ func TestUserConfigDir(t *testing.T) {
 	_ = os.Setenv("HOME", dir)
 	_ = os.Unsetenv("XDG_CONFIG_HOME")
 
+	base, err := os.UserConfigDir()
+	if err != nil {
+		t.Skipf("UserConfigDir not available: %v", err)
+	}
+	want := filepath.Join(base, "caddy-analyzer")
+
 	got, err := userConfigDir()
 	if err != nil {
 		t.Fatalf("userConfigDir: %v", err)
 	}
-	want := filepath.Join(dir, ".config", "caddy-analyzer")
 	if got != want {
 		t.Errorf("expected %s, got %s", want, got)
 	}
