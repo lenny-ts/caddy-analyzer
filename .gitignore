@@ -6,3 +6,4 @@ report.html
 sample.log
 *.sha256
 dist/
+coverage.out

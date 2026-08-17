@@ -225,10 +225,15 @@ func TestNewGeoIPNoFileNoAutoDownload(t *testing.T) {
 
 func TestUserConfigDir(t *testing.T) {
 	oldHome := os.Getenv("HOME")
-	defer func() { _ = os.Setenv("HOME", oldHome) }()
+	oldXDG := os.Getenv("XDG_CONFIG_HOME")
+	defer func() {
+		_ = os.Setenv("HOME", oldHome)
+		_ = os.Setenv("XDG_CONFIG_HOME", oldXDG)
+	}()
 
 	dir := t.TempDir()
 	_ = os.Setenv("HOME", dir)
+	_ = os.Unsetenv("XDG_CONFIG_HOME")
 
 	got, err := userConfigDir()
 	if err != nil {

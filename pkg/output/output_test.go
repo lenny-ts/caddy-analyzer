@@ -9,6 +9,53 @@ import (
 	"github.com/lenny-ts/caddy-analyzer/pkg/types"
 )
 
+func TestParseFormat(t *testing.T) {
+	tests := []struct {
+		in   string
+		want Format
+	}{
+		{"json", FormatJSON},
+		{"JSON", FormatJSON},
+		{"csv", FormatCSV},
+		{"html", FormatHTML},
+		{"table", FormatTable},
+		{"unknown", FormatTable},
+		{"", FormatTable},
+	}
+	for _, tt := range tests {
+		if got := ParseFormat(tt.in); got != tt.want {
+			t.Errorf("ParseFormat(%q) = %v, want %v", tt.in, got, tt.want)
+		}
+	}
+}
+
+func TestNewReportWithSections(t *testing.T) {
+	engine := analysis.New(types.Filters{})
+	sections := types.TopSections{Path: true, IP: true}
+	r := NewReportWithSections(engine, FormatJSON, 5, sections)
+	if r.format != FormatJSON || r.top != 5 || !r.sections.Path {
+		t.Errorf("NewReportWithSections fields wrong: %+v", r)
+	}
+}
+
+func TestReportSetters(t *testing.T) {
+	engine := analysis.New(types.Filters{})
+	r := NewReport(engine, FormatTable, 5)
+	r.SetDetect(true)
+	if !r.detect {
+		t.Error("SetDetect(true) failed")
+	}
+	r.SetDefang(true)
+	if !r.defang {
+		t.Error("SetDefang(true) failed")
+	}
+	f := types.Filters{Method: "POST"}
+	r.SetFilters(f)
+	if r.filters.Method != "POST" {
+		t.Error("SetFilters failed")
+	}
+}
+
 func TestReportOutputs(t *testing.T) {
 	engine := analysis.New(types.Filters{})
 	engine.Process(&types.LogEntry{
@@ -160,5 +207,50 @@ func TestFmtLogEntryStripsANSISignal(t *testing.T) {
 	}
 	if !strings.Contains(out, "/good/red") {
 		t.Errorf("expected stripped path in FmtLogEntry, got %q", out)
+	}
+}
+
+func TestDefangMap(t *testing.T) {
+	if defangMap(nil) != nil {
+		t.Error("nil map should return nil")
+	}
+	m := map[string]int64{"1.2.3.4": 5}
+	out := defangMap(m)
+	if _, ok := out["1[.]2[.]3[.]4"]; !ok {
+		t.Errorf("expected defanged key, got %v", out)
+	}
+}
+
+func TestDefangStringSliceMap(t *testing.T) {
+	if defangStringSliceMap(nil) != nil {
+		t.Error("nil map should return nil")
+	}
+	m := map[string][]string{"1.2.3.4": {"4.5.6.7"}}
+	out := defangStringSliceMap(m)
+	dk := "1[.]2[.]3[.]4"
+	v, ok := out[dk]
+	if !ok {
+		t.Fatalf("expected defanged key %q, got %v", dk, out)
+	}
+	if len(v) != 1 || v[0] != "4[.]5[.]6[.]7" {
+		t.Errorf("expected defanged value, got %v", v)
+	}
+}
+
+func TestDefangDetectionMap(t *testing.T) {
+	if defangDetectionMap(nil) != nil {
+		t.Error("nil map should return nil")
+	}
+	m := map[string][]types.DetectionRecord{
+		"1.2.3.4": {{Type: "scan", Desc: "hit 9.9.9.9", URI: "/p"}},
+	}
+	out := defangDetectionMap(m)
+	dk := "1[.]2[.]3[.]4"
+	v, ok := out[dk]
+	if !ok || len(v) != 1 {
+		t.Fatalf("expected 1 defanged entry, got %v", out)
+	}
+	if v[0].Desc != "hit 9[.]9[.]9[.]9" || v[0].URI != "/p" {
+		t.Errorf("unexpected defanged record: %+v", v[0])
 	}
 }

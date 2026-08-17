@@ -109,9 +109,14 @@ func SetAutoDownload(enabled bool) {
 }
 
 // userConfigDir returns the directory where auto-downloaded mmdb files
-// are stored (~/.config/caddy-analyzer/).
+// are stored (under the OS-specific user config dir, typically
+// ~/.config/caddy-analyzer/ on Linux).
 func userConfigDir() (string, error) {
-	dir := filepath.Join(os.Getenv("HOME"), ".config", "caddy-analyzer")
+	base, err := os.UserConfigDir()
+	if err != nil {
+		return "", fmt.Errorf("determine user config directory: %w", err)
+	}
+	dir := filepath.Join(base, "caddy-analyzer")
 	if err := os.MkdirAll(dir, 0o750); err != nil {
 		return "", fmt.Errorf("create config dir %s: %w", dir, err)
 	}

@@ -119,3 +119,162 @@ func TestMatchEntryGrepRegex(t *testing.T) {
 		})
 	}
 }
+
+func TestAvgDuration(t *testing.T) {
+	e := New(types.Filters{})
+	if got := e.AvgDuration(); got != 0 {
+		t.Errorf("empty engine AvgDuration = %v, want 0", got)
+	}
+	e.entries = 2
+	e.stats.DurationSum = 10.0
+	if got := e.AvgDuration(); got != 5.0 {
+		t.Errorf("AvgDuration = %v, want 5.0", got)
+	}
+}
+
+func TestRPS(t *testing.T) {
+	e := New(types.Filters{})
+	if got := e.RPS(); got != 0 {
+		t.Errorf("empty engine RPS = %v, want 0", got)
+	}
+	e.entries = 10
+	e.stats.StartTime = time.Now().Add(-2 * time.Second)
+	e.stats.EndTime = time.Now()
+	if rps := e.RPS(); rps <= 0 {
+		t.Errorf("RPS = %v, want > 0", rps)
+	}
+	// zero elapsed → 0
+	e.stats.StartTime = e.stats.EndTime
+	if got := e.RPS(); got != 0 {
+		t.Errorf("zero-elapsed RPS = %v, want 0", got)
+	}
+}
+
+func TestTopNInt(t *testing.T) {
+	m := map[int]int64{1: 30, 2: 10, 3: 20}
+	items := TopNInt(m, 2)
+	if len(items) != 2 || items[0].Key != 1 || items[0].Count != 30 {
+		t.Errorf("TopNInt = %v", items)
+	}
+	// n=0 → all
+	all := TopNInt(m, 0)
+	if len(all) != 3 {
+		t.Errorf("TopNInt(0) = %d items, want 3", len(all))
+	}
+}
+
+func TestCompareStats(t *testing.T) {
+	base := New(types.Filters{})
+	base.entries = 100
+	base.stats.TotalRequests = 100
+	base.stats.StartTime = time.Now().Add(-10 * time.Second)
+	base.stats.EndTime = time.Now()
+	base.stats.Errors = 5
+	base.stats.DurationSum = 50.0
+	base.stats.PathErrorCounts = map[string]int64{"/old": 1}
+
+	curr := New(types.Filters{})
+	curr.entries = 150
+	curr.stats.TotalRequests = 150
+	curr.stats.StartTime = time.Now().Add(-10 * time.Second)
+	curr.stats.EndTime = time.Now()
+	curr.stats.Errors = 8
+	curr.stats.DurationSum = 90.0
+	curr.stats.PathErrorCounts = map[string]int64{"/old": 1, "/new": 3}
+
+	diff := CompareStats(base, curr)
+	if diff.BaseRequests != 100 || diff.CurrRequests != 150 {
+		t.Errorf("requests base=%d curr=%d", diff.BaseRequests, diff.CurrRequests)
+	}
+	if diff.RequestsDelta != 50 {
+		t.Errorf("delta = %d, want 50", diff.RequestsDelta)
+	}
+	if diff.ErrorsDelta != 3 {
+		t.Errorf("errors delta = %d, want 3", diff.ErrorsDelta)
+	}
+	if len(diff.NewErrorPaths) != 1 || diff.NewErrorPaths[0] != "/new" {
+		t.Errorf("new error paths = %v, want [/new]", diff.NewErrorPaths)
+	}
+
+	// zero base → 0 pct
+	emptyBase := New(types.Filters{})
+	diff0 := CompareStats(emptyBase, curr)
+	if diff0.RequestsPct != 0 {
+		t.Errorf("pct with zero base = %v, want 0", diff0.RequestsPct)
+	}
+}
+
+func TestIPMatch(t *testing.T) {
+	tests := []struct {
+		pattern, ip string
+		want        bool
+	}{
+		{"", "", true},
+		{"", "1.1.1.1", false},
+		{"1.1.1.1", "1.1.1.1", true},
+		{"1.1.1.1", "2.2.2.2", false},
+		{"10.0.0.0/8", "10.1.2.3", true},
+		{"10.0.0.0/8", "11.1.2.3", false},
+		{"invalid/", "1.1.1.1", false},
+		{"10.0.0.0/8", "notanip", false},
+	}
+	for _, tt := range tests {
+		if got := ipMatch(tt.pattern, tt.ip); got != tt.want {
+			t.Errorf("ipMatch(%q, %q) = %v, want %v", tt.pattern, tt.ip, got, tt.want)
+		}
+	}
+}
+
+func TestMatchGlob(t *testing.T) {
+	if !matchGlob("*", "/anything") {
+		t.Error("matchGlob(*) should be true")
+	}
+	if !matchGlob("", "/anything") {
+		t.Error("matchGlob('') should be true")
+	}
+	if !matchGlob("/api/*", "/api/v1/users") {
+		t.Error("glob /api/* should match /api/v1/users")
+	}
+	if matchGlob("/api/*", "/admin/login") {
+		t.Error("glob /api/* should not match /admin/login")
+	}
+	if !matchGlob("/api/?", "/api/x") {
+		t.Error("glob /api/? should match /api/x")
+	}
+	// exact fallback when pattern has no glob chars and regex fails —
+	// exercise the cache path too
+	if !matchGlob("/api/v1", "/api/v1") {
+		t.Error("exact glob should match")
+	}
+}
+
+func TestCompileGlob(t *testing.T) {
+	re := compileGlob("/api/*")
+	if re == nil {
+		t.Fatal("expected non-nil regex")
+	}
+	if !re.MatchString("/api/v1") {
+		t.Error("compiled glob should match")
+	}
+}
+
+func TestSetDetector(t *testing.T) {
+	e := New(types.Filters{})
+	d := NewDetector()
+	e.SetDetector(d)
+	if e.detector == nil {
+		t.Error("detector not set")
+	}
+}
+
+func TestUARotationThreshold(t *testing.T) {
+	d := NewDetector()
+	d.SetUARotationThreshold(5)
+	if got := d.UARotationThreshold(); got != 5 {
+		t.Errorf("threshold = %d, want 5", got)
+	}
+	d.SetUARotationThreshold(0)
+	if got := d.UARotationThreshold(); got <= 0 {
+		t.Errorf("threshold reset = %d, want > 0", got)
+	}
+}
