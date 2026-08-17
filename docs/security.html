@@ -5,19 +5,19 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="view-transition" content="same-origin">
     <title>Threat Engine Guide — caddy-analyzer</title>
-    <meta name="description" content="26-category evasion-resistant threat detection engine: SQLi, XSS, Log4j, RCE, JWT, beaconing, path traversal. MITRE ATT&CK tagged, Sigma export, IOC defanging, iptables auto-blocking.">
+    <meta name="description" content="26-category evasion-resistant threat detection engine: SQLi, XSS, Log4j, RCE, JWT, beaconing, path traversal. MITRE ATT&CK tagged, Sigma export, IOC defanging, iptables auto-blocking, blocklist feeds, GeoIP country-block.">
     <meta name="theme-color" content="#0a0a0c">
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E🛡️%3C/text%3E%3C/svg%3E">
     <meta property="og:title" content="Threat Engine Guide — caddy-analyzer">
-    <meta property="og:description" content="26-category threat detection: SQLi, XSS, Log4j, RCE, JWT, beaconing. MITRE tagged, Sigma export, iptables firewall guard.">
+    <meta property="og:description" content="26-category threat detection: SQLi, XSS, Log4j, RCE, JWT, beaconing. MITRE tagged, Sigma export, iptables guard, blocklist feeds, country-block.">
     <meta property="og:type" content="website">
     <meta property="og:url" content="https://lenny-ts.github.io/caddy-analyzer/security.html">
     <meta property="og:image" content="https://lenny-ts.github.io/caddy-analyzer/og-image.png">
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="Threat Engine Guide — caddy-analyzer">
-    <meta name="twitter:description" content="26-category threat detection: SQLi, XSS, Log4j, RCE, JWT, beaconing. MITRE tagged, Sigma export, iptables firewall guard.">
+    <meta name="twitter:description" content="26-category threat detection: SQLi, XSS, Log4j, RCE, JWT, beaconing. MITRE tagged, Sigma export, iptables guard, blocklist feeds, country-block.">
     <script>try{var t=localStorage.getItem('caddy-docs-theme');if(t==='light')document.documentElement.setAttribute('data-theme','light');else if(t!=='dark'&&window.matchMedia&&window.matchMedia('(prefers-color-scheme: light)').matches)document.documentElement.setAttribute('data-theme','light');}catch(e){}</script>
-    <meta name="doc:modified" content="2026-08-15T15:51:05+02:00">
+    <meta name="doc:modified" content="2026-08-17T14:45:35+02:00">
     <meta name="color-scheme" content="dark light">
     <link rel="manifest" href="manifest.json">
     <link rel="apple-touch-icon" href="apple-touch-icon.png">
@@ -26,7 +26,7 @@
     <link rel="dns-prefetch" href="//pkg.go.dev">
     <link rel="preconnect" href="//github.com">
     <link rel="prefetch" href="tui-html.html">
-    <link rel="stylesheet" href="styles.min.css?v=25">
+    <link rel="stylesheet" href="styles.min.css?v=26">
     <script type="speculationrules">{"prefetch":[{"where":{"href_matches":"/*.html"},"eagerness":"moderate"}]}</script>
 </head>
 <body>
@@ -49,7 +49,7 @@
                     <li><a class="breadcrumb-current" aria-current="page" href="security.html">Security Threats</a></li>
                 </ol>
             </nav>
-            <p class="doc-meta"><a href="https://github.com/lenny-ts/caddy-analyzer/releases" rel="noopener">v0.3.0</a> &middot; updated <time datetime="2026-08-14">2026-08-14</time> &middot; <a href="https://github.com/lenny-ts/caddy-analyzer" rel="noopener">GitHub</a></p>
+            <p class="doc-meta"><a href="https://github.com/lenny-ts/caddy-analyzer/releases" rel="noopener">v0.4.0</a> &middot; updated <time datetime="2026-08-17">2026-08-17</time> &middot; <a href="https://github.com/lenny-ts/caddy-analyzer" rel="noopener">GitHub</a></p>
             <h1>Threat Engine &amp; Security Inspector</h1>
             <p class="subtitle">Built-in attack detection engine, signature rules, and firewall defense</p>
         </div>
@@ -296,6 +296,41 @@ sudo caddy-analyze guard --detect-confidence 0 docker://my-caddy</pre>
 
             <h3>Confidence Scoring</h3>
             <p>Every detection is assigned a confidence score from 1 (low) to 10 (high) based on the specificity and reliability of the matched pattern. High-confidence patterns (e.g. <code>UNION SELECT</code>, <code>${jndi:ldap://</code>) score 9–10, while broad or ambiguous patterns (e.g. <code>onerror=</code> which can appear in legitimate payloads) score 3–5. This allows downstream consumers to filter noise and prioritize high-signal detections.</p>
+
+            <h3>Blocklist Feeds (Threat Intel)</h3>
+            <p>In addition to behavioral thresholds, the guard checks every connecting IP against curated blocklist feeds and blocks matches immediately (before any rate or pattern threshold fires). Feeds are downloaded, parsed (plain-text IP/CIDR or JSON Lines), and cached as a CIDR trie in <code>~/.cache/caddy-analyzer/blocklists/</code> for O(1) lookup. The cache has a 7-day TTL; the guard refreshes it in the background every 6 hours (configurable via <code>--blocklist-refresh</code>, minimum <code>1h</code>, <code>0</code> disables background refresh).</p>
+            <p>The 8 default feeds (disabled with <code>--no-blocklist</code> or <code>--no-default-blocklists</code>):</p>
+            <ul>
+                <li><strong>Spamhaus DROP v4 / v6</strong> — known hijacked networks and spam operations (JSON Lines).</li>
+                <li><strong>FireHOL level 1 / 2</strong> — community-maintained netsets aggregating multiple abuse feeds.</li>
+                <li><strong>CINS Army</strong> — recurrently-scanned malicious IPs from the Collective Intelligence Network Security.</li>
+                <li><strong>Tor exit nodes</strong> — the live Tor bulk exit list.</li>
+                <li><strong>Emerging Threats</strong> — compromised-host blocklist.</li>
+                <li><strong>AbuseIPDB s100-7d</strong> — top-100 most-reported IPs in the last 7 days (community mirror).</li>
+            </ul>
+            <p>Use the <code>blocklist</code> subcommand to manage feeds (see the <a href="subcommands.html#blocklist">Subcommands reference</a>): <code>refresh</code> forces a cache update, <code>list</code> shows per-feed status, <code>config</code> shows the resolved source list, and <code>init</code> persists flag settings to <code>caddy-analyzer.json</code>. Add custom feeds with <code>--blocklist-config &lt;file.json&gt;</code> (JSON array of <code>{"name","url","format"}</code> objects) and remove defaults with <code>--blocklist-remove &lt;name,name&gt;</code>.</p>
+<pre>sudo caddy-analyze guard --no-blocklist docker://my-caddy         # disable feeds
+caddy-analyze blocklist refresh                                 # force update
+caddy-analyze blocklist list                                    # show status
+caddy-analyze blocklist init --no-default-blocklists \
+  --blocklist-config mylist.txt                                 # persist custom-only config</pre>
+
+            <h3>Country Blocking (--country-block)</h3>
+            <p>Block traffic from specified ISO country codes immediately using GeoIP lookup. Pass a comma-separated list to <code>--country-block</code>; the guard fails fast if no GeoIP mmdb is available.</p>
+<pre>sudo caddy-analyze guard --country-block CN,RU,IR docker://my-caddy
+sudo caddy-analyze guard --country-block CN --no-blocklist docker://my-caddy</pre>
+
+            <h3>GeoIP Auto-Download</h3>
+            <p>On first run, the guard and root command auto-download <code>GeoLite2-Country.mmdb</code> and <code>GeoLite2-ASN.mmdb</code> from the <a href="https://github.com/P3TERX/GeoLite.mmdb" rel="noopener">P3TERX GeoLite2 mirror</a> to <code>~/.config/caddy-analyzer/</code>. Disable with <code>--no-auto-download</code>; then supply your own mmdb via <code>--geoip-db &lt;path&gt;</code>. The guard searches the current directory, <code>~/.config/caddy-analyzer</code>, <code>/var/lib/caddy-analyzer</code>, and <code>/usr/share/GeoIP</code> for an mmdb when <code>--geoip-db</code> is empty.</p>
+<pre># Let the guard auto-download on first run
+sudo caddy-analyze guard --country-block CN docker://my-caddy
+
+# Use your own MaxMind / DB-IP mmdb
+sudo caddy-analyze guard --geoip-db /etc/caddy-analyzer/GeoLite2-Country.mmdb \
+  --country-block CN docker://my-caddy
+
+# Disable auto-download (mmdb must be supplied via --geoip-db or in a search path)
+sudo caddy-analyze guard --no-auto-download --geoip-db /opt/GeoIP.mmdb docker://my-caddy</pre>
         </section>
 
         <section class="reveal">
@@ -330,7 +365,7 @@ caddy-analyze tail --defang access.log</pre>
     </main>
 
     <button class="back-to-top" aria-label="Back to top">↑</button>
-    <script src="docs.min.js?v=25" defer></script>
+    <script src="docs.min.js?v=26" defer></script>
 
 </body>
 </html>

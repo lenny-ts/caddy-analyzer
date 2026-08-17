@@ -5,6 +5,28 @@ All notable changes to `caddy-analyzer` will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.0] - 2026-08-17
+
+### Added
+- **Blocklist feed system**: `blocklist` subcommand with four actions — `refresh` (download + cache all feeds), `list` (per-feed status), `config` (print resolved sources), `init` (persist flag settings to `caddy-analyzer.json`). Feeds are cached as a CIDR trie in `~/.cache/caddy-analyzer/blocklists/` (7-day TTL). Flags: `--cache-dir`, `--no-default-blocklists`, `--blocklist-config`, `--blocklist-remove`.
+- **8 default blocklist feeds**: Spamhaus DROP v4/v6, FireHOL level 1/2, CINS Army, Tor exit nodes, Emerging Threats, AbuseIPDB s100-7d mirror. JSON Lines (Spamhaus) and plain-text formats supported.
+- **Guard blocklist integration**: incoming IPs are checked against the CIDR trie for immediate block. `--no-blocklist` disables; `--blocklist-refresh` (default `6h`) controls background re-fetch.
+- **Guard country-block**: `--country-block CN,RU,IR` immediately blocks IPs by GeoIP country code. Fails fast if no mmdb is available.
+- **GeoIP enrichment**: offline mmdb lookup (no API key, no network at query time). `--geoip-db` with auto-discovery in cwd, `~/.config/caddy-analyzer/`, `/var/lib/caddy-analyzer/`, `/usr/share/GeoIP/`. Auto-downloads `GeoLite2-Country.mmdb` + `GeoLite2-ASN.mmdb` from the P3TERX mirror on first run; disable with `--no-auto-download`.
+- **`top country` / `top asn` dimensions** with human-readable country names ("Italy" instead of `IT`). Country and ASN sections now in the default report (auto-hidden when no GeoIP data).
+- **`--watch` (live dashboard) GeoIP tab**: new "Geo" view (key `7`) showing top client countries (human-readable names) and top ASN. Log entries are enriched inline as they stream in; the tab degrades to a disabled hint when no mmdb is available.
+- **Documentation site**: glassmorphism-design docs (index, subcommands, security, sources, installation) with TOC sidebar, back-to-top, Lighthouse-optimized performance.
+
+### Fixed
+- **GeoIP download URLs**: dead `download.dbip.com` (DNS does not resolve) replaced with the P3TERX/GeoLite.mmdb GitHub release mirror. Auto-download now fetches both country and ASN databases.
+- **CINS Army URL** corrected to `http://cinsscore.com/list/ci-badguys.txt`.
+- **Country codes shown instead of names** in `top country` and the default report.
+
+### Changed
+- **AbuseIPDB enricher removed**: the `pkg/enrich/abuseipdb.go` file (shipped in 0.3.0 but never wired to any command) is deleted. GeoIP mmdb is the sole enrichment backend.
+- **Guard startup summary** now prints blocklist stats and country-block list alongside existing thresholds.
+- **Go 1.25.13** (was 1.24.6).
+
 ## [0.3.0] - 2026-08-06
 
 ### Added
@@ -13,7 +35,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`--defang` flag**: defangs IPs (`.` → `[.]`) and URL schemes (`http://` → `hxxp://`) across all commands for safe IOC sharing.
 - **`tail --detect`**: inline threat highlighting on streamed entries. IP colored by severity, attack types appended after a `→` arrow. Clean entries unchanged.
 - **Progress bar**: determinate bar on TTY for file analysis (`caddy-analyze`, `top`, `diff`); indeterminate spinner for non-file sources. Auto-disabled on pipe.
-- **Threat-intel enrichment**: AbuseIPDB client with bounded TTL cache (10K entries). Guard flags: `--enrich`, `--enrich-threshold`.
+- **Threat-intel enrichment**: GeoIP enrichment via DB-IP/MaxMind mmdb (offline, zero API key). `--geoip-db` flag with auto-discovery. Country/ASN top-N dimensions (`--top country`, `--top asn`).
 - **Guard features**: sliding-window rate limiting, distributed-scan defense (`--subnet-limit`), RPS anomaly alerting (`--rps-anomaly`), credential stuffing detection (`--cred-stuffing-limit`), `--trust-forwarded` for reverse proxy/CDN.
 - **`--state-file` on `block`/`unban`**: manual blocks/unbans sync with guard state file — survive restarts.
 - **Detection engine 2x throughput**: case-fold elimination, per-source marker triage, literal fast path. ~7K lines/sec with `--detect` (was ~3.5K).

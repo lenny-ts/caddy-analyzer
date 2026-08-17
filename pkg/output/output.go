@@ -509,6 +509,24 @@ func (r *Report) printTable() error {
 			_, _ = fmt.Fprintf(w, "%s:\n", title)
 			printTopNWithBar(w, analysis.TopN(s.HostCounts, r.top), total, useColor)
 		}
+		if r.sections.Country && len(s.CountryCounts) > 0 {
+			_, _ = fmt.Fprintf(w, "\n")
+			title := fmt.Sprintf("Top %d Countries", r.top)
+			if useColor {
+				title = styleLabel.Render(title)
+			}
+			_, _ = fmt.Fprintf(w, "%s:\n", title)
+			printTopNWithBar(w, renameItems(analysis.TopN(s.CountryCounts, r.top), s.CountryNames), total, useColor)
+		}
+		if r.sections.ASN && len(s.ASNCounts) > 0 {
+			_, _ = fmt.Fprintf(w, "\n")
+			title := fmt.Sprintf("Top %d Autonomous Systems", r.top)
+			if useColor {
+				title = styleLabel.Render(title)
+			}
+			_, _ = fmt.Fprintf(w, "%s:\n", title)
+			printTopNWithBar(w, analysis.TopN(s.ASNCounts, r.top), total, useColor)
+		}
 	}
 
 	if err := w.Flush(); err != nil {
@@ -682,6 +700,12 @@ func (r *Report) printJSON() error {
 		if r.sections.Host {
 			data["top_hosts"] = analysis.TopN(s.HostCounts, r.top)
 		}
+		if r.sections.Country && len(s.CountryCounts) > 0 {
+			data["top_countries"] = analysis.TopN(s.CountryCounts, r.top)
+		}
+		if r.sections.ASN && len(s.ASNCounts) > 0 {
+			data["top_asns"] = analysis.TopN(s.ASNCounts, r.top)
+		}
 	}
 
 	enc := json.NewEncoder(r.writer)
@@ -752,6 +776,18 @@ func (r *Report) printCSV() error {
 		if r.sections.IP {
 			writeSection([]string{"top_ips:ip", "count"})
 			for _, item := range analysis.TopN(s.RemoteIPCounts, r.top) {
+				writePair(item.Key, fmt.Sprintf("%d", item.Count))
+			}
+		}
+		if r.sections.Country && len(s.CountryCounts) > 0 {
+			writeSection([]string{"top_countries:country", "count"})
+			for _, item := range analysis.TopN(s.CountryCounts, r.top) {
+				writePair(item.Key, fmt.Sprintf("%d", item.Count))
+			}
+		}
+		if r.sections.ASN && len(s.ASNCounts) > 0 {
+			writeSection([]string{"top_asns:asn", "count"})
+			for _, item := range analysis.TopN(s.ASNCounts, r.top) {
 				writePair(item.Key, fmt.Sprintf("%d", item.Count))
 			}
 		}
@@ -846,6 +882,10 @@ func TopFieldAnalysis(engine *analysis.Engine, field types.TopField, n int, w io
 		printTop(w, "Remote IPs", analysis.TopN(s.RemoteIPCounts, n))
 	case types.TopUserAgent:
 		printTop(w, "User Agents", analysis.TopN(s.UserAgentCounts, n))
+	case types.TopCountry:
+		printTop(w, "Countries", renameItems(analysis.TopN(s.CountryCounts, n), s.CountryNames))
+	case types.TopASN:
+		printTop(w, "Autonomous Systems", analysis.TopN(s.ASNCounts, n))
 	}
 }
 
@@ -859,6 +899,30 @@ func printTop(w io.Writer, title string, items []types.CountItem) {
 		_, _ = fmt.Fprintf(tw, "  %d.\t%s\t(%d)\n", i+1, stripANSI(item.Key), item.Count)
 	}
 	_ = tw.Flush()
+}
+
+// RenameCountryItems returns a copy of items with keys replaced by their
+// human-readable name from names when available; keys without a name
+// entry are left unchanged. Used to display country names (e.g.
+// "Italy") instead of ISO codes (e.g. "IT") in text output.
+func RenameCountryItems(items []types.CountItem, names map[string]string) []types.CountItem {
+	return renameItems(items, names)
+}
+
+// renameItems returns a copy of items with keys replaced by their
+// human-readable name from names when available; keys without a name
+// entry are left unchanged. Used to display country names (e.g.
+// "Italy") instead of ISO codes (e.g. "IT") in text output.
+func renameItems(items []types.CountItem, names map[string]string) []types.CountItem {
+	out := make([]types.CountItem, len(items))
+	for i, it := range items {
+		if name, ok := names[it.Key]; ok && name != "" {
+			out[i] = types.CountItem{Key: name, Count: it.Count}
+		} else {
+			out[i] = it
+		}
+	}
+	return out
 }
 
 func listStatus(s int) string {

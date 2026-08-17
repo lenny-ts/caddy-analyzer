@@ -6,9 +6,27 @@ linters:
     - ineffassign
     - staticcheck
     - unused
+    - bodyclose
+    - copyloopvar
+    - errorlint
+    - misspell
+    - nakedret
+    - tparallel
+    - unconvert
+    - unparam
+    - whitespace
   settings:
     errcheck:
       exclude-functions:
         - fmt.Fprint
         - fmt.Fprintf
         - fmt.Fprintln
+    errorlint:
+      errorf: true
+      asserts: true
+      comparison: true
+  exclusions:
+    rules:
+      - path: _test\.go
+        linters:
+          - errcheck

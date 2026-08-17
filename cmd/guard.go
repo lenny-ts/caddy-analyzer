@@ -14,6 +14,8 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/lenny-ts/caddy-analyzer/pkg/audit"
+	"github.com/lenny-ts/caddy-analyzer/pkg/blocklist"
+	"github.com/lenny-ts/caddy-analyzer/pkg/config"
 	"github.com/lenny-ts/caddy-analyzer/pkg/enrich"
 	"github.com/lenny-ts/caddy-analyzer/pkg/guard"
 	"github.com/lenny-ts/caddy-analyzer/pkg/reader"
@@ -33,10 +35,15 @@ var (
 	guardSubnetLimit       int
 	guardAnomalyFactor     float64
 	guardUARotation        int
-	guardEnrich            bool
 	guardCredStuffingLimit int
-	guardEnrichThreshold   int
+	guardCountryBlock      []string
+	guardBlocklistRefresh  string
+	guardNoBlocklist       bool
+	guardGeoIPDB           string
+	guardNoAutoDL          bool
 )
+
+const minBlocklistRefresh = 1 * time.Hour
 
 func init() {
 	guardCmd.Flags().IntVarP(&guardLimit, "limit", "l", 100, "Max requests before blocking (0 disables)")
@@ -52,9 +59,13 @@ func init() {
 	guardCmd.Flags().IntVarP(&guardSubnetLimit, "subnet-limit", "", 0, "Block a /24 when its combined requests exceed this (0 disables; distributed-scan defense)")
 	guardCmd.Flags().Float64VarP(&guardAnomalyFactor, "rps-anomaly", "", 0, "Alert when current RPS exceeds this factor over the EWMA baseline (0 disables; e.g. 5 = 5x spike)")
 	guardCmd.Flags().IntVarP(&guardUARotation, "ua-rotation", "", 10, "Distinct User-Agents from one IP before scanner/rotation heuristic fires")
-	guardCmd.Flags().BoolVarP(&guardEnrich, "enrich", "", false, "Enable threat-intel enrichment (AbuseIPDB). Set ABUSEIPDB_KEY env var")
 	guardCmd.Flags().IntVarP(&guardCredStuffingLimit, "cred-stuffing-limit", "", 0, "Alert when N distinct IPs fail auth on the same path (0 disables)")
-	guardCmd.Flags().IntVarP(&guardEnrichThreshold, "enrich-threshold", "", 70, "Min AbuseIPDB score to pre-block IP with auth failures (0 disables enrichment blocking)")
+	guardCmd.Flags().StringSliceVarP(&guardCountryBlock, "country-block", "", nil, "Block IPs from these ISO country codes (e.g. CN,RU,IR)")
+	guardCmd.Flags().StringVarP(&guardBlocklistRefresh, "blocklist-refresh", "", "6h", "Blocklist background refresh interval (min 1h; 0 disables)")
+	guardCmd.Flags().BoolVarP(&guardNoBlocklist, "no-blocklist", "", false, "Disable blocklist feed checking")
+	guardCmd.Flags().StringVarP(&guardGeoIPDB, "geoip-db", "", "", "Path to GeoIP mmdb file (auto-discovered if empty)")
+	guardCmd.Flags().BoolVarP(&guardNoAutoDL, "no-auto-download", "", false, "Disable automatic download of DB-IP lite mmdb on first run")
+	guardCmd.Flags().StringVarP(&blocklistCacheDir, "cache-dir", "", defaultBlocklistCacheDir(), "Directory for cached blocklist files")
 	rootCmd.AddCommand(guardCmd)
 }
 
@@ -68,6 +79,8 @@ Detection:
   • 404 surge — directory scanning / enumeration
   • Request threshold — generic high-volume
   • Pattern detection — 26 categories: SQLi, NoSQLi, XSS, SSTI, SSRF, RCE, path traversal, LFI wrappers, GraphQL, Log4j/JNDI, XXE, open redirect, LDAP/XPath/CRLF/SSI injection, prototype pollution, probes, scanners, UA rotation, JWT abuse, object enumeration, beaconing (confidence >= --detect-confidence)
+  • Blocklist feeds (Spamhaus DROP, FireHOL, CINS, Tor, Emerging Threats, AbuseIPDB) — immediate block
+  • Country block (--country-block) — immediate block by GeoIP country code
 
 Set any threshold to 0 to disable it. Blockade is temporary (default 10m).
 For permanent block: --duration 0. Rules live in the CADDY_ANALYZER iptables
@@ -81,6 +94,8 @@ Examples:
   caddy-analyze guard k8s://caddy-pod -n production --auth-limit 5
   caddy-analyze guard /var/log/caddy/access.log --never-block 10.0.0.0/8,192.168.1.1
   caddy-analyze guard /var/log/caddy/access.log --never-block-file /etc/caddy-analyzer/allowlist.txt
+  caddy-analyze guard /var/log/caddy/access.log --country-block CN,RU,IR --geoip-db /etc/geoip/dbip-country-lite.mmdb
+  caddy-analyze guard /var/log/caddy/access.log --no-blocklist
 `,
 	Args: cobra.ArbitraryArgs,
 	RunE: runGuard,
@@ -174,13 +189,78 @@ func runGuard(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-	var enricher enrich.Enricher
-	if guardEnrich {
-		key := os.Getenv("ABUSEIPDB_KEY")
-		if key == "" {
-			return fmt.Errorf("--enrich requires ABUSEIPDB_KEY env var")
+	// Blocklist manager: load cached feeds first, then start background
+	// refresh. If --no-blocklist is set, skip entirely. Source list is
+	// assembled from the config file (if any) so 'blocklist init'
+	// settings are honoured.
+	var blMgr *blocklist.Manager
+	if !guardNoBlocklist {
+		var sources []blocklist.Source
+		cfg, _, _ := config.Load()
+		if cfg != nil && cfg.Blocklist != nil {
+			var err error
+			sources, err = cfg.Blocklist.ResolveSources()
+			if err != nil {
+				return fmt.Errorf("blocklist config: %w", err)
+			}
 		}
-		enricher = enrich.NewCache(enrich.NewAbuseIPDB(key), 30*24*time.Hour)
+		var err error
+		blMgr, err = blocklist.NewManager(sources, blocklistCacheDir)
+		if err != nil {
+			return fmt.Errorf("blocklist manager: %w", err)
+		}
+		blMgr.LoadAll()
+		stats := blMgr.Stats()
+		if stats.Active == 0 {
+			fmt.Fprintf(os.Stderr, "No cached blocklists found. Running initial refresh...\n")
+			statuses := blMgr.Refresh()
+			active := 0
+			for _, st := range statuses {
+				if st.Error == "" && st.Entries > 0 {
+					active++
+				}
+				if st.Error != "" {
+					fmt.Fprintf(os.Stderr, "  %s: %s\n", st.Name, st.Error)
+				} else {
+					fmt.Fprintf(os.Stderr, "  %s: %d entries\n", st.Name, st.Entries)
+				}
+			}
+			if active == 0 {
+				fmt.Fprintf(os.Stderr, "Warning: all blocklist feeds failed. Running without blocklist protection.\n")
+			}
+		}
+	}
+
+	// GeoIP enricher: needed for country-block. If --geoip-db is empty,
+	// auto-discovery is attempted. If country-block is set but no GeoIP
+	// db is found, warn the user.
+	var geoip *enrich.GeoIP
+	if len(guardCountryBlock) > 0 || guardGeoIPDB != "" {
+		enrich.SetAutoDownload(!guardNoAutoDL)
+		var err error
+		geoip, err = enrich.NewGeoIP(guardGeoIPDB)
+		if err != nil {
+			if len(guardCountryBlock) > 0 {
+				return fmt.Errorf("--country-block requires GeoIP db: %w", err)
+			}
+			fmt.Fprintf(os.Stderr, "Warning: GeoIP db not found, country/ASN enrichment disabled: %v\n", err)
+			geoip = nil
+		} else {
+			defer func() { _ = geoip.Close() }()
+		}
+	}
+
+	var blocklistRefresh time.Duration
+	if guardBlocklistRefresh == "0" {
+		blocklistRefresh = 0
+	} else {
+		blocklistRefresh, err = time.ParseDuration(guardBlocklistRefresh)
+		if err != nil {
+			return fmt.Errorf("invalid blocklist-refresh %q: %w", guardBlocklistRefresh, err)
+		}
+		if blocklistRefresh > 0 && blocklistRefresh < minBlocklistRefresh {
+			return fmt.Errorf("--blocklist-refresh must be >= %s", minBlocklistRefresh)
+		}
 	}
 
 	g := guard.New(guard.Config{
@@ -201,9 +281,11 @@ func runGuard(cmd *cobra.Command, args []string) error {
 		SubnetLimit:         guardSubnetLimit,
 		AnomalyFactor:       guardAnomalyFactor,
 		UARotationThreshold: guardUARotation,
-		Enricher:            enricher,
 		CredStuffingLimit:   guardCredStuffingLimit,
-		EnrichThreshold:     guardEnrichThreshold,
+		BlocklistMgr:        blMgr,
+		BlocklistRefresh:    blocklistRefresh,
+		CountryBlock:        guardCountryBlock,
+		GeoIP:               geoip,
 	})
 
 	durMsg := duration.String()
@@ -222,6 +304,18 @@ func runGuard(cmd *cobra.Command, args []string) error {
 		fmt.Fprintf(os.Stderr, "Pattern detection blocking: confidence >= %d\n", guardDetectConfidence)
 	} else {
 		fmt.Fprintf(os.Stderr, "Pattern detection blocking: off\n")
+	}
+	if blMgr != nil {
+		stats := blMgr.Stats()
+		fmt.Fprintf(os.Stderr, "Blocklist: %d entries across %d active sources\n", stats.Total, stats.Active)
+		if blocklistRefresh > 0 {
+			fmt.Fprintf(os.Stderr, "Blocklist refresh: every %s\n", blocklistRefresh)
+		}
+	} else {
+		fmt.Fprintf(os.Stderr, "Blocklist: off\n")
+	}
+	if len(guardCountryBlock) > 0 && geoip != nil {
+		fmt.Fprintf(os.Stderr, "Country block: %s\n", strings.Join(guardCountryBlock, ", "))
 	}
 	fmt.Fprintf(os.Stderr, "Ctrl+C to stop\n\n")
 
@@ -243,6 +337,9 @@ func runGuard(cmd *cobra.Command, args []string) error {
 	fmt.Fprintln(os.Stderr, "\nGuard stopped.")
 	if n := g.Count(); n > 0 {
 		fmt.Fprintf(os.Stderr, "IPs blocked this session: %d\n", n)
+	}
+	if n := g.BlocklistHits(); n > 0 {
+		fmt.Fprintf(os.Stderr, "IPs blocked via blocklist/country-block: %d\n", n)
 	}
 	return nil
 }

@@ -123,6 +123,17 @@ type LogEntry struct {
 	ForwardedFor  []string
 	RealIP        string
 	Authorization string
+	Geo           GeoInfo
+}
+
+// GeoInfo holds GeoIP enrichment data for a single IP. Populated by the
+// GeoIP enricher from a DB-IP / MaxMind mmdb file. Zero-value means the
+// IP was not enriched (private/loopback, db missing, or lookup miss).
+type GeoInfo struct {
+	CountryCode string // ISO 3166-1 alpha-2, e.g. "US", "DE"
+	CountryName string // Human-readable, e.g. "United States"
+	ASN         uint   // Autonomous System Number
+	ASNOrg      string // ASNOrganization, e.g. "AS15169 Google LLC"
 }
 
 // EffectiveClientIP returns the IP to attribute the request to when a
@@ -220,6 +231,8 @@ const (
 	TopRemoteAddr TopField = "remote_addr"
 	TopUserAgent  TopField = "user_agent"
 	TopRemoteIP   TopField = "remote_ip"
+	TopCountry    TopField = "country"
+	TopASN        TopField = "asn"
 )
 
 type Stats struct {
@@ -237,6 +250,15 @@ type Stats struct {
 	RefererCounts    map[string]int64
 	PathBytesMap     map[string]int64
 	IPBytesMap       map[string]int64
+	// CountryCounts and ASNCounts are populated by the GeoIP enricher
+	// when a mmdb file is available. Keys are ISO country codes (e.g.
+	// "US") and ASN strings (e.g. "AS15169") respectively.
+	CountryCounts map[string]int64
+	ASNCounts     map[string]int64
+	// CountryNames maps ISO country codes (e.g. "IT") to human-readable
+	// names (e.g. "Italy") for display. Populated by the GeoIP enricher
+	// alongside CountryCounts.
+	CountryNames map[string]string
 	// PathErrorCounts tracks 5xx responses per path. Used by the diff
 	// engine to surface NEW error paths (paths that errored in target but
 	// were absent or healthy in baseline) rather than any new path.
@@ -294,16 +316,18 @@ type CountIntItem struct {
 }
 
 type TopSections struct {
-	Path   bool
-	IP     bool
-	UA     bool
-	Method bool
-	Status bool
-	Host   bool
+	Path    bool
+	IP      bool
+	UA      bool
+	Method  bool
+	Status  bool
+	Host    bool
+	Country bool
+	ASN     bool
 }
 
 func DefaultTopSections() TopSections {
-	return TopSections{Path: true, IP: true, UA: true, Method: true, Status: true, Host: true}
+	return TopSections{Path: true, IP: true, UA: true, Method: true, Status: true, Host: true, Country: true, ASN: true}
 }
 
 func (e *LogEntry) Path() string {
@@ -332,6 +356,9 @@ func NewStats() *Stats {
 		SuspiciousIPs:        make(map[string]int64),
 		SuspiciousDetails:    make(map[string][]string),
 		SuspiciousDetections: make(map[string][]DetectionRecord),
+		CountryCounts:        make(map[string]int64),
+		ASNCounts:            make(map[string]int64),
+		CountryNames:         make(map[string]string),
 		MinDuration:          1<<63 - 1,
 	}
 }

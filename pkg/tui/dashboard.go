@@ -10,6 +10,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 
 	"github.com/lenny-ts/caddy-analyzer/pkg/analysis"
+	"github.com/lenny-ts/caddy-analyzer/pkg/enrich"
 	"github.com/lenny-ts/caddy-analyzer/pkg/output"
 	"github.com/lenny-ts/caddy-analyzer/pkg/parser"
 	"github.com/lenny-ts/caddy-analyzer/pkg/types"
@@ -28,6 +29,7 @@ const (
 	viewTopIPs
 	viewTopPaths
 	viewTopUA
+	viewGeo
 )
 
 type Model struct {
@@ -43,9 +45,13 @@ type Model struct {
 	recentLogs  []*types.LogEntry
 	windowStart time.Time
 
-	ipTable   table.Model
-	pathTable table.Model
-	uaItems   []types.CountItem
+	ipTable      table.Model
+	pathTable    table.Model
+	countryTable table.Model
+	asnTable     table.Model
+	uaItems      []types.CountItem
+
+	geoip *enrich.GeoIP
 }
 
 var (
@@ -67,6 +73,13 @@ var (
 )
 
 func NewModel(linesCh chan string) Model {
+	return NewModelWithGeoIP(linesCh, nil)
+}
+
+// NewModelWithGeoIP returns a Model wired to enrich every parsed entry with
+// the given GeoIP enricher before it reaches the analysis engine. Pass nil
+// to disable GeoIP (equivalent to NewModel).
+func NewModelWithGeoIP(linesCh chan string, g *enrich.GeoIP) Model {
 	det := analysis.NewDetector()
 	eng := analysis.New(types.Filters{})
 	eng.SetDetector(det)
@@ -78,6 +91,7 @@ func NewModel(linesCh chan string) Model {
 		current:     viewSummary,
 		recentLogs:  make([]*types.LogEntry, 0, 20),
 		windowStart: time.Now(),
+		geoip:       g,
 	}
 }
 
@@ -131,8 +145,11 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m = m.refreshTables()
 		case "6":
 			m.current = viewTopUA
+		case "7":
+			m.current = viewGeo
+			m = m.refreshTables()
 		case "tab", "right":
-			if m.current < viewTopUA {
+			if m.current < viewGeo {
 				m.current++
 				m = m.refreshTables()
 			}
@@ -154,6 +171,11 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		line := string(msg)
 		entry, err := parser.Parse(line)
 		if err == nil && entry != nil {
+			if m.geoip != nil && entry.RemoteIP != "" {
+				if info, lerr := m.geoip.Lookup(entry.RemoteIP); lerr == nil {
+					entry.Geo = info
+				}
+			}
 			m.engine.Process(entry)
 			if len(m.recentLogs) >= 15 {
 				m.recentLogs = m.recentLogs[1:]
@@ -217,6 +239,28 @@ func (m Model) initTables() Model {
 		table.WithFocused(false),
 		table.WithHeight(max(1, min(15, m.height-10))),
 	)
+
+	countryCols := []table.Column{
+		{Title: "#", Width: 4},
+		{Title: "Country", Width: 26},
+		{Title: "Requests", Width: 10},
+	}
+	m.countryTable = table.New(
+		table.WithColumns(countryCols),
+		table.WithFocused(false),
+		table.WithHeight(max(1, min(12, m.height-14))),
+	)
+
+	asnCols := []table.Column{
+		{Title: "#", Width: 4},
+		{Title: "ASN", Width: 30},
+		{Title: "Requests", Width: 10},
+	}
+	m.asnTable = table.New(
+		table.WithColumns(asnCols),
+		table.WithFocused(false),
+		table.WithHeight(max(1, min(12, m.height-14))),
+	)
 	return m
 }
 
@@ -248,6 +292,32 @@ func (m Model) refreshTables() Model {
 		})
 	}
 	m.pathTable.SetRows(pathRows)
+
+	countries := analysis.TopN(s.CountryCounts, 15)
+	var countryRows []table.Row
+	for i, c := range countries {
+		name := c.Key
+		if display, ok := s.CountryNames[c.Key]; ok && display != "" {
+			name = display
+		}
+		countryRows = append(countryRows, table.Row{
+			fmt.Sprintf("%d", i+1),
+			truncate(name, 24),
+			fmt.Sprintf("%d", c.Count),
+		})
+	}
+	m.countryTable.SetRows(countryRows)
+
+	asns := analysis.TopN(s.ASNCounts, 15)
+	var asnRows []table.Row
+	for i, a := range asns {
+		asnRows = append(asnRows, table.Row{
+			fmt.Sprintf("%d", i+1),
+			truncate(a.Key, 28),
+			fmt.Sprintf("%d", a.Count),
+		})
+	}
+	m.asnTable.SetRows(asnRows)
 	return m
 }
 
@@ -259,7 +329,7 @@ func (m Model) View() string {
 	var b strings.Builder
 
 	b.WriteString(styleTitle.Render("⚡ Caddy Live Dashboard"))
-	b.WriteString(styleHelp.Render("  [q] quit  [1-6] tabs  [tab] next  [r] reset"))
+	b.WriteString(styleHelp.Render("  [q] quit  [1-7] tabs  [tab] next  [r] reset"))
 	b.WriteString("\n")
 	b.WriteString(styleDimLine())
 	b.WriteString("\n\n")
@@ -277,6 +347,8 @@ func (m Model) View() string {
 		m.renderPaths(&b)
 	case viewTopUA:
 		m.renderUA(&b)
+	case viewGeo:
+		m.renderGeo(&b)
 	}
 
 	b.WriteString("\n")
@@ -286,7 +358,7 @@ func (m Model) View() string {
 }
 
 func (m Model) viewTabs() string {
-	tabs := []string{"Summary", "Realtime Stream", "Security", "Top IPs", "Top Paths", "User Agents"}
+	tabs := []string{"Summary", "Realtime", "Security", "Top IPs", "Top Paths", "User Agents", "Geo"}
 	var parts []string
 	for i, t := range tabs {
 		if view(i) == m.current {
@@ -410,6 +482,23 @@ func (m Model) renderUA(b *strings.Builder) {
 	for i, item := range m.uaItems {
 		fmt.Fprintf(b, "  %d. %-40s %d\n", i+1, truncate(item.Key, 38), item.Count)
 	}
+}
+
+func (m Model) renderGeo(b *strings.Builder) {
+	if m.geoip == nil && (m.stats == nil || (len(m.stats.CountryCounts) == 0 && len(m.stats.ASNCounts) == 0)) {
+		fmt.Fprintf(b, "  %s\n", styleWarn.Render("GeoIP enrichment disabled"))
+		fmt.Fprintf(b, "  Pass --geoip-db (or let auto-download run) to populate country/ASN stats.\n")
+		return
+	}
+	if m.stats == nil {
+		fmt.Fprintf(b, "  Waiting for data...\n")
+		return
+	}
+
+	fmt.Fprintf(b, "  %s\n\n", styleLabel.Render("Top Countries"))
+	b.WriteString(m.countryTable.View())
+	fmt.Fprintf(b, "\n\n  %s\n\n", styleLabel.Render("Top ASN"))
+	b.WriteString(m.asnTable.View())
 }
 
 func truncate(s string, n int) string {

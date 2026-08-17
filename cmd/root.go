@@ -20,6 +20,7 @@ import (
 
 	"github.com/lenny-ts/caddy-analyzer/pkg/analysis"
 	"github.com/lenny-ts/caddy-analyzer/pkg/config"
+	"github.com/lenny-ts/caddy-analyzer/pkg/enrich"
 	"github.com/lenny-ts/caddy-analyzer/pkg/output"
 	"github.com/lenny-ts/caddy-analyzer/pkg/parser"
 	"github.com/lenny-ts/caddy-analyzer/pkg/progress"
@@ -62,9 +63,11 @@ var (
 	flagMinSize    string
 	flagMaxSize    string
 	flagDefang     bool
+	flagGeoIPDB    string
+	flagNoAutoDL   bool
 )
 
-var Version = "dev"
+var Version = "1.0.0"
 
 var rootCmd = &cobra.Command{
 	Use:   "caddy-analyze [flags] [source...]",
@@ -152,6 +155,8 @@ func init() {
 	flags.StringVar(&flagMinSize, "min-size", "", "Filter responses at least this size (bytes, or k/mb/gb suffix e.g. 1mb)")
 	flags.StringVar(&flagMaxSize, "max-size", "", "Filter responses at most this size (bytes, or k/mb/gb suffix e.g. 512kb)")
 	flags.BoolVarP(&flagDefang, "defang", "", false, "Defang IPs in output (replace . with [.]) for safe sharing")
+	flags.StringVarP(&flagGeoIPDB, "geoip-db", "", "", "Path to GeoIP mmdb file (DB-IP or MaxMind). Auto-discovers if empty")
+	flags.BoolVarP(&flagNoAutoDL, "no-auto-download", "", false, "Disable automatic download of DB-IP lite mmdb on first run")
 	rootCmd.PersistentFlags().StringVarP(&flagK8sNS, "namespace", "n", "", "Kubernetes namespace")
 
 	rootFlags := rootCmd.Flags()
@@ -260,6 +265,11 @@ func runOnceMode(ctx context.Context, sources []types.LogSource, filters types.F
 	var entries []*types.LogEntry
 	showListing := output.HasEntryFilters(filters) && flagFormat == "table" && flagOutput == "" && !flagDetect
 
+	geoip := newGeoIPEnricher()
+	if geoip != nil {
+		defer func() { _ = geoip.Close() }()
+	}
+
 	totalLines := countTotalLines(sources)
 	bar := progress.New(os.Stderr, totalLines, "Analyzing")
 
@@ -286,6 +296,7 @@ func runOnceMode(ctx context.Context, sources []types.LogSource, filters types.F
 				bar.Add(1)
 				continue
 			}
+			enrichGeoIP(entry, geoip)
 			engine.Process(entry)
 			processed++
 			bar.Add(1)
@@ -331,6 +342,31 @@ func applyForwarded(entry *types.LogEntry, filters types.Filters) {
 			entry.RemoteIP = ip
 		}
 	}
+}
+
+// newGeoIPEnricher creates a GeoIP enricher from the --geoip-db flag or
+// auto-discovery. Returns nil if no mmdb file is available (non-fatal:
+// analysis continues without country/ASN data).
+func newGeoIPEnricher() *enrich.GeoIP {
+	enrich.SetAutoDownload(!flagNoAutoDL)
+	g, err := enrich.NewGeoIP(flagGeoIPDB)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "warning: geoip: %v (continuing without GeoIP)\n", err)
+		return nil
+	}
+	return g
+}
+
+// enrichGeoIP populates entry.Geo from the GeoIP database if available.
+func enrichGeoIP(entry *types.LogEntry, g *enrich.GeoIP) {
+	if g == nil || entry.RemoteIP == "" {
+		return
+	}
+	info, err := g.Lookup(entry.RemoteIP)
+	if err != nil {
+		return
+	}
+	entry.Geo = info
 }
 
 // countTotalLines counts the total number of lines across all local file
@@ -411,6 +447,11 @@ func runFollowMode(ctx context.Context, sources []types.LogSource, filters types
 	engine.Stats().MaxCardinality = flagMaxCard
 	windowStart := time.Now()
 
+	geoip := newGeoIPEnricher()
+	if geoip != nil {
+		defer func() { _ = geoip.Close() }()
+	}
+
 	var w io.Writer = os.Stdout
 	if flagOutput != "" {
 		f, err := createOutputFile(flagOutput)
@@ -438,6 +479,7 @@ func runFollowMode(ctx context.Context, sources []types.LogSource, filters types
 			continue
 		}
 		applyForwarded(entry, filters)
+		enrichGeoIP(entry, geoip)
 		engine.Process(entry)
 		if time.Since(last) > 5*time.Second {
 			engine.Finalize()
@@ -475,6 +517,11 @@ func runIntervalMode(ctx context.Context, sources []types.LogSource, filters typ
 	sections := types.DefaultTopSections()
 	initial := true
 
+	geoip := newGeoIPEnricher()
+	if geoip != nil {
+		defer func() { _ = geoip.Close() }()
+	}
+
 	var w io.Writer = os.Stdout
 	if flagOutput != "" {
 		f, err := createOutputFile(flagOutput)
@@ -509,6 +556,7 @@ func runIntervalMode(ctx context.Context, sources []types.LogSource, filters typ
 				continue
 			}
 			applyForwarded(entry, filters)
+			enrichGeoIP(entry, geoip)
 			bucket := entry.Timestamp.Truncate(interval)
 			if initial {
 				current = bucket
@@ -567,7 +615,12 @@ func runWatch(ctx context.Context, sources []types.LogSource) error {
 		close(linesCh)
 	}()
 
-	p := tea.NewProgram(tui.NewModel(linesCh), tea.WithAltScreen())
+	geoip := newGeoIPEnricher()
+	if geoip != nil {
+		defer func() { _ = geoip.Close() }()
+	}
+
+	p := tea.NewProgram(tui.NewModelWithGeoIP(linesCh, geoip), tea.WithAltScreen())
 	_, err := p.Run()
 	return err
 }

@@ -406,12 +406,12 @@ func isMarkerCovered(pattern string) bool {
 
 // extractPureLiterals checks if a pattern is a pure alternation of literal
 // strings (no quantifiers, character classes, or anchors). If so, it returns
-// the lowercased literals and true — the caller can use strings.Contains
-// instead of the regex engine, which is ~100x faster.
-func extractPureLiterals(pattern string) ([]string, bool) {
+// the lowercased literals — the caller can use strings.Contains instead of
+// the regex engine, which is ~100x faster.
+func extractPureLiterals(pattern string) []string {
 	re, err := syntax.Parse(pattern, syntax.Perl)
 	if err != nil {
-		return nil, false
+		return nil
 	}
 	for re.Op == syntax.OpCapture && len(re.Sub) == 1 {
 		re = re.Sub[0]
@@ -426,20 +426,20 @@ func extractPureLiterals(pattern string) ([]string, bool) {
 		for _, sub := range re.Sub {
 			lit, ok := literalFromNode(sub)
 			if !ok {
-				return nil, false
+				return nil
 			}
 			if len(lit) < 2 {
-				return nil, false
+				return nil
 			}
 			literals = append(literals, strings.ToLower(lit))
 		}
 	default:
-		return nil, false
+		return nil
 	}
 	if len(literals) == 0 {
-		return nil, false
+		return nil
 	}
-	return literals, true
+	return literals
 }
 
 // literalFromNode extracts a literal string from a regex node, handling
@@ -503,7 +503,7 @@ func compilePatterns() []compiledPattern {
 	var p []compiledPattern
 
 	add := func(pattern string, dtype DetectionType, desc string, confidence int) {
-		lits, _ := extractPureLiterals(pattern)
+		lits := extractPureLiterals(pattern)
 		p = append(p, compiledPattern{
 			re:         compileLowercase(pattern),
 			dtype:      dtype,
@@ -515,7 +515,7 @@ func compilePatterns() []compiledPattern {
 	}
 
 	addUA := func(pattern string, dtype DetectionType, desc string, confidence int, uaOnly bool) {
-		lits, _ := extractPureLiterals(pattern)
+		lits := extractPureLiterals(pattern)
 		p = append(p, compiledPattern{
 			re:         compileLowercase(pattern),
 			dtype:      dtype,
@@ -528,11 +528,11 @@ func compilePatterns() []compiledPattern {
 		})
 	}
 
-	addAuth := func(pattern string, dtype DetectionType, desc string, confidence int) {
-		lits, _ := extractPureLiterals(pattern)
+	addAuth := func(pattern string, desc string, confidence int) {
+		lits := extractPureLiterals(pattern)
 		p = append(p, compiledPattern{
 			re:         compileLowercase(pattern),
-			dtype:      dtype,
+			dtype:      DetJWTAbuse,
 			desc:       desc,
 			confidence: confidence,
 			matchAuth:  true,
@@ -764,11 +764,11 @@ func compilePatterns() []compiledPattern {
 	// JWT / Token Abuse
 	add(`(?i)eyJ[A-Za-z0-9_-]+\.eyJ[A-Za-z0-9_-]+\.`, DetJWTAbuse, "JWT: token in URI (leaked credential)", 9)
 	add(`(?i)Bearer\s+eyJ[A-Za-z0-9_-]+\.eyJ`, DetJWTAbuse, "JWT: Bearer token in URI (credential leak)", 8)
-	addAuth(`(?i)alg\"?\s*:\s*\"none\"`, DetJWTAbuse, "JWT: none algorithm (auth bypass)", 10)
-	addAuth(`(?i)kid\"?\s*:\s*\"[^"]*(?:\.\.\/|\.\.\\|%2e%2e)`, DetJWTAbuse, "JWT: path traversal in kid (injection risk)", 8)
-	addAuth(`(?i)kid[=:][^&\s]*\.\./`, DetJWTAbuse, "JWT: kid path traversal", 9)
-	addAuth(`(?i)kid[=:][^&\s]*[|;`+"`"+`]`, DetJWTAbuse, "JWT: kid command injection", 9)
-	addAuth(`(?i)^Bearer\s+eyJ[A-Za-z0-9_-]+\.eyJ[A-Za-z0-9_-]+\.`, DetJWTAbuse, "JWT: Bearer token in Authorization header", 4)
+	addAuth(`(?i)alg\"?\s*:\s*\"none\"`, "JWT: none algorithm (auth bypass)", 10)
+	addAuth(`(?i)kid\"?\s*:\s*\"[^"]*(?:\.\.\/|\.\.\\|%2e%2e)`, "JWT: path traversal in kid (injection risk)", 8)
+	addAuth(`(?i)kid[=:][^&\s]*\.\./`, "JWT: kid path traversal", 9)
+	addAuth(`(?i)kid[=:][^&\s]*[|;`+"`"+`]`, "JWT: kid command injection", 9)
+	addAuth(`(?i)^Bearer\s+eyJ[A-Za-z0-9_-]+\.eyJ[A-Za-z0-9_-]+\.`, "JWT: Bearer token in Authorization header", 4)
 
 	return p
 }
@@ -777,7 +777,7 @@ var rawPatterns []compiledPattern
 
 func init() {
 	addRaw := func(pattern string, dtype DetectionType, desc string, confidence int) {
-		lits, _ := extractPureLiterals(pattern)
+		lits := extractPureLiterals(pattern)
 		rawPatterns = append(rawPatterns, compiledPattern{
 			re:         compileLowercase(pattern),
 			dtype:      dtype,
@@ -973,7 +973,7 @@ func (d *Detector) DetectAll(entry *types.LogEntry) []Detection {
 		}
 	}
 
-	consider := func(p compiledPattern, source, lowerSrc string) {
+	consider := func(p compiledPattern, lowerSrc string) {
 		var matched bool
 		if len(p.literals) > 0 {
 			for _, lit := range p.literals {
@@ -1035,23 +1035,19 @@ func (d *Detector) DetectAll(entry *types.LogEntry) []Detection {
 				continue
 			}
 		}
-		source := uri
 		lowerSrc := lowerURI
 		switch {
 		case p.uaOnly:
-			source = ua
 			lowerSrc = lowerUA
 		case p.matchAuth:
-			source = authDecoded
 			lowerSrc = lowerAuth
 		case p.matchUA:
-			source = uri + "\n" + ua
 			lowerSrc = lowerURI + "\n" + lowerUA
 		}
 		if p.gate != "" && !strings.Contains(lowerSrc, p.gate) {
 			continue
 		}
-		consider(p, source, lowerSrc)
+		consider(p, lowerSrc)
 	}
 	for _, p := range rawPatterns {
 		if p.hasMarkers && !triageRawOK {
@@ -1060,7 +1056,7 @@ func (d *Detector) DetectAll(entry *types.LogEntry) []Detection {
 		if p.gate != "" && !strings.Contains(lowerRaw, p.gate) {
 			continue
 		}
-		consider(p, rawURI, lowerRaw)
+		consider(p, lowerRaw)
 	}
 
 	return dets
