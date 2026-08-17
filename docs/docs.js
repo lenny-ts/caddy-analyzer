@@ -834,7 +834,7 @@
     })();
 
     /* ===================================================================
-       THEME TOGGLE — dark/light with localStorage + system preference
+       THEME TOGGLE — dark default, light opt-in via localStorage
        =================================================================== */
     (function () {
         var KEY = "caddy-docs-theme";
@@ -842,11 +842,8 @@
         try { stored = localStorage.getItem(KEY); } catch (e) {}
         if (stored === "light") {
             document.documentElement.setAttribute("data-theme", "light");
-        } else if (stored === "dark") {
+        } else {
             document.documentElement.removeAttribute("data-theme");
-        } else if (window.matchMedia &&
-                   window.matchMedia("(prefers-color-scheme: light)").matches) {
-            document.documentElement.setAttribute("data-theme", "light");
         }
 
         var btn = document.createElement("button");
@@ -1280,6 +1277,28 @@
         panel.appendChild(list);
         overlay.appendChild(panel);
         document.body.appendChild(overlay);
+
+        /* Visible trigger button appended into the nav bar so the
+           command palette is discoverable without knowing the Ctrl+K
+           shortcut. Shows the platform-correct keycap. */
+        var isMac = navigator.platform.indexOf("Mac") !== -1;
+        var kbdText = isMac ? "\u2318 K" : "Ctrl K";
+        var ICON = '<svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="7" cy="7" r="5"/><path d="m11 11 3 3"/></svg>';
+        var makeTrigger = function () {
+            var t = document.createElement("button");
+            t.type = "button";
+            t.className = "cmdk-trigger";
+            t.setAttribute("aria-label", "Open command palette (Ctrl+K)");
+            t.innerHTML = '<span class="cmdk-trigger-icon" aria-hidden="true">' + ICON + '</span><span class="cmdk-trigger-text">Search</span><kbd class="cmdk-kbd">' + kbdText + '</kbd>';
+            t.addEventListener("click", function (e) {
+                e.preventDefault();
+                open();
+            });
+            return t;
+        };
+        document.querySelectorAll(".doc-nav").forEach(function (nav) {
+            nav.appendChild(makeTrigger());
+        });
 
         var items = [];
         var selected = 0;

@@ -2052,6 +2052,64 @@ kbd {
 }
 
 /* =====================================================================
+   COMMAND PALETTE TRIGGER — visible ⌘K / Ctrl K badge in the nav bar
+   ===================================================================== */
+.cmdk-trigger {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.3rem 0.6rem;
+    margin-left: auto;
+    background: var(--glass-bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text-dim);
+    font-size: 0.8rem;
+    font-family: inherit;
+    cursor: pointer;
+    transition: border-color 0.2s, color 0.2s, box-shadow 0.2s, background 0.2s;
+    white-space: nowrap;
+    -webkit-appearance: none;
+    appearance: none;
+}
+.cmdk-trigger:hover,
+.cmdk-trigger:focus-visible {
+    border-color: var(--accent);
+    color: var(--text);
+    box-shadow: 0 0 14px var(--accent-glow);
+    outline: none;
+}
+.cmdk-trigger-icon {
+    display: inline-flex;
+    align-items: center;
+    color: var(--accent);
+}
+.cmdk-trigger-text {
+    font-weight: 500;
+}
+.cmdk-kbd {
+    display: inline-block;
+    padding: 0.1rem 0.4rem;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    font-size: 0.7rem;
+    font-family: var(--font-mono, ui-monospace, monospace);
+    color: var(--text-faint);
+    line-height: 1.2;
+}
+[data-theme="light"] .cmdk-trigger {
+    background: rgba(255,255,255,0.6);
+}
+[data-theme="light"] .cmdk-kbd {
+    background: rgba(0,0,0,0.04);
+}
+@media (max-width: 640px) {
+    .cmdk-trigger-text { display: none; }
+    .cmdk-trigger { padding: 0.3rem 0.5rem; }
+}
+
+/* =====================================================================
    GLOSSARY TOOLTIPS
    ===================================================================== */
 .glossary-term {
