@@ -82,9 +82,9 @@ var geoIPSearchPaths = []string{
 	"GeoLite2-Country.mmdb",
 	"dbip-country-lite.mmdb",
 	"dbip-city-lite.mmdb",
-	filepath.Join(os.Getenv("HOME"), ".config", "caddy-analyzer", "GeoIP.mmdb"),
-	filepath.Join(os.Getenv("HOME"), ".config", "caddy-analyzer", "GeoLite2-Country.mmdb"),
-	filepath.Join(os.Getenv("HOME"), ".config", "caddy-analyzer", "dbip-country-lite.mmdb"),
+	filepath.Join(userHomeDir(), ".config", "caddy-analyzer", "GeoIP.mmdb"),
+	filepath.Join(userHomeDir(), ".config", "caddy-analyzer", "GeoLite2-Country.mmdb"),
+	filepath.Join(userHomeDir(), ".config", "caddy-analyzer", "dbip-country-lite.mmdb"),
 	"/var/lib/caddy-analyzer/GeoIP.mmdb",
 	"/var/lib/caddy-analyzer/GeoLite2-Country.mmdb",
 	"/usr/share/GeoIP/GeoIP.mmdb",
@@ -96,8 +96,8 @@ var geoIPSearchPaths = []string{
 var geoIPASNSearchPaths = []string{
 	"GeoLite2-ASN.mmdb",
 	"dbip-asn-lite.mmdb",
-	filepath.Join(os.Getenv("HOME"), ".config", "caddy-analyzer", "GeoLite2-ASN.mmdb"),
-	filepath.Join(os.Getenv("HOME"), ".config", "caddy-analyzer", "dbip-asn-lite.mmdb"),
+	filepath.Join(userHomeDir(), ".config", "caddy-analyzer", "GeoLite2-ASN.mmdb"),
+	filepath.Join(userHomeDir(), ".config", "caddy-analyzer", "dbip-asn-lite.mmdb"),
 	"/var/lib/caddy-analyzer/GeoLite2-ASN.mmdb",
 	"/usr/share/GeoIP/GeoLite2-ASN.mmdb",
 }
@@ -106,6 +106,18 @@ var geoIPASNSearchPaths = []string{
 // lite mmdb when no GeoIP file is found. Must be called before NewGeoIP.
 func SetAutoDownload(enabled bool) {
 	autoDownload = enabled
+}
+
+// userHomeDir returns the current user's home directory. It prefers
+// os.UserHomeDir (which is cross-platform, resolving the right directory on
+// Windows where the HOME environment variable is typically unset) and falls
+// back to HOME when the OS-specific lookup fails, preserving the previous
+// behaviour on systems where only HOME is defined.
+func userHomeDir() string {
+	if home, err := os.UserHomeDir(); err == nil && home != "" {
+		return home
+	}
+	return os.Getenv("HOME")
 }
 
 // userConfigDir returns the directory where auto-downloaded mmdb files
