@@ -344,6 +344,38 @@ func applyForwarded(entry *types.LogEntry, filters types.Filters) {
 	}
 }
 
+// acceptEntry rewrites the client IP when requested, then applies the same
+// filters as one-shot and tail mode.
+func acceptEntry(entry *types.LogEntry, filters types.Filters) bool {
+	applyForwarded(entry, filters)
+	return analysis.MatchEntry(entry, filters)
+}
+
+type geoLookuper interface {
+	Lookup(ip string) (types.GeoInfo, error)
+}
+
+// prepareEntry filters first, then enriches accepted rows only.
+func prepareEntry(entry *types.LogEntry, filters types.Filters, geo geoLookuper) bool {
+	if !acceptEntry(entry, filters) {
+		return false
+	}
+	if geo != nil && entry.RemoteIP != "" {
+		if info, err := geo.Lookup(entry.RemoteIP); err == nil {
+			entry.Geo = info
+		}
+	}
+	return true
+}
+
+// takeEntry is the follow/interval ingest step: prepare, then next only if accepted.
+func takeEntry(entry *types.LogEntry, filters types.Filters, geo geoLookuper, next func(*types.LogEntry)) {
+	if !prepareEntry(entry, filters, geo) {
+		return
+	}
+	next(entry)
+}
+
 // newGeoIPEnricher creates a GeoIP enricher from the --geoip-db flag or
 // auto-discovery. Returns nil if no mmdb file is available (non-fatal:
 // analysis continues without country/ASN data).
@@ -478,9 +510,7 @@ func runFollowMode(ctx context.Context, sources []types.LogSource, filters types
 		if err != nil || entry == nil {
 			continue
 		}
-		applyForwarded(entry, filters)
-		enrichGeoIP(entry, geoip)
-		engine.Process(entry)
+		takeEntry(entry, filters, geoip, engine.Process)
 		if time.Since(last) > 5*time.Second {
 			engine.Finalize()
 			report := output.NewReportWithSections(engine, output.ParseFormat(flagFormat), flagTop, sections)
@@ -555,9 +585,12 @@ func runIntervalMode(ctx context.Context, sources []types.LogSource, filters typ
 			if err != nil || entry == nil {
 				continue
 			}
-			applyForwarded(entry, filters)
-			enrichGeoIP(entry, geoip)
-			bucket := entry.Timestamp.Truncate(interval)
+			var accepted *types.LogEntry
+			takeEntry(entry, filters, geoip, func(e *types.LogEntry) { accepted = e })
+			if accepted == nil {
+				continue
+			}
+			bucket := accepted.Timestamp.Truncate(interval)
 			if initial {
 				current = bucket
 				engine = analysis.New(filters)
@@ -580,7 +613,7 @@ func runIntervalMode(ctx context.Context, sources []types.LogSource, filters typ
 				}
 				current = bucket
 			}
-			engine.Process(entry)
+			engine.Process(accepted)
 		}
 	}
 	if engine != nil && engine.Count() > 0 {
