@@ -5,6 +5,15 @@ All notable changes to `caddy-analyzer` will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+- **GeoIP search paths on Windows**: resolve home directory with `os.UserHomeDir()` instead of `os.Getenv("HOME")` (typically unset on Windows), so GeoIP/ASN databases are discovered under `C:\Users\<user>\.config\caddy-analyzer\` rather than `/.config/...`. PR by @MsfPablo. #27
+- **Follow/interval mode filters**: entry filters (method, status, --only-5xx, IP, grep, forwarded-IP) are now applied before GeoIP enrichment. Previously discarded rows were still enriched, wasting lookups and showing filtered-out entries in the live report. PR by @myukitty. #26
+
+### Changed
+- **TUI tab navigation**: simplified cycling through views with modulo arithmetic (no more boundary checks). PR by @intactov. #18
+
 ## [0.4.0] - 2026-08-17
 
 ### Added
