@@ -53,8 +53,8 @@ Examples:
   caddy-analyze top /var/log/caddy/access.log --by status --slow 500ms
   caddy-analyze top docker://my-caddy
 `,
-	Args: cobra.ArbitraryArgs,
-	RunE: runTopCmd,
+	Args:         cobra.ArbitraryArgs,
+	RunE:         runTopCmd,
 	SilenceUsage: true,
 }
 

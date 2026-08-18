@@ -97,8 +97,8 @@ Examples:
   caddy-analyze guard /var/log/caddy/access.log --country-block CN,RU,IR --geoip-db /etc/geoip/dbip-country-lite.mmdb
   caddy-analyze guard /var/log/caddy/access.log --no-blocklist
 `,
-	Args: cobra.ArbitraryArgs,
-	RunE: runGuard,
+	Args:         cobra.ArbitraryArgs,
+	RunE:         runGuard,
 	SilenceUsage: true,
 }
 

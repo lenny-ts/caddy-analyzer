@@ -70,9 +70,9 @@ var (
 var Version = "0.4.1-dev"
 
 var rootCmd = &cobra.Command{
-	Use:   "caddy-analyze [flags] [source...]",
-	Short: "Analyze Caddy access logs from files, stdin, Docker, Kubernetes, or journalctl",
-	Args:  cobra.ArbitraryArgs,
+	Use:          "caddy-analyze [flags] [source...]",
+	Short:        "Analyze Caddy access logs from files, stdin, Docker, Kubernetes, or journalctl",
+	Args:         cobra.ArbitraryArgs,
 	SilenceUsage: true,
 	Long: `Analyze Caddy v2 access logs with security detection across 26 attack categories (SQLi, NoSQLi, XSS, SSTI, SSRF, RCE, path traversal, LFI wrappers, GraphQL, Log4j/JNDI, XXE, open redirect, LDAP/XPath/CRLF/SSI injection, prototype pollution, probes, scanners, UA rotation, JWT abuse, object enumeration, beaconing) using a dual-pass evasion-resistant engine.
 
