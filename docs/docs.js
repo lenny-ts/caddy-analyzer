@@ -65,10 +65,8 @@
                 io.observe(el);
             }
         });
-        /* Show body after in-view elements are revealed */
-        if (inViewCount > 0) {
-            document.documentElement.classList.add("ready");
-        }
+        /* Show body immediately after reveal init — no reason to wait */
+        document.documentElement.classList.add("ready");
         /* Fallback: show body after 3s even if JS fails */
         setTimeout(function () {
             if (!document.documentElement.classList.contains("ready")) {
