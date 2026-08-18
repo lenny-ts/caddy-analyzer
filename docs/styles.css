@@ -3,11 +3,6 @@
    v2: a11y (focus, skip-link, contrast, landmarks) + design polish
    ===================================================================== */
 
-/* Hide main content until JS is ready to prevent flash of unstyled/broken
-   content. docs.js removes this class after initializing reveals. */
-body { opacity: 0; transition: opacity .15s ease; }
-html.ready body { opacity: 1; }
-
 /* During initial load (html.decor-paused set by inline head script) all
    decorative animations are frozen so the first paint / LCP isn't delayed
    by continuous style/layout work on the main thread. docs.js removes the
@@ -2879,7 +2874,7 @@ main h3.glitch-hover code {
    ===================================================================== */
 .skeleton-overlay {
     position: fixed;
-    inset: var(--nav-height) 0 0 0;
+    inset: 0;
     z-index: 5000;
     background: var(--bg);
     padding: 2rem;
