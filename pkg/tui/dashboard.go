@@ -481,6 +481,11 @@ func (m Model) renderUA(b *strings.Builder) {
 }
 
 func (m Model) renderGeo(b *strings.Builder) {
+	if m.geoip != nil && m.geoip.Loading() && (m.stats == nil || (len(m.stats.CountryCounts) == 0 && len(m.stats.ASNCounts) == 0)) {
+		fmt.Fprintf(b, "  %s\n", styleWarn.Render("GeoIP database downloading in background..."))
+		fmt.Fprintf(b, "  Country/ASN stats will populate once the download completes.\n")
+		return
+	}
 	if m.geoip == nil && (m.stats == nil || (len(m.stats.CountryCounts) == 0 && len(m.stats.ASNCounts) == 0)) {
 		fmt.Fprintf(b, "  %s\n", styleWarn.Render("GeoIP enrichment disabled"))
 		fmt.Fprintf(b, "  Pass --geoip-db (or let auto-download run) to populate country/ASN stats.\n")

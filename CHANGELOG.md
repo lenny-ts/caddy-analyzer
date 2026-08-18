@@ -7,7 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.1] - 2026-08-18
+
 ### Fixed
+- **Apparent freeze with no log source (#19)**: when no source is specified, no config file exists, and stdin is a TTY, `caddy-analyzer` no longer falls back to a blocking stdin read that hangs forever with no output. It now prints a clear error listing the supported source formats. `StdinReader.Read` also rejects a TTY directly (defense-in-depth) and prints a "reading log lines from stdin..." hint in the pipe case. `--watch` refuses a stdin source up front instead of starting a dashboard that races bubbletea for fd 0. #19
+- **`--watch` startup blocked on GeoIP download**: `newGeoIPEnricher()` ran `autoDownloadGeoIP` synchronously (5-min per-file timeout), so the dashboard did not appear until the download finished. `--watch` now uses `NewGeoIPAsync`, which returns a lazy enricher that downloads in the background; lookups return a zero `GeoInfo` until the database is swapped in, and the Geo tab shows a "downloading in background..." hint. #19
+- **Usage spam on source errors**: `SilenceUsage: true` added to the root, `tail`, `top`, and `guard` commands so a missing source prints only the error (not the full help text). #19
 - **GeoIP search paths on Windows**: resolve home directory with `os.UserHomeDir()` instead of `os.Getenv("HOME")` (typically unset on Windows), so GeoIP/ASN databases are discovered under `C:\Users\<user>\.config\caddy-analyzer\` rather than `/.config/...`. PR by @MsfPablo. #27
 - **Follow/interval mode filters**: entry filters (method, status, --only-5xx, IP, grep, forwarded-IP) are now applied before GeoIP enrichment. Previously discarded rows were still enriched, wasting lookups and showing filtered-out entries in the live report. PR by @myukitty. #26
 

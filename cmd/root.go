@@ -67,12 +67,13 @@ var (
 	flagNoAutoDL   bool
 )
 
-var Version = "0.4.0-dev"
+var Version = "0.4.1-dev"
 
 var rootCmd = &cobra.Command{
 	Use:   "caddy-analyze [flags] [source...]",
 	Short: "Analyze Caddy access logs from files, stdin, Docker, Kubernetes, or journalctl",
 	Args:  cobra.ArbitraryArgs,
+	SilenceUsage: true,
 	Long: `Analyze Caddy v2 access logs with security detection across 26 attack categories (SQLi, NoSQLi, XSS, SSTI, SSRF, RCE, path traversal, LFI wrappers, GraphQL, Log4j/JNDI, XXE, open redirect, LDAP/XPath/CRLF/SSI injection, prototype pollution, probes, scanners, UA rotation, JWT abuse, object enumeration, beaconing) using a dual-pass evasion-resistant engine.
 
 Sources:
@@ -197,7 +198,10 @@ func runAnalysis(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	sources := resolveSources(args)
+	sources, err := resolveSources(args)
+	if err != nil {
+		return err
+	}
 
 	filters, err := buildFilters()
 	if err != nil {
@@ -382,6 +386,20 @@ func takeEntry(entry *types.LogEntry, filters types.Filters, geo geoLookuper, ne
 func newGeoIPEnricher() *enrich.GeoIP {
 	enrich.SetAutoDownload(!flagNoAutoDL)
 	g, err := enrich.NewGeoIP(flagGeoIPDB)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "warning: geoip: %v (continuing without GeoIP)\n", err)
+		return nil
+	}
+	return g
+}
+
+// newGeoIPEnricherAsync is like newGeoIPEnricher but uses NewGeoIPAsync
+// so a missing mmdb is downloaded in the background instead of blocking
+// startup. Intended for interactive modes (--watch) where a 5-10 minute
+// download delay before the dashboard appears is unacceptable.
+func newGeoIPEnricherAsync() *enrich.GeoIP {
+	enrich.SetAutoDownload(!flagNoAutoDL)
+	g, err := enrich.NewGeoIPAsync(flagGeoIPDB)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "warning: geoip: %v (continuing without GeoIP)\n", err)
 		return nil
@@ -623,6 +641,15 @@ func runIntervalMode(ctx context.Context, sources []types.LogSource, filters typ
 }
 
 func runWatch(ctx context.Context, sources []types.LogSource) error {
+	// --watch runs the dashboard in alt-screen raw mode, which takes over
+	// stdin. A StdinReader would race bubbletea for fd 0 and never receive
+	// log lines, so refuse it up front with a clear message.
+	for _, src := range sources {
+		if src.Type == types.SourceStdin {
+			return fmt.Errorf("--watch needs a followable source (file, docker://, k8s://, journalctl://); stdin is not supported")
+		}
+	}
+
 	linesCh := make(chan string, 10000)
 	var wg sync.WaitGroup
 	for _, src := range sources {
@@ -648,7 +675,7 @@ func runWatch(ctx context.Context, sources []types.LogSource) error {
 		close(linesCh)
 	}()
 
-	geoip := newGeoIPEnricher()
+	geoip := newGeoIPEnricherAsync()
 	if geoip != nil {
 		defer func() { _ = geoip.Close() }()
 	}
@@ -670,9 +697,9 @@ func createOutputFile(path string) (*os.File, error) {
 	return os.OpenFile(path, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0600)
 }
 
-func resolveSources(args []string) []types.LogSource {
+func resolveSources(args []string) ([]types.LogSource, error) {
 	if len(args) > 0 {
-		return parseSources(args)
+		return parseSources(args), nil
 	}
 	cfg, cfgPath, err := config.Load()
 	if err == nil && cfg != nil && cfg.Source != "" {
@@ -684,12 +711,12 @@ func resolveSources(args []string) []types.LogSource {
 				src.Namespace = cfg.Namespace
 			}
 		}
-		return []types.LogSource{src}
+		return []types.LogSource{src}, nil
 	}
 
 	fi, err := os.Stdin.Stat()
 	if err == nil && (fi.Mode()&os.ModeCharDevice) == 0 {
-		return []types.LogSource{{Type: types.SourceStdin}}
+		return []types.LogSource{{Type: types.SourceStdin}}, nil
 	}
 
 	candidates := []string{
@@ -702,11 +729,16 @@ func resolveSources(args []string) []types.LogSource {
 	for _, candidate := range candidates {
 		if _, err := os.Stat(candidate); err == nil {
 			fmt.Fprintf(os.Stderr, "auto-detected log file: %s\n", candidate)
-			return []types.LogSource{{Type: types.SourceFile, Path: candidate}}
+			return []types.LogSource{{Type: types.SourceFile, Path: candidate}}, nil
 		}
 	}
 
-	return []types.LogSource{{Type: types.SourceStdin}}
+	// No args, no config, stdin is a TTY (pipe case returned above), and
+	// no candidate file found: refuse to fall back to a blocking stdin
+	// read, which would hang forever with no output.
+	return nil, fmt.Errorf(`no log source specified and no config file found.
+specify a source: <file>, -, docker://<container>, k8s://<pod>, journalctl://<unit>
+or create caddy-analyzer.json with { "source": "/var/log/caddy/access.log" }`)
 }
 
 func parseSources(args []string) []types.LogSource {
