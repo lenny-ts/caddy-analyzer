@@ -4,6 +4,7 @@ caddy-analyzer.*
 caddy_access.log
 report.html
 sample.log
+!testdata/sample.log
 *.sha256
 dist/
 coverage.out

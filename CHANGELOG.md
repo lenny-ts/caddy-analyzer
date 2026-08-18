@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Sample log fixtures**: `testdata/sample.log` (68 curated lines, one per detection category plus benign baseline) and `testdata/large.log` (~50,000 lines, ~27 MB, ~95% benign / ~5% malicious cycling all 26 categories over 24h) — let users exercise every command, including the full detection engine, without a live Caddy server. All client IPs use TEST-NET ranges (RFC 5737), so nothing in the fixtures points at a real host.
+- **`testdata/generate.py`**: stdlib-only Python generator producing both fixtures. Supports `--sample` and `--large` flags. Deterministic output (seeded RNG, fixed epoch anchor matching `parser_test.go`); the script is the source of truth — re-run it instead of hand-editing the `.log` files.
+
+### Docs
+- **README**: new "Sample Logs & Test Fixtures" section covering usage (`caddy-analyze --detect testdata/sample.log`, `tail -d`, JSON output, HTML report, `diff`, large.log performance demo) and regeneration (`python3 testdata/generate.py`).
+- **docs/sources.html**: new "7. Sample Logs & Test Fixtures" section mirroring the README, with a fixtures table and the regeneration callout.
+
 ## [0.4.1] - 2026-08-18
 
 ### Fixed
