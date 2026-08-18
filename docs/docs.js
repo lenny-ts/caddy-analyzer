@@ -37,8 +37,13 @@
         compactNav();
     }
 
-    /* ----- Reveal on scroll ----- */
+    /* ----- Reveal on scroll -----
+       Progressive enhancement: add `reveal-ready` to <html> to activate
+       the hidden initial state, then immediately mark in-view elements
+       with `.in` — all synchronously so the browser never paints the
+       hidden state without the reveal. */
     var revealEls = document.querySelectorAll(".reveal, .reveal-stagger");
+    document.documentElement.classList.add("reveal-ready");
     if (!("IntersectionObserver" in window)) {
         revealEls.forEach(function (el) { el.classList.add("in"); });
     } else {

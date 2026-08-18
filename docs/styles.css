@@ -1426,32 +1426,34 @@ iframe {
 }
 
 /* ---------------------------------------------------------------------
-   Reveal animation — smoother easing
+   Reveal animation — progressive enhancement
+   Content is visible by default; JS adds `reveal-ready` on <html> to
+   opt into the hidden initial state, then `.in` to trigger the reveal.
+   This avoids the broken/invisible flash during load & view transitions
+   when JS (deferred) hasn't run yet.
    --------------------------------------------------------------------- */
 .reveal {
-    opacity: 0;
-    transform: translateY(20px);
     transition: opacity .6s cubic-bezier(0.22, 1, 0.36, 1),
                 transform .6s cubic-bezier(0.22, 1, 0.36, 1);
 }
-@starting-style {
-    .reveal {
-        opacity: 0;
-        transform: translateY(20px);
-    }
+html.reveal-ready .reveal {
+    opacity: 0;
+    transform: translateY(20px);
 }
-.reveal.in {
+html.reveal-ready .reveal.in {
     opacity: 1;
     transform: translateY(0);
 }
 
 .reveal-stagger > * {
-    opacity: 0;
-    transform: translateY(16px);
     transition: opacity .5s cubic-bezier(0.22, 1, 0.36, 1),
                 transform .5s cubic-bezier(0.22, 1, 0.36, 1);
 }
-.reveal-stagger.in > * {
+html.reveal-ready .reveal-stagger > * {
+    opacity: 0;
+    transform: translateY(16px);
+}
+html.reveal-ready .reveal-stagger.in > * {
     opacity: 1;
     transform: translateY(0);
 }
