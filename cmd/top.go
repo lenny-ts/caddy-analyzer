@@ -55,6 +55,7 @@ Examples:
 `,
 	Args: cobra.ArbitraryArgs,
 	RunE: runTopCmd,
+	SilenceUsage: true,
 }
 
 func init() {

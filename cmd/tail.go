@@ -74,6 +74,7 @@ var tailCmd = &cobra.Command{
 	Use:   "tail [source...]",
 	Short: "Stream and colorize Caddy access logs in real time",
 	RunE:  runTail,
+	SilenceUsage: true,
 }
 
 func init() {

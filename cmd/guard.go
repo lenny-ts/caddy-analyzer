@@ -99,6 +99,7 @@ Examples:
 `,
 	Args: cobra.ArbitraryArgs,
 	RunE: runGuard,
+	SilenceUsage: true,
 }
 
 func runGuard(cmd *cobra.Command, args []string) error {
