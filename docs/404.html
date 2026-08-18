@@ -5,17 +5,17 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="view-transition" content="same-origin">
     <title>404 — Page Not Found | caddy-analyzer</title>
-    <meta name="description" content="The page you are looking for does not exist. Return to the caddy-analyzer documentation.">
+    <meta name="description" content="The page you were looking for could not be found.">
     <meta name="theme-color" content="#0a0a0c">
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E🛡️%3C/text%3E%3C/svg%3E">
     <meta property="og:title" content="404 — caddy-analyzer">
-    <meta property="og:description" content="Page not found. Return to caddy-analyzer documentation.">
+    <meta property="og:description" content="Page not found.">
     <meta property="og:type" content="website">
     <meta property="og:url" content="https://lenny-ts.github.io/caddy-analyzer/404.html">
     <meta property="og:image" content="https://lenny-ts.github.io/caddy-analyzer/og-image.png">
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="404 — caddy-analyzer">
-    <meta name="twitter:description" content="Page not found. Return to caddy-analyzer documentation.">
+    <meta name="twitter:description" content="Page not found.">
     <meta name="color-scheme" content="dark light">
     <meta name="robots" content="noindex">
     <script>
@@ -27,7 +27,7 @@
         })();
         document.documentElement.classList.add("decor-paused");
     </script>
-    <meta name="doc:modified" content="2026-08-17T22:11:55+02:00">
+    <meta name="doc:modified" content="2026-08-18T19:51:52+02:00">
     <link rel="manifest" href="manifest.json">
     <link rel="apple-touch-icon" href="apple-touch-icon.png">
     <link rel="canonical" href="https://lenny-ts.github.io/caddy-analyzer/index.html">
@@ -40,7 +40,7 @@
             text-align: center;
         }
         .error-wrap {
-            max-width: 560px;
+            max-width: 520px;
             width: 100%;
             position: relative;
             z-index: 2;
@@ -56,61 +56,19 @@
         }
         .error-code {
             font-family: var(--mono);
-            font-size: clamp(6rem, 22vw, 12rem);
-            font-weight: 800;
-            line-height: 0.9;
-            background: linear-gradient(135deg, var(--accent), #a78bfa, #f87171);
-            background-size: 200% 200%;
-            -webkit-background-clip: text;
-            background-clip: text;
-            -webkit-text-fill-color: transparent;
-            animation: error-gradient 4s ease infinite;
-            position: relative;
-            margin-bottom: 0.5rem;
+            font-size: clamp(5rem, 18vw, 9rem);
+            font-weight: 700;
+            line-height: 1;
+            color: var(--text);
+            letter-spacing: -0.04em;
+            margin-bottom: 1.5rem;
         }
-        .error-code::before, .error-code::after {
-            content: "404";
-            position: absolute;
-            top: 0; left: 0;
-            width: 100%;
-            background: var(--bg);
-            -webkit-background-clip: text;
-            background-clip: text;
-            -webkit-text-fill-color: transparent;
-            opacity: 0.8;
-        }
-        .error-code::before {
-            color: var(--accent);
-            -webkit-text-fill-color: var(--accent);
-            animation: glitch-1 2.5s infinite linear alternate-reverse;
-            clip-path: polygon(0 0, 100% 0, 100% 33%, 0 33%);
-        }
-        .error-code::after {
-            color: #f87171;
-            -webkit-text-fill-color: #f87171;
-            animation: glitch-2 3s infinite linear alternate-reverse;
-            clip-path: polygon(0 67%, 100% 67%, 100% 100%, 0 100%);
-        }
-        @keyframes error-gradient {
-            0%, 100% { background-position: 0% 50%; }
-            50% { background-position: 100% 50%; }
-        }
-        @keyframes glitch-1 {
-            0%, 100% { transform: translate(0); }
-            20% { transform: translate(-3px, 1px); }
-            40% { transform: translate(2px, -1px); }
-            60% { transform: translate(-1px, 2px); }
-            80% { transform: translate(1px, -2px); }
-        }
-        @keyframes glitch-2 {
-            0%, 100% { transform: translate(0); }
-            25% { transform: translate(2px, -1px); }
-            50% { transform: translate(-2px, 1px); }
-            75% { transform: translate(1px, 2px); }
+        .error-code .digit-ghost {
+            color: var(--border);
         }
         .error-title {
             font-family: var(--sans);
-            font-size: 1.4rem;
+            font-size: 1.3rem;
             color: var(--text);
             margin: 0 0 0.6rem;
             font-weight: 600;
@@ -137,7 +95,7 @@
             font-size: 0.85rem;
             font-weight: 600;
             text-decoration: none;
-            transition: transform .2s, box-shadow .2s, background .2s;
+            transition: transform .2s, box-shadow .2s, background .2s, border-color .2s;
         }
         .error-btn-primary {
             background: var(--accent);
@@ -157,35 +115,6 @@
             border-color: var(--accent);
             transform: translateY(-2px);
         }
-        .error-orbit {
-            position: fixed;
-            width: 600px;
-            height: 600px;
-            border-radius: 50%;
-            border: 1px dashed rgba(72,209,204,0.12);
-            top: 50%; left: 50%;
-            transform: translate(-50%, -50%);
-            animation: orbit-rotate 40s linear infinite;
-            pointer-events: none;
-            z-index: 0;
-        }
-        .error-orbit::before {
-            content: "";
-            position: absolute;
-            top: -4px; left: 50%;
-            width: 8px; height: 8px;
-            border-radius: 50%;
-            background: var(--accent);
-            box-shadow: 0 0 12px var(--accent);
-        }
-        @keyframes orbit-rotate {
-            from { transform: translate(-50%, -50%) rotate(0deg); }
-            to { transform: translate(-50%, -50%) rotate(360deg); }
-        }
-        @media (prefers-reduced-motion: reduce) {
-            .error-code, .error-code::before, .error-code::after,
-            .error-orbit { animation: none !important; }
-        }
     </style>
 </head>
 <body class="error-page">
@@ -197,11 +126,10 @@
         <i class="aurora-vignette"></i>
     </div>
     <div class="grid-overlay"></div>
-    <div class="error-orbit" aria-hidden="true"></div>
     <main class="error-wrap" id="main">
-        <div class="error-code" aria-hidden="true">404</div>
+        <div class="error-code" aria-hidden="true">4<span class="digit-ghost">0</span>4</div>
         <h1 class="error-title">Page not found</h1>
-        <p class="error-desc">The page you're looking for has drifted off into orbit, or never existed. Let's get you back to safety.</p>
+        <p class="error-desc">The page you're looking for doesn't exist or may have moved.</p>
         <div class="error-actions">
             <a href="index.html" class="error-btn error-btn-primary">&#9664; Back to docs</a>
             <a href="https://github.com/lenny-ts/caddy-analyzer" class="error-btn error-btn-secondary" target="_blank" rel="noopener">GitHub &#8599;</a>

@@ -37,10 +37,16 @@
         compactNav();
     }
 
-    /* ----- Reveal on scroll ----- */
+    /* ----- Reveal on scroll -----
+       Progressive enhancement: add `reveal-ready` to <html> to activate
+       the hidden initial state, then immediately mark in-view elements
+       with `.in`, then show body content — all synchronously so the
+       browser never paints the hidden state without the reveal. */
     var revealEls = document.querySelectorAll(".reveal, .reveal-stagger");
+    document.documentElement.classList.add("reveal-ready");
     if (!("IntersectionObserver" in window)) {
         revealEls.forEach(function (el) { el.classList.add("in"); });
+        document.documentElement.classList.add("ready");
     } else {
         var io = new IntersectionObserver(function (entries) {
             entries.forEach(function (entry) {
@@ -50,9 +56,11 @@
                 }
             });
         }, { threshold: 0.08, rootMargin: "0px 0px -40px 0px" });
+        var inViewCount = 0;
         revealEls.forEach(function (el) {
             if (el.getBoundingClientRect().top < window.innerHeight) {
                 el.classList.add("in");
+                inViewCount++;
             } else {
                 io.observe(el);
             }
@@ -60,8 +68,8 @@
     }
 
     /* Resume decorative animations only after real user interaction (scroll,
-   pointer/key) or after a generous delay so the initial load stays free of
-   continuous style-layout work — which keeps LCP/TBT fast. */
+       pointer/key) or after a generous delay so the initial load stays free of
+       continuous style-layout work — which keeps LCP/TBT fast. */
     (function () {
         var resumed = false;
         var resume = function () {
