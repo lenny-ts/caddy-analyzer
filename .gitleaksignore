@@ -1,3 +1,6 @@
 # False positives from test fixtures
 # JWT test token in detect_test.go (not a real secret)
 566060ffea44b09260b0fddc7e5ca66242fde1bc:pkg/analysis/detect_test.go:generic-api-key:1252
+# Sample log fixtures contain test JWT tokens and synthetic secrets to trigger detection rules
+testdata/sample.log
+testdata/large.log
