@@ -77,7 +77,10 @@ func runTopCmd(cmd *cobra.Command, args []string) error {
 		sourceArgs = args
 	}
 
-	sources := resolveSources(sourceArgs)
+	sources, err := resolveSources(sourceArgs)
+	if err != nil {
+		return err
+	}
 
 	filters, err := buildFilters()
 	if err != nil {

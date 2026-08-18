@@ -48,6 +48,13 @@ type GeoIP struct {
 	cacheMu   sync.Mutex
 	cache     map[string]geoCacheEntry
 	path      string
+	// loading is true while a background download is in progress; Lookups
+	// return a zero GeoInfo until the database is swapped in.
+	loading bool
+	// closed is set by Close so a racing backgroundLoad can release the
+	// freshly opened databases instead of swapping them into a GeoIP that
+	// the caller already stopped using.
+	closed bool
 }
 
 type geoCacheEntry struct {
@@ -242,6 +249,79 @@ func openGeoIP(countryPath, asnPath string) (*GeoIP, error) {
 	return g, nil
 }
 
+// NewGeoIPAsync is like NewGeoIP but, when no mmdb file is found and
+// auto-download is enabled, returns immediately with a lazy GeoIP that
+// downloads the database in the background. Lookups during the download
+// return a zero GeoInfo (no error); once the download completes the
+// database is swapped in atomically and subsequent lookups return real
+// data. This keeps interactive modes (notably --watch) responsive.
+func NewGeoIPAsync(path string) (*GeoIP, error) {
+	if path != "" {
+		return openGeoIP(path, "")
+	}
+	countryPath, ok := findFirst(geoIPSearchPaths)
+	if ok {
+		asnPath, _ := findFirst(geoIPASNSearchPaths)
+		return openGeoIP(countryPath, asnPath)
+	}
+	if !autoDownload {
+		return nil, fmt.Errorf("no GeoIP mmdb file found; pass --geoip-db or place a file in one of: %v", geoIPSearchPaths)
+	}
+	g := &GeoIP{
+		cache:   make(map[string]geoCacheEntry),
+		loading: true,
+	}
+	go g.backgroundLoad()
+	return g, nil
+}
+
+// backgroundLoad downloads the GeoLite2 country + ASN databases and swaps
+// them into the GeoIP. Intended to run as a goroutine from NewGeoIPAsync
+// so interactive modes are not blocked on startup. If Close is called
+// before the download finishes, the freshly opened databases are closed
+// and discarded.
+func (g *GeoIP) backgroundLoad() {
+	cp, ap, err := autoDownloadGeoIP()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "warning: geoip background download failed: %v\n", err)
+		g.mu.Lock()
+		g.loading = false
+		g.mu.Unlock()
+		return
+	}
+	real, err := openGeoIP(cp, ap)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "warning: geoip open failed: %v\n", err)
+		g.mu.Lock()
+		g.loading = false
+		g.mu.Unlock()
+		return
+	}
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	g.loading = false
+	if g.closed {
+		if real.countryDB != nil {
+			_ = real.countryDB.Close()
+		}
+		if real.asnDB != nil {
+			_ = real.asnDB.Close()
+		}
+		return
+	}
+	g.countryDB = real.countryDB
+	g.asnDB = real.asnDB
+	g.path = real.path
+}
+
+// Loading reports whether the GeoIP is still downloading its database in
+// the background. Lookups during this time return a zero GeoInfo.
+func (g *GeoIP) Loading() bool {
+	g.mu.RLock()
+	defer g.mu.RUnlock()
+	return g.loading
+}
+
 // findFirst returns the first path in the list that exists as a file.
 func findFirst(paths []string) (string, bool) {
 	for _, p := range paths {
@@ -255,10 +335,14 @@ func findFirst(paths []string) (string, bool) {
 	return "", false
 }
 
-// Close releases the mmdb file handles.
+// Close releases the mmdb file handles. It also marks the GeoIP as
+// closed so a racing background download (started by NewGeoIPAsync)
+// releases its freshly opened databases instead of swapping them in.
 func (g *GeoIP) Close() error {
 	g.mu.Lock()
 	defer g.mu.Unlock()
+	g.closed = true
+	g.loading = false
 	var err error
 	if g.countryDB != nil {
 		err = g.countryDB.Close()
@@ -278,7 +362,8 @@ func (g *GeoIP) Path() string {
 
 // Lookup returns GeoInfo for the given IP. For private/loopback IPs
 // returns a zero-value GeoInfo without hitting the database. Results
-// are cached for geoCacheTTL.
+// are cached for geoCacheTTL. While a background download is in
+// progress (see NewGeoIPAsync), returns a zero GeoInfo with no error.
 func (g *GeoIP) Lookup(ip string) (types.GeoInfo, error) {
 	if IsPrivateOrLoopback(ip) {
 		return types.GeoInfo{}, nil
@@ -290,6 +375,13 @@ func (g *GeoIP) Lookup(ip string) (types.GeoInfo, error) {
 
 	if info, ok := g.cacheGet(ip); ok {
 		return info, nil
+	}
+
+	g.mu.RLock()
+	loading := g.loading
+	g.mu.RUnlock()
+	if loading {
+		return types.GeoInfo{}, nil
 	}
 
 	info, err := g.lookupUncached(parsed)

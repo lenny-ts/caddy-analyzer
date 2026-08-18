@@ -82,7 +82,10 @@ func init() {
 }
 
 func runTail(cmd *cobra.Command, args []string) error {
-	sources := resolveSources(args)
+	sources, err := resolveSources(args)
+	if err != nil {
+		return err
+	}
 
 	filters, err := buildFilters()
 	if err != nil {

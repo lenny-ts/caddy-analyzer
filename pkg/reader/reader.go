@@ -82,9 +82,17 @@ type StdinReader struct{}
 func (r *StdinReader) Name() string { return "stdin" }
 
 func (r *StdinReader) Read(ctx context.Context) (<-chan string, error) {
+	// Defense-in-depth: resolveSources already refuses the stdin fallback
+	// when stdin is a TTY, but a caller can still construct a StdinReader
+	// directly (e.g. explicit "-"). Reading from a TTY with bufio.Scanner
+	// blocks forever with no prompt, so reject it here with a clear error.
+	if isTerminal() {
+		return nil, fmt.Errorf("stdin is a terminal; pipe log lines (e.g. `tail -f access.log | caddy-analyze -`) or specify a file/docker://k8s://journalctl:// source")
+	}
 	out := newLineChannel()
 	go func() {
 		defer close(out)
+		fmt.Fprintln(os.Stderr, "reading log lines from stdin... (Ctrl+D to end)")
 		scanner := bufio.NewScanner(os.Stdin)
 		scanner.Buffer(make([]byte, 1024*1024), 1024*1024)
 		for scanner.Scan() {

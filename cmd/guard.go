@@ -131,7 +131,10 @@ func runGuard(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("guard requires root: run with sudo (iptables needs CAP_NET_ADMIN)")
 	}
 
-	sources := resolveSources(args)
+	sources, err := resolveSources(args)
+	if err != nil {
+		return err
+	}
 
 	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer cancel()
