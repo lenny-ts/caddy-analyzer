@@ -149,15 +149,11 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.current = viewGeo
 			m = m.refreshTables()
 		case "tab", "right":
-			if m.current < viewGeo {
-				m.current++
-				m = m.refreshTables()
-			}
+			m.current = (m.current + 1) % (viewGeo + 1)
+			m = m.refreshTables()
 		case "shift+tab", "left":
-			if m.current > viewSummary {
-				m.current--
-				m = m.refreshTables()
-			}
+			m.current = (m.current + viewGeo) % (viewGeo + 1)
+			m = m.refreshTables()
 		case "r":
 			eng := analysis.New(types.Filters{})
 			eng.SetDetector(m.detector)
