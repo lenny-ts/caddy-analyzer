@@ -155,6 +155,15 @@ type OperationalEntry struct {
 
 func (*OperationalEntry) entry() {}
 
+// EffectiveLevel returns the entry's level, defaulting to "info" when
+// the level field is empty (Caddy omits it for info-level messages).
+func (e *OperationalEntry) EffectiveLevel() string {
+	if e.Level == "" {
+		return "info"
+	}
+	return e.Level
+}
+
 // GeoInfo holds GeoIP enrichment data for a single IP. Populated by the
 // GeoIP enricher from a DB-IP / MaxMind mmdb file. Zero-value means the
 // IP was not enriched (private/loopback, db missing, or lookup miss).

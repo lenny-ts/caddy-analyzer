@@ -42,10 +42,7 @@ func (e *OperationalEngine) Process(entry *types.OperationalEntry) {
 		}
 	}
 
-	lvl := entry.Level
-	if lvl == "" {
-		lvl = "info"
-	}
+	lvl := entry.EffectiveLevel()
 	s.LevelCounts[lvl]++
 	s.LoggerCounts[entry.Logger]++
 	s.MsgCounts[entry.Msg]++
@@ -66,10 +63,7 @@ func MatchOperational(entry *types.OperationalEntry, filters types.Filters) bool
 		return false
 	}
 	if len(filters.Level) > 0 {
-		lvl := entry.Level
-		if lvl == "" {
-			lvl = "info"
-		}
+		lvl := entry.EffectiveLevel()
 		found := false
 		for _, l := range filters.Level {
 			if strings.EqualFold(l, lvl) {
