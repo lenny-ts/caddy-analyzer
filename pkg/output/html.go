@@ -3,6 +3,7 @@ package output
 import (
 	"fmt"
 	"html"
+	"strings"
 
 	"github.com/lenny-ts/caddy-analyzer/pkg/analysis"
 	"github.com/lenny-ts/caddy-analyzer/pkg/types"
@@ -28,10 +29,16 @@ func (r *Report) printHTML() error {
 	topPathBytes := analysis.TopN(s.PathBytesMap, 5)
 	suspicious := analysis.TopN(s.SuspiciousIPs, 20)
 
-	html := generateHTMLReport(s, total, r.engine.RPS(), r.engine.AvgDuration(),
+	out := generateHTMLReport(s, total, r.engine.RPS(), r.engine.AvgDuration(),
 		topPaths, topIPs, topUAs, topMethods, topCountries, topASNs, topProtos, topTLS, topBots, topReferers, topPathBytes, suspicious, r.detect, r.activeFilters(), s.SuspiciousDetails)
 
-	_, err := fmt.Fprint(r.writer, html)
+	// Inject operational events card before </body> if present
+	if r.opStats != nil && r.opStats.TotalEvents > 0 {
+		op := generateOperationalHTML(r.opStats, r.top)
+		out = strings.Replace(out, "</body>", op+"</body>", 1)
+	}
+
+	_, err := fmt.Fprint(r.writer, out)
 	return err
 }
 
@@ -395,4 +402,47 @@ func renderActiveFiltersHTML(filters []string) string {
 
 func escapeHTML(s string) string {
 	return html.EscapeString(s)
+}
+
+// generateOperationalHTML renders the Operational Events card for the HTML
+// report. Returns an empty string when there are no events so the card is
+// omitted entirely.
+func generateOperationalHTML(op *types.OperationalStats, top int) string {
+	if op == nil || op.TotalEvents == 0 {
+		return ""
+	}
+
+	// Level breakdown rows
+	var levelRows string
+	for _, lvl := range []string{"error", "warn", "info", "debug"} {
+		if c, ok := op.LevelCounts[lvl]; ok && c > 0 {
+			ratio := float64(c) / float64(op.TotalEvents) * 100
+			levelRows += fmt.Sprintf(`<tr><td>%s</td><td class="count">%d</td><td class="bar-cell"><div class="progress-bar"><div class="progress-fill" style="width: %.1f%%"></div></div></td></tr>`,
+				escapeHTML(lvl), c, ratio)
+		}
+	}
+
+	// Top loggers
+	loggers := analysis.TopN(op.LoggerCounts, top)
+	messages := analysis.TopN(op.MsgCounts, top)
+
+	loggersCard := ""
+	if len(loggers) > 0 {
+		loggersCard = fmt.Sprintf(`<div class="card"><h2>Top Loggers</h2><table><thead><tr><th>Logger</th><th>Events</th><th class="bar-cell">Distribution</th></tr></thead><tbody>%s</tbody></table></div>`,
+			renderTableRows(loggers, op.TotalEvents))
+	}
+
+	messagesCard := ""
+	if len(messages) > 0 {
+		messagesCard = fmt.Sprintf(`<div class="card"><h2>Top Messages</h2><table><thead><tr><th>Message</th><th>Events</th><th class="bar-cell">Distribution</th></tr></thead><tbody>%s</tbody></table></div>`,
+			renderTableRows(messages, op.TotalEvents))
+	}
+
+	errLine := ""
+	if op.Errors > 0 {
+		errLine = fmt.Sprintf(`<p class="error">Errors: %d</p>`, op.Errors)
+	}
+
+	return fmt.Sprintf(`<div class="card"><h2>Operational Events</h2><p>Total Events: %d</p>%s<table><thead><tr><th>Level</th><th>Events</th><th class="bar-cell">Distribution</th></tr></thead><tbody>%s</tbody></table></div>%s%s`,
+		op.TotalEvents, errLine, levelRows, loggersCard, messagesCard)
 }

@@ -60,6 +60,7 @@ func ParseFormat(s string) Format {
 
 type Report struct {
 	engine   *analysis.Engine
+	opStats  *types.OperationalStats
 	format   Format
 	top      int
 	sections types.TopSections
@@ -103,6 +104,10 @@ func (r *Report) SetDefang(d bool) {
 
 func (r *Report) SetFilters(f types.Filters) {
 	r.filters = f
+}
+
+func (r *Report) SetOperationalStats(s *types.OperationalStats) {
+	r.opStats = s
 }
 
 func (r *Report) activeFilters() []string {
@@ -529,10 +534,77 @@ func (r *Report) printTable() error {
 		}
 	}
 
+	r.printOperationalTable(w, useColor)
+
 	if err := w.Flush(); err != nil {
 		return err
 	}
 	return ew.err
+}
+
+func (r *Report) printOperationalTable(w *tabwriter.Writer, useColor bool) {
+	if r.opStats == nil || r.opStats.TotalEvents == 0 {
+		return
+	}
+	op := r.opStats
+
+	_, _ = fmt.Fprintf(w, "\n")
+	label := "Operational Events"
+	if useColor {
+		label = styleLabel.Render(label)
+	}
+	_, _ = fmt.Fprintf(w, "%s:\n", label)
+	_, _ = fmt.Fprintf(w, "  %s\t%d\n", "Total Events:", op.TotalEvents)
+	if op.Errors > 0 {
+		errLabel := "Errors:"
+		if useColor {
+			errLabel = styleError.Render("Errors:")
+		}
+		_, _ = fmt.Fprintf(w, "  %s\t%d\n", errLabel, op.Errors)
+	}
+
+	// Level breakdown
+	for _, lvl := range []string{"error", "warn", "info", "debug"} {
+		if c, ok := op.LevelCounts[lvl]; ok && c > 0 {
+			lvlLabel := lvl + ":"
+			if useColor {
+				switch lvl {
+				case "error":
+					lvlLabel = styleError.Render(lvlLabel)
+				case "warn":
+					lvlLabel = styleWarn.Render(lvlLabel)
+				case "info":
+					lvlLabel = styleOK.Render(lvlLabel)
+				default:
+					lvlLabel = styleDim.Render(lvlLabel)
+				}
+			}
+			_, _ = fmt.Fprintf(w, "  %s\t%d\n", lvlLabel, c)
+		}
+	}
+
+	// Top loggers
+	if len(op.LoggerCounts) > 0 {
+		_, _ = fmt.Fprintf(w, "\n")
+		logLabel := "Top Loggers"
+		if useColor {
+			logLabel = styleLabel.Render(logLabel)
+		}
+		_, _ = fmt.Fprintf(w, "%s:\n", logLabel)
+		printTopNWithBar(w, analysis.TopN(op.LoggerCounts, r.top), op.TotalEvents, useColor)
+	}
+
+	// Top messages
+	if len(op.MsgCounts) > 0 {
+		_, _ = fmt.Fprintf(w, "\n")
+		msgLabel := "Top Messages"
+		if useColor {
+			msgLabel = styleLabel.Render(msgLabel)
+		}
+		_, _ = fmt.Fprintf(w, "%s:\n", msgLabel)
+		printTopNWithBar(w, analysis.TopN(op.MsgCounts, r.top), op.TotalEvents, useColor)
+	}
+	_, _ = fmt.Fprintf(w, "\n")
 }
 
 func (r *Report) printDetectTable(s *types.Stats, total int64, useColor bool, ew *errWriter) error {
@@ -708,6 +780,16 @@ func (r *Report) printJSON() error {
 		}
 	}
 
+	if r.opStats != nil && r.opStats.TotalEvents > 0 {
+		data["operational"] = map[string]interface{}{
+			"total_events":  r.opStats.TotalEvents,
+			"errors":         r.opStats.Errors,
+			"level_counts":   r.opStats.LevelCounts,
+			"logger_counts":  analysis.TopN(r.opStats.LoggerCounts, r.top),
+			"message_counts": analysis.TopN(r.opStats.MsgCounts, r.top),
+		}
+	}
+
 	enc := json.NewEncoder(r.writer)
 	enc.SetIndent("", "  ")
 	return enc.Encode(data)
@@ -790,6 +872,25 @@ func (r *Report) printCSV() error {
 			for _, item := range analysis.TopN(s.ASNCounts, r.top) {
 				writePair(item.Key, fmt.Sprintf("%d", item.Count))
 			}
+		}
+	}
+
+	if r.opStats != nil && r.opStats.TotalEvents > 0 {
+		writeSection([]string{"operational:metric", "value"})
+		writePair("op_total_events", fmt.Sprintf("%d", r.opStats.TotalEvents))
+		writePair("op_errors", fmt.Sprintf("%d", r.opStats.Errors))
+		for _, lvl := range []string{"error", "warn", "info", "debug"} {
+			if c, ok := r.opStats.LevelCounts[lvl]; ok && c > 0 {
+				writePair("op_level:"+lvl, fmt.Sprintf("%d", c))
+			}
+		}
+		writeSection([]string{"operational_loggers:logger", "count"})
+		for _, item := range analysis.TopN(r.opStats.LoggerCounts, r.top) {
+			writePair(item.Key, fmt.Sprintf("%d", item.Count))
+		}
+		writeSection([]string{"operational_messages:message", "count"})
+		for _, item := range analysis.TopN(r.opStats.MsgCounts, r.top) {
+			writePair(item.Key, fmt.Sprintf("%d", item.Count))
 		}
 	}
 
