@@ -773,36 +773,43 @@ func (g *Guard) Evaluate(line string) {
 	if err != nil || entry == nil {
 		return
 	}
+	le, ok := entry.(*types.LogEntry)
+	if !ok {
+		// Operational entries (config loads, TLS events, upstream
+		// errors) are not HTTP requests and carry no RemoteIP/Status,
+		// so they cannot feed the sliding window, detector, or engine.
+		return
+	}
 	if g.cfg.TrustForwarded {
-		if ip := entry.EffectiveClientIP(true); ip != "" {
-			entry.RemoteIP = ip
+		if ip := le.EffectiveClientIP(true); ip != "" {
+			le.RemoteIP = ip
 		}
 	}
-	if g.IsBlocked(entry.RemoteIP) {
+	if g.IsBlocked(le.RemoteIP) {
 		return
 	}
 	// Blocklist and country-block: immediate block on match. The
 	// allowlist (--never-block) always wins over both — this is checked
 	// inside checkImmediateBlock so an allowlisted IP is never blocked
 	// by a feed or country rule.
-	if g.checkImmediateBlock(entry.RemoteIP) {
+	if g.checkImmediateBlock(le.RemoteIP) {
 		return
 	}
 	g.tickReqs.Add(1)
-	g.sliding.add(entry.RemoteIP, time.Now(), entry.Status == 401 || entry.Status == 403, entry.Status == 404, entry.Path())
+	g.sliding.add(le.RemoteIP, time.Now(), le.Status == 401 || le.Status == 403, le.Status == 404, le.Path())
 	if g.cfg.DetectionConfidence > 0 {
-		for _, det := range g.detector.DetectAll(entry) {
+		for _, det := range g.detector.DetectAll(le) {
 			if det.Confidence >= g.cfg.DetectionConfidence {
 				g.mu.Lock()
-				g.detectCounts[entry.RemoteIP]++
+				g.detectCounts[le.RemoteIP]++
 				g.mu.Unlock()
 				break
 			}
 		}
 	} else {
-		g.detector.Detect(entry)
+		g.detector.Detect(le)
 	}
-	g.engine.Process(entry)
+	g.engine.Process(le)
 }
 
 // checkImmediateBlock returns true if ip matches the blocklist or a

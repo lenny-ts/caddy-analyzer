@@ -107,11 +107,24 @@ func runTail(cmd *cobra.Command, args []string) error {
 		if err != nil || entry == nil {
 			continue
 		}
-		if !analysis.MatchEntry(entry, filters) {
-			continue
-		}
-		if err := printColorizedLog(entry, det); err != nil {
-			break
+		switch e := entry.(type) {
+		case *types.LogEntry:
+			if filters.OpsOnly {
+				continue
+			}
+			if !analysis.MatchEntry(e, filters) {
+				continue
+			}
+			if err := printColorizedLog(e, det); err != nil {
+				break
+			}
+		case *types.OperationalEntry:
+			if !analysis.MatchOperational(e, filters) {
+				continue
+			}
+			if err := printColorizedOperational(e); err != nil {
+				break
+			}
 		}
 	}
 	return nil
@@ -206,4 +219,51 @@ func formatStatus(s int) string {
 	default:
 		return str
 	}
+}
+
+func printColorizedOperational(e *types.OperationalEntry) error {
+	timeStr := styleTailDim.Render(e.Timestamp.Format("15:04:05"))
+
+	var lvlStr string
+	switch e.Level {
+	case "error":
+		lvlStr = styleTail5xx.Render("ERROR")
+	case "warn":
+		lvlStr = styleTail4xx.Render("WARN ")
+	case "debug":
+		lvlStr = styleTailDim.Render("DEBUG")
+	default:
+		lvlStr = styleTail3xx.Render("INFO ")
+	}
+
+	loggerStr := ""
+	if e.Logger != "" {
+		loggerStr = styleTailIP.Render("[" + e.Logger + "]")
+	}
+
+	msgStr := e.Msg
+	if flagDefang {
+		msgStr = output.Defang(msgStr)
+	}
+
+	// Show up to 3 extra fields inline for context (upstream target,
+	// error message, config path, etc.)
+	var extras []string
+	for k, v := range e.Extra {
+		vs := strings.Trim(string(v), `"`)
+		if flagDefang {
+			vs = output.Defang(vs)
+		}
+		extras = append(extras, fmt.Sprintf("%s=%s", k, vs))
+		if len(extras) >= 3 {
+			break
+		}
+	}
+	extraStr := ""
+	if len(extras) > 0 {
+		extraStr = styleTailDim.Render(" " + strings.Join(extras, " "))
+	}
+
+	_, err := fmt.Printf("%s  %s  %s  %s%s\n", timeStr, lvlStr, loggerStr, msgStr, extraStr)
+	return err
 }
