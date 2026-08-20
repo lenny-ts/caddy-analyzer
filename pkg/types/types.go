@@ -1,6 +1,7 @@
 package types
 
 import (
+	"encoding/json"
 	"math"
 	"net"
 	"strings"
@@ -126,6 +127,34 @@ type LogEntry struct {
 	Geo           GeoInfo
 }
 
+// Entry is a marker interface implemented by all parsed log entry types.
+// Parse returns an Entry; callers type-switch on the concrete type
+// (*LogEntry for HTTP access logs, *OperationalEntry for server/runtime
+// logs) to dispatch to the appropriate pipeline.
+type Entry interface {
+	entry()
+}
+
+func (*LogEntry) entry() {}
+
+// OperationalEntry represents a non-HTTP Caddy log line: server startup,
+// TLS events, admin API activity, upstream errors, config reloads, etc.
+// These are the entries Caddy's global/default logger emits alongside (or
+// instead of) access logs.
+type OperationalEntry struct {
+	Timestamp time.Time
+	Level     string // info, warn, error, debug
+	Logger    string // "tls", "http", "admin", "" (top-level)
+	Msg       string // "using provided configuration", "dialing upstream", ...
+	Raw       string
+	// Extra holds all JSON fields not covered by the typed fields above
+	// (upstream, error, config_file, etc.). Values are the raw JSON tokens
+	// so callers can decode them lazily.
+	Extra map[string]json.RawMessage
+}
+
+func (*OperationalEntry) entry() {}
+
 // GeoInfo holds GeoIP enrichment data for a single IP. Populated by the
 // GeoIP enricher from a DB-IP / MaxMind mmdb file. Zero-value means the
 // IP was not enriched (private/loopback, db missing, or lookup miss).
@@ -219,6 +248,12 @@ type Filters struct {
 	GrepPattern    string
 	Compact        bool
 	TrustForwarded bool
+	// Level filters operational entries by level (info, warn, error,
+	// debug). Empty slice = accept all levels.
+	Level []string
+	// OpsOnly, when true, suppresses HTTP entries entirely so only
+	// operational events are processed/displayed.
+	OpsOnly bool
 }
 
 type TopField string
@@ -398,4 +433,26 @@ func (s *Stats) ComputePercentiles() {
 	s.Percentile50 = s.durHist.percentile(50)
 	s.Percentile95 = s.durHist.percentile(95)
 	s.Percentile99 = s.durHist.percentile(99)
+}
+
+// OperationalStats holds aggregate counters for non-HTTP Caddy log entries.
+// Populated by the OperationalEngine and read by the output formatters when
+// operational events are present.
+type OperationalStats struct {
+	TotalEvents  int64
+	LevelCounts  map[string]int64 // info, warn, error, debug
+	LoggerCounts map[string]int64 // "tls", "http", "admin", ""
+	MsgCounts    map[string]int64
+	StartTime    time.Time
+	EndTime      time.Time
+	Errors       int64 // count of level == "error"
+	ParseErrors  int64
+}
+
+func NewOperationalStats() *OperationalStats {
+	return &OperationalStats{
+		LevelCounts:  make(map[string]int64),
+		LoggerCounts: make(map[string]int64),
+		MsgCounts:    make(map[string]int64),
+	}
 }

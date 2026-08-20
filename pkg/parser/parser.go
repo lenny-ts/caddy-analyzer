@@ -43,7 +43,7 @@ type rawTLS struct {
 	ServerName  string      `json:"server_name"`
 }
 
-func Parse(line string) (*types.LogEntry, error) {
+func Parse(line string) (types.Entry, error) {
 	line = strings.TrimSpace(line)
 	if line == "" {
 		return nil, nil
@@ -54,10 +54,13 @@ func Parse(line string) (*types.LogEntry, error) {
 		return nil, fmt.Errorf("json parse: %w", err)
 	}
 
-	if raw.Msg != "handled request" {
-		return nil, nil
+	if raw.Msg == "handled request" {
+		return buildHTTPEntry(&raw, line), nil
 	}
+	return buildOperationalEntry(&raw, line), nil
+}
 
+func buildHTTPEntry(raw *rawLog, line string) *types.LogEntry {
 	entry := &types.LogEntry{
 		Level:  raw.Level,
 		Logger: raw.Logger,
@@ -143,7 +146,45 @@ func Parse(line string) (*types.LogEntry, error) {
 
 	entry.Duration = parseDuration(raw.Duration, raw.LatencyS, raw.Latency)
 
-	return entry, nil
+	return entry
+}
+
+func buildOperationalEntry(raw *rawLog, line string) *types.OperationalEntry {
+	entry := &types.OperationalEntry{
+		Level:  raw.Level,
+		Logger: raw.Logger,
+		Msg:    raw.Msg,
+		Raw:    line,
+	}
+
+	if raw.TS.String() != "" {
+		ts, err := raw.TS.Float64()
+		if err == nil {
+			sec := int64(ts)
+			nsec := int64((ts - float64(sec)) * 1e9)
+			entry.Timestamp = time.Unix(sec, nsec)
+		}
+	}
+
+	// Capture all fields not covered by the typed struct into Extra so
+	// callers can display upstream targets, error messages, config paths,
+	// etc. without the parser needing to know every possible key.
+	var all map[string]json.RawMessage
+	if json.Unmarshal([]byte(line), &all) == nil {
+		for k, v := range all {
+			switch k {
+			case "level", "ts", "logger", "msg", "request", "status",
+				"size", "duration", "latency", "latency_seconds", "resp_headers":
+			default:
+				if entry.Extra == nil {
+					entry.Extra = make(map[string]json.RawMessage)
+				}
+				entry.Extra[k] = v
+			}
+		}
+	}
+
+	return entry
 }
 
 func extractIP(addr string) string {
