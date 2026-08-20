@@ -619,6 +619,16 @@ func runIntervalMode(ctx context.Context, sources []types.LogSource, filters typ
 		return report.Print()
 	}
 
+	resetEngines := func() {
+		engine = analysis.New(filters)
+		opEngine = analysis.NewOperationalEngine(filters)
+		if flagDetect {
+			det := analysis.NewDetector()
+			det.SetUARotationThreshold(flagUARotation)
+			engine.SetDetector(det)
+		}
+	}
+
 	for _, src := range sources {
 		r := reader.FromSource(src)
 		lines, err := r.Read(ctx)
@@ -644,57 +654,36 @@ func runIntervalMode(ctx context.Context, sources []types.LogSource, filters typ
 				bucket := accepted.Timestamp.Truncate(interval)
 				if initial {
 					current = bucket
-					engine = analysis.New(filters)
-					opEngine = analysis.NewOperationalEngine(filters)
-					if flagDetect {
-						det := analysis.NewDetector()
-						det.SetUARotationThreshold(flagUARotation)
-						engine.SetDetector(det)
-					}
+					resetEngines()
 					initial = false
 				}
 				if bucket != current {
 					if err := reportFn(engine, opEngine, current); err != nil {
 						return err
 					}
-					engine = analysis.New(filters)
-					opEngine = analysis.NewOperationalEngine(filters)
-					if flagDetect {
-						det := analysis.NewDetector()
-						det.SetUARotationThreshold(flagUARotation)
-						engine.SetDetector(det)
-					}
+					resetEngines()
 					current = bucket
 				}
 				engine.Process(accepted)
-		case *types.OperationalEntry:
-			bucket := e.Timestamp.Truncate(interval)
-			if initial {
-				current = bucket
-				engine = analysis.New(filters)
-				opEngine = analysis.NewOperationalEngine(filters)
-				if flagDetect {
-					det := analysis.NewDetector()
-					det.SetUARotationThreshold(flagUARotation)
-					engine.SetDetector(det)
+			case *types.OperationalEntry:
+				if !analysis.MatchOperational(e, filters) {
+					continue
 				}
-				initial = false
+				bucket := e.Timestamp.Truncate(interval)
+				if initial {
+					current = bucket
+					resetEngines()
+					initial = false
+				}
+				if bucket != current {
+					if err := reportFn(engine, opEngine, current); err != nil {
+						return err
+					}
+					resetEngines()
+					current = bucket
+				}
+				opEngine.Process(e)
 			}
-			if bucket != current {
-				if err := reportFn(engine, opEngine, current); err != nil {
-					return err
-				}
-				engine = analysis.New(filters)
-				opEngine = analysis.NewOperationalEngine(filters)
-				if flagDetect {
-					det := analysis.NewDetector()
-					det.SetUARotationThreshold(flagUARotation)
-					engine.SetDetector(det)
-				}
-				current = bucket
-			}
-			opEngine.Process(e)
-		}
 		}
 	}
 	if engine != nil && (engine.Count() > 0 || (opEngine != nil && opEngine.Stats().TotalEvents > 0)) {

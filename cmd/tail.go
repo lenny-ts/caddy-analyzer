@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os/signal"
+	"sort"
 	"strings"
 	"syscall"
 
@@ -247,10 +248,16 @@ func printColorizedOperational(e *types.OperationalEntry) error {
 	}
 
 	// Show up to 3 extra fields inline for context (upstream target,
-	// error message, config path, etc.)
+	// error message, config path, etc.). Sort keys for deterministic
+	// output — Go randomizes map iteration order.
+	keys := make([]string, 0, len(e.Extra))
+	for k := range e.Extra {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
 	var extras []string
-	for k, v := range e.Extra {
-		vs := strings.Trim(string(v), `"`)
+	for _, k := range keys {
+		vs := strings.Trim(string(e.Extra[k]), `"`)
 		if flagDefang {
 			vs = output.Defang(vs)
 		}

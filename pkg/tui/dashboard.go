@@ -210,8 +210,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			eng := analysis.New(types.Filters{})
 			eng.SetDetector(m.detector)
 			m.engine = eng
+			m.opEngine = analysis.NewOperationalEngine(types.Filters{})
 			m.stats = nil
 			m.recentLogs = make([]*types.LogEntry, 0, 20)
+			m.recentOps = nil
 			m.windowStart = time.Now()
 		}
 		m.engine.Finalize()

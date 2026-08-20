@@ -782,7 +782,7 @@ func (r *Report) printJSON() error {
 
 	if r.opStats != nil && r.opStats.TotalEvents > 0 {
 		data["operational"] = map[string]interface{}{
-			"total_events":  r.opStats.TotalEvents,
+			"total_events":   r.opStats.TotalEvents,
 			"errors":         r.opStats.Errors,
 			"level_counts":   r.opStats.LevelCounts,
 			"logger_counts":  analysis.TopN(r.opStats.LoggerCounts, r.top),
