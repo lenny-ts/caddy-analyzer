@@ -272,6 +272,7 @@ func runOnceMode(ctx context.Context, sources []types.LogSource, filters types.F
 	sections := types.DefaultTopSections()
 	var parseErrors, processed int64
 	var entries []*types.LogEntry
+	var opEntries []*types.OperationalEntry
 	showListing := output.HasEntryFilters(filters) && flagFormat == "table" && flagOutput == "" && !flagDetect
 
 	geoip := newGeoIPEnricher()
@@ -318,7 +319,14 @@ func runOnceMode(ctx context.Context, sources []types.LogSource, filters types.F
 					entries = append(entries, e)
 				}
 			case *types.OperationalEntry:
+				if !analysis.MatchOperational(e, filters) {
+					bar.Add(1)
+					continue
+				}
 				opEngine.Process(e)
+				if showListing {
+					opEntries = append(opEntries, e)
+				}
 			}
 			bar.Add(1)
 		}
@@ -332,8 +340,9 @@ func runOnceMode(ctx context.Context, sources []types.LogSource, filters types.F
 	}
 
 	if showListing {
-		fmt.Fprintf(os.Stderr, "%d entries matched\n\n", len(entries))
+		fmt.Fprintf(os.Stderr, "%d entries matched\n\n", len(entries)+len(opEntries))
 		output.PrintLogEntries(entries, os.Stdout, flagDefang)
+		output.PrintOperationalEntries(opEntries, os.Stdout, flagDefang)
 		return nil
 	}
 

@@ -1081,6 +1081,62 @@ func PrintLogEntries(entries []*types.LogEntry, w io.Writer, defang bool) {
 	}
 }
 
+// FmtOperationalEntry renders one non-HTTP log event for filter-driven
+// listings, mirroring the tail format: time, level, logger, message, and
+// up to 3 extra fields with sorted keys for deterministic output.
+func FmtOperationalEntry(e *types.OperationalEntry, defang bool) string {
+	timeStr := styleListDim.Render(e.Timestamp.Format("15:04:05"))
+	lvlStr := styleDim.Render(strings.ToUpper(e.EffectiveLevel()))
+	switch e.EffectiveLevel() {
+	case "error":
+		lvlStr = styleError.Render("ERROR")
+	case "warn":
+		lvlStr = styleWarn.Render("WARN")
+	case "info":
+		lvlStr = styleOK.Render("INFO")
+	}
+
+	loggerStr := ""
+	if e.Logger != "" {
+		loggerStr = styleListDim.Render("[" + stripANSI(e.Logger) + "]  ")
+	}
+	msgStr := stripANSI(e.Msg)
+	if defang {
+		msgStr = Defang(msgStr)
+	}
+
+	keys := make([]string, 0, len(e.Extra))
+	for k := range e.Extra {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	var extras []string
+	for _, k := range keys {
+		vs := strings.Trim(string(e.Extra[k]), `"`)
+		if defang {
+			vs = Defang(vs)
+		}
+		extras = append(extras, fmt.Sprintf("%s=%s", k, vs))
+		if len(extras) >= 3 {
+			break
+		}
+	}
+	extraStr := ""
+	if len(extras) > 0 {
+		extraStr = styleListDim.Render("  " + strings.Join(extras, " "))
+	}
+
+	return fmt.Sprintf("%s  %s  %s%s%s", timeStr, lvlStr, loggerStr, msgStr, extraStr)
+}
+
+func PrintOperationalEntries(entries []*types.OperationalEntry, w io.Writer, defang bool) {
+	for _, e := range entries {
+		if e != nil {
+			_, _ = fmt.Fprintln(w, FmtOperationalEntry(e, defang))
+		}
+	}
+}
+
 func printTopInt(w io.Writer, title string, items []types.CountIntItem) {
 	if len(items) == 0 {
 		return
