@@ -191,6 +191,36 @@ func TestCSVANSIStripped(t *testing.T) {
 	}
 }
 
+func TestCSVOperationalFormulaInjectionNeutralized(t *testing.T) {
+	engine := analysis.New(types.Filters{})
+	engine.Finalize()
+
+	op := types.NewOperationalStats()
+	op.TotalEvents = 2
+	op.Errors = 1
+	op.LevelCounts["error"] = 1
+	op.LoggerCounts["=cmd|'/c calc'!A0"] = 1
+	op.MsgCounts["\t=1+1"] = 1
+
+	var buf bytes.Buffer
+	report := NewReport(engine, FormatCSV, 5)
+	report.SetOperationalStats(op)
+	report.SetWriter(&buf)
+	if err := report.Print(); err != nil {
+		t.Fatalf("Print failed: %v", err)
+	}
+
+	out := buf.String()
+	for _, raw := range []string{"\n=cmd", ",=cmd", "\n\t=", ",\t="} {
+		if strings.Contains(out, raw) {
+			t.Errorf("CSV operational section contains unsanitized formula payload %q, got:\n%s", raw, out)
+		}
+	}
+	if !strings.Contains(out, "'=cmd") {
+		t.Errorf("CSV output missing sanitized operational logger cell, got:\n%s", out)
+	}
+}
+
 func TestFmtLogEntryStripsANSISignal(t *testing.T) {
 	e := &types.LogEntry{
 		Method:    "GET",
