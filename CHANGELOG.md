@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **`update` subcommand for self-update with cosign verification (#16)**: `caddy-analyze update` downloads the latest GitHub release, verifies it, and atomically replaces the running binary. Verification is fail closed: cosign keyless signature check on `checksums.txt` (certificate identity anchored to this repo's release workflow) plus a SHA256 match against the signed manifest; a missing `cosign` binary or any verification failure aborts with nothing installed — no unverified fallback. Flags: `--check` (report only), `--version <tag>` (pin an exact release), `--force` (reinstall/allow downgrade), `--install-dir <dir>` (target another directory when the binary is root-owned). Handles GitHub API rate limits (cached last-check fallback for `--check`, actionable error otherwise), refuses downgrades without `--force`, preserves file permissions, and uses the Windows rename-aside trick for running `.exe` files.
+
 ## [0.5.0] - 2026-08-22
 
 ### Added

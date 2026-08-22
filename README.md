@@ -206,6 +206,17 @@ go install github.com/lenny-ts/caddy-analyzer/cmd/caddy-analyze@latest
 docker run --rm -v /var/log/caddy:/logs ghcr.io/lenny-ts/caddy-analyzer /logs/access.log
 ```
 
+### Keeping up to date
+
+Once installed, self-update with signature verification (cosign keyless + SHA256, fail closed):
+
+```bash
+caddy-analyze update                     # install the latest verified release
+caddy-analyze update --check             # report availability only
+caddy-analyze update --version v0.5.0    # pin an exact release
+sudo caddy-analyze update                # when the binary is in a root-owned path
+```
+
 ---
 
 ## Documentation
