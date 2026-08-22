@@ -185,15 +185,19 @@ func TestCheckWritable(t *testing.T) {
 	if err := CheckWritable(dir); err != nil {
 		t.Fatalf("writable dir rejected: %v", err)
 	}
-	// A read-only directory must produce an actionable error.
+	// A read-only directory must produce an actionable error. Skip on
+	// Windows where directory chmod does not restrict writes.
+	if runtime.GOOS == "windows" {
+		t.Skip("directory chmod does not restrict writes on windows")
+	}
+	if runningAsRoot() {
+		t.Skip("running as root: read-only dir check not meaningful")
+	}
 	roDir := filepath.Join(dir, "ro")
 	if err := os.Mkdir(roDir, 0o500); err != nil {
 		t.Fatal(err)
 	}
 	defer func() { _ = os.Chmod(roDir, 0o700) }()
-	if runningAsRoot() {
-		t.Skip("running as root: read-only dir check not meaningful")
-	}
 	if err := CheckWritable(roDir); err == nil {
 		t.Fatal("unwritable dir accepted")
 	} else if !strings.Contains(err.Error(), "sudo") {

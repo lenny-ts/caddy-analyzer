@@ -59,7 +59,8 @@ func Run(ctx context.Context, opts *Options) error {
 			if cached := readCache(); cached != nil {
 				fmt.Fprintf(opts.Stderr, "warning: %v\nusing cached release info from %s\n",
 					err, cached.CheckedAt.Format(time.RFC3339))
-				return reportAvailability(opts, currentLabel(opts.CurrentVer), cached.Tag)
+				reportAvailability(opts, currentLabel(opts.CurrentVer), cached.Tag)
+				return nil
 			}
 		}
 		return err
@@ -69,7 +70,8 @@ func Run(ctx context.Context, opts *Options) error {
 	cmp := CompareVersions(opts.CurrentVer, rel.Tag)
 
 	if opts.CheckOnly {
-		return reportAvailability(opts, currentLabel(opts.CurrentVer), rel.Tag)
+		reportAvailability(opts, currentLabel(opts.CurrentVer), rel.Tag)
+		return nil
 	}
 
 	if cmp == 0 && !opts.Force {
@@ -135,8 +137,8 @@ func currentLabel(v string) string {
 }
 
 // reportAvailability implements `update --check`: print current vs latest
-// plus the action hint, and always succeed.
-func reportAvailability(o *Options, current, latest string) error {
+// plus the action hint.
+func reportAvailability(o *Options, current, latest string) {
 	switch CompareVersions(current, latest) {
 	case 0:
 		fmt.Fprintf(o.Stdout, "caddy-analyze is up to date (%s)\n", latest)
@@ -145,7 +147,6 @@ func reportAvailability(o *Options, current, latest string) error {
 	default:
 		fmt.Fprintf(o.Stdout, "installed %s is newer than the latest published release %s\n", current, latest)
 	}
-	return nil
 }
 
 // resolveTarget picks what gets replaced: <installDir>/binary when set,
@@ -156,7 +157,7 @@ func resolveTarget(installDir string) (target, destDir string, err error) {
 		if abs, absErr := filepath.Abs(dir); absErr == nil {
 			dir = abs
 		}
-		if mkErr := os.MkdirAll(dir, 0o755); mkErr != nil {
+		if mkErr := os.MkdirAll(dir, 0o750); mkErr != nil {
 			return "", "", fmt.Errorf("create install dir: %w", mkErr)
 		}
 		return filepath.Join(dir, BinaryName(runtime.GOOS)), dir, nil

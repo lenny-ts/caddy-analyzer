@@ -43,14 +43,6 @@ func CheckWritable(destDir string) error {
 // Windows a running .exe cannot be overwritten, so the live image is
 // renamed out of the way first and rolled back if anything fails.
 func ReplaceBinary(newBin, target string) error {
-	mode := os.FileMode(0o755)
-	if info, err := os.Stat(target); err == nil && runtime.GOOS != "windows" {
-		mode = info.Mode().Perm()
-		if err := os.Chmod(newBin, mode); err != nil {
-			return fmt.Errorf("preserve file mode: %w", err)
-		}
-	}
-
 	if runtime.GOOS == "windows" {
 		old := target + ".old"
 		_ = os.Remove(old) // leftover from a previous update
@@ -59,7 +51,7 @@ func ReplaceBinary(newBin, target string) error {
 		}
 		if err := os.Rename(newBin, target); err != nil {
 			if rbErr := os.Rename(old, target); rbErr != nil {
-				return fmt.Errorf("install new binary: %w (rollback also failed: %v; original saved as %s)", err, rbErr, old)
+				return fmt.Errorf("install new binary: %w (rollback also failed: %s; original saved as %s)", err, rbErr.Error(), old)
 			}
 			return fmt.Errorf("install new binary: %w", err)
 		}
@@ -67,6 +59,12 @@ func ReplaceBinary(newBin, target string) error {
 			fmt.Fprintf(os.Stderr, "note: could not delete %s; it can be removed manually\n", old)
 		}
 		return nil
+	}
+
+	if info, err := os.Stat(target); err == nil {
+		if err := os.Chmod(newBin, info.Mode().Perm()); err != nil {
+			return fmt.Errorf("preserve file mode: %w", err)
+		}
 	}
 
 	if err := os.Rename(newBin, target); err != nil {
