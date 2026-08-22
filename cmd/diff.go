@@ -164,9 +164,11 @@ func processLogFile(ctx context.Context, path string) (*analysis.Engine, error) 
 			bar.Add(1)
 			continue
 		}
-		applyForwarded(entry, filters)
-		enrichGeoIP(entry, geoip)
-		engine.Process(entry)
+		if le, ok := entry.(*types.LogEntry); ok {
+			applyForwarded(le, filters)
+			enrichGeoIP(le, geoip)
+			engine.Process(le)
+		}
 		bar.Add(1)
 	}
 	bar.Done()

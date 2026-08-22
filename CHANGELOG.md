@@ -7,7 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-08-22
+
 ### Added
+- **Operational (non-HTTP) log support**: Caddy operational events — config loads, TLS certificate operations, upstream dial errors, admin shutdowns — are now parsed, filtered, and aggregated alongside HTTP access entries. Non-`"handled request"` JSON lines no longer get silently dropped: they populate a new "Operational Events" report section (total events, error count, level breakdown, top loggers, top messages) in every output format (`table`, `json`, `csv`, `html`). Unknown JSON fields are preserved in an `Extra` map and shown inline in `tail` output (e.g. `upstream=10.0.0.5:8080`). New flags: `--level error,warn,info,debug` filters operational events by level (repeatable/comma-separated), `--ops-only` hides HTTP entries entirely.
+- **Operational tab in `--watch` dashboard**: new 8th tab (key `8`) showing live operational event counts by level, logger, and message.
 - **Sample log fixtures**: `testdata/sample.log` (68 curated lines, one per detection category plus benign baseline) and `testdata/large.log` (~50,000 lines, ~27 MB, ~95% benign / ~5% malicious cycling all 26 categories over 24h) — let users exercise every command, including the full detection engine, without a live Caddy server. All client IPs use TEST-NET ranges (RFC 5737), so nothing in the fixtures points at a real host.
 - **`testdata/generate.py`**: stdlib-only Python generator producing both fixtures. Supports `--sample` and `--large` flags. Deterministic output (seeded RNG, fixed epoch anchor matching `parser_test.go`); the script is the source of truth — re-run it instead of hand-editing the `.log` files.
 

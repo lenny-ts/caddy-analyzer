@@ -2,8 +2,10 @@ package output
 
 import (
 	"bytes"
+	"encoding/json"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/lenny-ts/caddy-analyzer/pkg/analysis"
 	"github.com/lenny-ts/caddy-analyzer/pkg/types"
@@ -188,6 +190,65 @@ func TestCSVANSIStripped(t *testing.T) {
 	}
 	if !strings.Contains(out, "/xred") {
 		t.Errorf("expected stripped path /xred in CSV, got:\n%s", out)
+	}
+}
+
+func TestFmtOperationalEntryStripsANSIAndSortsExtras(t *testing.T) {
+	e := &types.OperationalEntry{
+		Timestamp: time.Date(2026, 8, 21, 12, 35, 4, 0, time.UTC),
+		Level:     "error",
+		Logger:    "http.log.error",
+		Msg:       "dialing \x1b[31mupstream\x1b[0m",
+		Extra: map[string]json.RawMessage{
+			"zebra":    json.RawMessage(`"last"`),
+			"upstream": json.RawMessage(`"10.0.0.6:8080"`),
+			"alpha":    json.RawMessage(`"first"`),
+		},
+	}
+
+	got := FmtOperationalEntry(e, false)
+	for _, want := range []string{"ERROR", "[http.log.error]", "dialing upstream", "alpha=first upstream=10.0.0.6:8080 zebra=last"} {
+		if !strings.Contains(got, want) {
+			t.Errorf("FmtOperationalEntry output missing %q, got:\n%s", want, got)
+		}
+	}
+	if strings.Contains(got, "\x1b") {
+		t.Errorf("FmtOperationalEntry output contains ANSI escapes from log data, got:\n%s", got)
+	}
+
+	defanged := FmtOperationalEntry(e, true)
+	if !strings.Contains(defanged, "10[.]0[.]0[.]6") {
+		t.Errorf("FmtOperationalEntry defang did not apply to extra values, got:\n%s", defanged)
+	}
+}
+
+func TestCSVOperationalFormulaInjectionNeutralized(t *testing.T) {
+	engine := analysis.New(types.Filters{})
+	engine.Finalize()
+
+	op := types.NewOperationalStats()
+	op.TotalEvents = 2
+	op.Errors = 1
+	op.LevelCounts["error"] = 1
+	op.LoggerCounts["=cmd|'/c calc'!A0"] = 1
+	op.MsgCounts["\t=1+1"] = 1
+
+	var buf bytes.Buffer
+	report := NewReport(engine, FormatCSV, 5)
+	report.SetOperationalStats(op)
+	report.SetWriter(&buf)
+	if err := report.Print(); err != nil {
+		t.Fatalf("Print failed: %v", err)
+	}
+
+	out := buf.String()
+	for _, raw := range []string{"\n=cmd", ",=cmd", "\n\t=", ",\t="} {
+		if strings.Contains(out, raw) {
+			t.Errorf("CSV operational section contains unsanitized formula payload %q, got:\n%s", raw, out)
+		}
+	}
+	if !strings.Contains(out, "'=cmd") {
+		t.Errorf("CSV output missing sanitized operational logger cell, got:\n%s", out)
 	}
 }
 

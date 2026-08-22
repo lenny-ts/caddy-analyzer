@@ -112,8 +112,10 @@ func runTopCmd(cmd *cobra.Command, args []string) error {
 				bar.Add(1)
 				continue
 			}
-			enrichGeoIP(entry, geoip)
-			engine.Process(entry)
+			if le, ok := entry.(*types.LogEntry); ok {
+				enrichGeoIP(le, geoip)
+				engine.Process(le)
+			}
 			bar.Add(1)
 		}
 	}

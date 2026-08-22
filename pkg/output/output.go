@@ -60,6 +60,7 @@ func ParseFormat(s string) Format {
 
 type Report struct {
 	engine   *analysis.Engine
+	opStats  *types.OperationalStats
 	format   Format
 	top      int
 	sections types.TopSections
@@ -103,6 +104,10 @@ func (r *Report) SetDefang(d bool) {
 
 func (r *Report) SetFilters(f types.Filters) {
 	r.filters = f
+}
+
+func (r *Report) SetOperationalStats(s *types.OperationalStats) {
+	r.opStats = s
 }
 
 func (r *Report) activeFilters() []string {
@@ -529,10 +534,77 @@ func (r *Report) printTable() error {
 		}
 	}
 
+	r.printOperationalTable(w, useColor)
+
 	if err := w.Flush(); err != nil {
 		return err
 	}
 	return ew.err
+}
+
+func (r *Report) printOperationalTable(w *tabwriter.Writer, useColor bool) {
+	if r.opStats == nil || r.opStats.TotalEvents == 0 {
+		return
+	}
+	op := r.opStats
+
+	_, _ = fmt.Fprintf(w, "\n")
+	label := "Operational Events"
+	if useColor {
+		label = styleLabel.Render(label)
+	}
+	_, _ = fmt.Fprintf(w, "%s:\n", label)
+	_, _ = fmt.Fprintf(w, "  %s\t%d\n", "Total Events:", op.TotalEvents)
+	if op.Errors > 0 {
+		errLabel := "Errors:"
+		if useColor {
+			errLabel = styleError.Render("Errors:")
+		}
+		_, _ = fmt.Fprintf(w, "  %s\t%d\n", errLabel, op.Errors)
+	}
+
+	// Level breakdown
+	for _, lvl := range []string{"error", "warn", "info", "debug"} {
+		if c, ok := op.LevelCounts[lvl]; ok && c > 0 {
+			lvlLabel := lvl + ":"
+			if useColor {
+				switch lvl {
+				case "error":
+					lvlLabel = styleError.Render(lvlLabel)
+				case "warn":
+					lvlLabel = styleWarn.Render(lvlLabel)
+				case "info":
+					lvlLabel = styleOK.Render(lvlLabel)
+				default:
+					lvlLabel = styleDim.Render(lvlLabel)
+				}
+			}
+			_, _ = fmt.Fprintf(w, "  %s\t%d\n", lvlLabel, c)
+		}
+	}
+
+	// Top loggers
+	if len(op.LoggerCounts) > 0 {
+		_, _ = fmt.Fprintf(w, "\n")
+		logLabel := "Top Loggers"
+		if useColor {
+			logLabel = styleLabel.Render(logLabel)
+		}
+		_, _ = fmt.Fprintf(w, "%s:\n", logLabel)
+		printTopNWithBar(w, analysis.TopN(op.LoggerCounts, r.top), op.TotalEvents, useColor)
+	}
+
+	// Top messages
+	if len(op.MsgCounts) > 0 {
+		_, _ = fmt.Fprintf(w, "\n")
+		msgLabel := "Top Messages"
+		if useColor {
+			msgLabel = styleLabel.Render(msgLabel)
+		}
+		_, _ = fmt.Fprintf(w, "%s:\n", msgLabel)
+		printTopNWithBar(w, analysis.TopN(op.MsgCounts, r.top), op.TotalEvents, useColor)
+	}
+	_, _ = fmt.Fprintf(w, "\n")
 }
 
 func (r *Report) printDetectTable(s *types.Stats, total int64, useColor bool, ew *errWriter) error {
@@ -708,6 +780,16 @@ func (r *Report) printJSON() error {
 		}
 	}
 
+	if r.opStats != nil && r.opStats.TotalEvents > 0 {
+		data["operational"] = map[string]interface{}{
+			"total_events":   r.opStats.TotalEvents,
+			"errors":         r.opStats.Errors,
+			"level_counts":   r.opStats.LevelCounts,
+			"logger_counts":  analysis.TopN(r.opStats.LoggerCounts, r.top),
+			"message_counts": analysis.TopN(r.opStats.MsgCounts, r.top),
+		}
+	}
+
 	enc := json.NewEncoder(r.writer)
 	enc.SetIndent("", "  ")
 	return enc.Encode(data)
@@ -790,6 +872,25 @@ func (r *Report) printCSV() error {
 			for _, item := range analysis.TopN(s.ASNCounts, r.top) {
 				writePair(item.Key, fmt.Sprintf("%d", item.Count))
 			}
+		}
+	}
+
+	if r.opStats != nil && r.opStats.TotalEvents > 0 {
+		writeSection([]string{"operational:metric", "value"})
+		writePair("op_total_events", fmt.Sprintf("%d", r.opStats.TotalEvents))
+		writePair("op_errors", fmt.Sprintf("%d", r.opStats.Errors))
+		for _, lvl := range []string{"error", "warn", "info", "debug"} {
+			if c, ok := r.opStats.LevelCounts[lvl]; ok && c > 0 {
+				writePair("op_level:"+lvl, fmt.Sprintf("%d", c))
+			}
+		}
+		writeSection([]string{"operational_loggers:logger", "count"})
+		for _, item := range analysis.TopN(r.opStats.LoggerCounts, r.top) {
+			writePair(item.Key, fmt.Sprintf("%d", item.Count))
+		}
+		writeSection([]string{"operational_messages:message", "count"})
+		for _, item := range analysis.TopN(r.opStats.MsgCounts, r.top) {
+			writePair(item.Key, fmt.Sprintf("%d", item.Count))
 		}
 	}
 
@@ -976,6 +1077,62 @@ func PrintLogEntries(entries []*types.LogEntry, w io.Writer, defang bool) {
 	for _, e := range entries {
 		if e != nil {
 			_, _ = fmt.Fprintln(w, FmtLogEntry(e, defang))
+		}
+	}
+}
+
+// FmtOperationalEntry renders one non-HTTP log event for filter-driven
+// listings, mirroring the tail format: time, level, logger, message, and
+// up to 3 extra fields with sorted keys for deterministic output.
+func FmtOperationalEntry(e *types.OperationalEntry, defang bool) string {
+	timeStr := styleListDim.Render(e.Timestamp.Format("15:04:05"))
+	lvlStr := styleDim.Render(strings.ToUpper(e.EffectiveLevel()))
+	switch e.EffectiveLevel() {
+	case "error":
+		lvlStr = styleError.Render("ERROR")
+	case "warn":
+		lvlStr = styleWarn.Render("WARN")
+	case "info":
+		lvlStr = styleOK.Render("INFO")
+	}
+
+	loggerStr := ""
+	if e.Logger != "" {
+		loggerStr = styleListDim.Render("[" + stripANSI(e.Logger) + "]  ")
+	}
+	msgStr := stripANSI(e.Msg)
+	if defang {
+		msgStr = Defang(msgStr)
+	}
+
+	keys := make([]string, 0, len(e.Extra))
+	for k := range e.Extra {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	var extras []string
+	for _, k := range keys {
+		vs := strings.Trim(string(e.Extra[k]), `"`)
+		if defang {
+			vs = Defang(vs)
+		}
+		extras = append(extras, fmt.Sprintf("%s=%s", k, vs))
+		if len(extras) >= 3 {
+			break
+		}
+	}
+	extraStr := ""
+	if len(extras) > 0 {
+		extraStr = styleListDim.Render("  " + strings.Join(extras, " "))
+	}
+
+	return fmt.Sprintf("%s  %s  %s%s%s", timeStr, lvlStr, loggerStr, msgStr, extraStr)
+}
+
+func PrintOperationalEntries(entries []*types.OperationalEntry, w io.Writer, defang bool) {
+	for _, e := range entries {
+		if e != nil {
+			_, _ = fmt.Fprintln(w, FmtOperationalEntry(e, defang))
 		}
 	}
 }

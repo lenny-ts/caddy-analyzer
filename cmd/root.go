@@ -65,9 +65,11 @@ var (
 	flagDefang     bool
 	flagGeoIPDB    string
 	flagNoAutoDL   bool
+	flagLevel      []string
+	flagOpsOnly    bool
 )
 
-var Version = "0.4.1-dev"
+var Version = "0.5.0-dev"
 
 var rootCmd = &cobra.Command{
 	Use:          "caddy-analyze [flags] [source...]",
@@ -152,6 +154,8 @@ func init() {
 	flags.IntVarP(&flagMaxCard, "max-cardinality", "", 100000, "Max distinct keys tracked per counter (paths, IPs, UAs). 0 = unlimited. Bounds memory on huge-cardinality logs")
 	flags.IntVarP(&flagUARotation, "ua-rotation", "", 10, "Distinct User-Agents from one IP before scanner/rotation heuristic fires (0 = default)")
 	flags.StringVar(&flagHost, "host", "", "Filter by request host (substring match, case-insensitive)")
+	flags.StringArrayVar(&flagLevel, "level", nil, "Filter operational logs by level (error, warn, info, debug). Repeatable")
+	flags.BoolVarP(&flagOpsOnly, "ops-only", "", false, "Show only operational (non-HTTP) log events")
 	flags.StringVar(&flagMaxLatency, "max-latency", "", "Filter requests faster than duration (e.g. 500ms, 1s). Counterpart to --slow")
 	flags.StringVar(&flagMinSize, "min-size", "", "Filter responses at least this size (bytes, or k/mb/gb suffix e.g. 1mb)")
 	flags.StringVar(&flagMaxSize, "max-size", "", "Filter responses at most this size (bytes, or k/mb/gb suffix e.g. 512kb)")
@@ -258,6 +262,7 @@ func validateFlags() error {
 
 func runOnceMode(ctx context.Context, sources []types.LogSource, filters types.Filters) error {
 	engine := analysis.New(filters)
+	opEngine := analysis.NewOperationalEngine(filters)
 	if flagDetect {
 		det := analysis.NewDetector()
 		det.SetUARotationThreshold(flagUARotation)
@@ -267,6 +272,7 @@ func runOnceMode(ctx context.Context, sources []types.LogSource, filters types.F
 	sections := types.DefaultTopSections()
 	var parseErrors, processed int64
 	var entries []*types.LogEntry
+	var opEntries []*types.OperationalEntry
 	showListing := output.HasEntryFilters(filters) && flagFormat == "table" && flagOutput == "" && !flagDetect
 
 	geoip := newGeoIPEnricher()
@@ -295,31 +301,48 @@ func runOnceMode(ctx context.Context, sources []types.LogSource, filters types.F
 				bar.Add(1)
 				continue
 			}
-			applyForwarded(entry, filters)
-			if !analysis.MatchEntry(entry, filters) {
-				bar.Add(1)
-				continue
+			switch e := entry.(type) {
+			case *types.LogEntry:
+				if filters.OpsOnly {
+					bar.Add(1)
+					continue
+				}
+				applyForwarded(e, filters)
+				if !analysis.MatchEntry(e, filters) {
+					bar.Add(1)
+					continue
+				}
+				enrichGeoIP(e, geoip)
+				engine.Process(e)
+				processed++
+				if showListing {
+					entries = append(entries, e)
+				}
+			case *types.OperationalEntry:
+				if !analysis.MatchOperational(e, filters) {
+					bar.Add(1)
+					continue
+				}
+				opEngine.Process(e)
+				if showListing {
+					opEntries = append(opEntries, e)
+				}
 			}
-			enrichGeoIP(entry, geoip)
-			engine.Process(entry)
-			processed++
 			bar.Add(1)
-			if showListing {
-				entries = append(entries, entry)
-			}
 		}
 	}
 
 	bar.Done()
 
-	if processed == 0 && parseErrors == 0 {
+	if processed == 0 && opEngine.Stats().TotalEvents == 0 && parseErrors == 0 {
 		fmt.Fprintln(os.Stderr, "no log entries found")
 		return nil
 	}
 
 	if showListing {
-		fmt.Fprintf(os.Stderr, "%d entries matched\n\n", len(entries))
+		fmt.Fprintf(os.Stderr, "%d entries matched\n\n", len(entries)+len(opEntries))
 		output.PrintLogEntries(entries, os.Stdout, flagDefang)
+		output.PrintOperationalEntries(opEntries, os.Stdout, flagDefang)
 		return nil
 	}
 
@@ -329,6 +352,7 @@ func runOnceMode(ctx context.Context, sources []types.LogSource, filters types.F
 	report.SetDetect(flagDetect)
 	report.SetDefang(flagDefang)
 	report.SetFilters(filters)
+	report.SetOperationalStats(opEngine.Stats())
 	if flagOutput != "" {
 		f, err := createOutputFile(flagOutput)
 		if err != nil {
@@ -489,6 +513,7 @@ func runFollowMode(ctx context.Context, sources []types.LogSource, filters types
 	// fresh report.
 	const window = 5 * time.Minute
 	engine := analysis.New(filters)
+	opEngine := analysis.NewOperationalEngine(filters)
 	if flagDetect {
 		det := analysis.NewDetector()
 		det.SetUARotationThreshold(flagUARotation)
@@ -514,6 +539,7 @@ func runFollowMode(ctx context.Context, sources []types.LogSource, filters types
 
 	resetEngine := func() {
 		engine = analysis.New(filters)
+		opEngine = analysis.NewOperationalEngine(filters)
 		if flagDetect {
 			det := analysis.NewDetector()
 			det.SetUARotationThreshold(flagUARotation)
@@ -528,13 +554,21 @@ func runFollowMode(ctx context.Context, sources []types.LogSource, filters types
 		if err != nil || entry == nil {
 			continue
 		}
-		takeEntry(entry, filters, geoip, engine.Process)
+		switch e := entry.(type) {
+		case *types.LogEntry:
+			if !filters.OpsOnly {
+				takeEntry(e, filters, geoip, engine.Process)
+			}
+		case *types.OperationalEntry:
+			opEngine.Process(e)
+		}
 		if time.Since(last) > 5*time.Second {
 			engine.Finalize()
 			report := output.NewReportWithSections(engine, output.ParseFormat(flagFormat), flagTop, sections)
 			report.SetDetect(flagDetect)
 			report.SetDefang(flagDefang)
 			report.SetFilters(filters)
+			report.SetOperationalStats(opEngine.Stats())
 			report.SetWriter(w)
 			if err := report.Print(); err != nil {
 				fmt.Fprintf(os.Stderr, "write report: %v\n", err)
@@ -549,6 +583,7 @@ func runFollowMode(ctx context.Context, sources []types.LogSource, filters types
 			report.SetDetect(flagDetect)
 			report.SetDefang(flagDefang)
 			report.SetFilters(filters)
+			report.SetOperationalStats(opEngine.Stats())
 			report.SetWriter(w)
 			if err := report.Print(); err != nil {
 				fmt.Fprintf(os.Stderr, "write report: %v\n", err)
@@ -562,6 +597,7 @@ func runFollowMode(ctx context.Context, sources []types.LogSource, filters types
 func runIntervalMode(ctx context.Context, sources []types.LogSource, filters types.Filters, interval time.Duration) error {
 	var current time.Time
 	var engine *analysis.Engine
+	var opEngine *analysis.OperationalEngine
 	sections := types.DefaultTopSections()
 	initial := true
 
@@ -580,15 +616,26 @@ func runIntervalMode(ctx context.Context, sources []types.LogSource, filters typ
 		w = f
 	}
 
-	reportFn := func(e *analysis.Engine, t time.Time) error {
+	reportFn := func(e *analysis.Engine, op *analysis.OperationalEngine, t time.Time) error {
 		e.Finalize()
 		fmt.Fprintf(w, "\n--- %s ---\n", t.Format(time.RFC3339))
 		report := output.NewReportWithSections(e, output.ParseFormat(flagFormat), flagTop, sections)
 		report.SetDetect(flagDetect)
 		report.SetDefang(flagDefang)
 		report.SetFilters(filters)
+		report.SetOperationalStats(op.Stats())
 		report.SetWriter(w)
 		return report.Print()
+	}
+
+	resetEngines := func() {
+		engine = analysis.New(filters)
+		opEngine = analysis.NewOperationalEngine(filters)
+		if flagDetect {
+			det := analysis.NewDetector()
+			det.SetUARotationThreshold(flagUARotation)
+			engine.SetDetector(det)
+		}
 	}
 
 	for _, src := range sources {
@@ -603,39 +650,53 @@ func runIntervalMode(ctx context.Context, sources []types.LogSource, filters typ
 			if err != nil || entry == nil {
 				continue
 			}
-			var accepted *types.LogEntry
-			takeEntry(entry, filters, geoip, func(e *types.LogEntry) { accepted = e })
-			if accepted == nil {
-				continue
-			}
-			bucket := accepted.Timestamp.Truncate(interval)
-			if initial {
-				current = bucket
-				engine = analysis.New(filters)
-				if flagDetect {
-					det := analysis.NewDetector()
-					det.SetUARotationThreshold(flagUARotation)
-					engine.SetDetector(det)
+			switch e := entry.(type) {
+			case *types.LogEntry:
+				if filters.OpsOnly {
+					continue
 				}
-				initial = false
-			}
-			if bucket != current {
-				if err := reportFn(engine, current); err != nil {
-					return err
+				var accepted *types.LogEntry
+				takeEntry(e, filters, geoip, func(le *types.LogEntry) { accepted = le })
+				if accepted == nil {
+					continue
 				}
-				engine = analysis.New(filters)
-				if flagDetect {
-					det := analysis.NewDetector()
-					det.SetUARotationThreshold(flagUARotation)
-					engine.SetDetector(det)
+				bucket := accepted.Timestamp.Truncate(interval)
+				if initial {
+					current = bucket
+					resetEngines()
+					initial = false
 				}
-				current = bucket
+				if bucket != current {
+					if err := reportFn(engine, opEngine, current); err != nil {
+						return err
+					}
+					resetEngines()
+					current = bucket
+				}
+				engine.Process(accepted)
+			case *types.OperationalEntry:
+				if !analysis.MatchOperational(e, filters) {
+					continue
+				}
+				bucket := e.Timestamp.Truncate(interval)
+				if initial {
+					current = bucket
+					resetEngines()
+					initial = false
+				}
+				if bucket != current {
+					if err := reportFn(engine, opEngine, current); err != nil {
+						return err
+					}
+					resetEngines()
+					current = bucket
+				}
+				opEngine.Process(e)
 			}
-			engine.Process(accepted)
 		}
 	}
-	if engine != nil && engine.Count() > 0 {
-		return reportFn(engine, current)
+	if engine != nil && (engine.Count() > 0 || (opEngine != nil && opEngine.Stats().TotalEvents > 0)) {
+		return reportFn(engine, opEngine, current)
 	}
 	return nil
 }
@@ -798,6 +859,15 @@ func buildFilters() (types.Filters, error) {
 	f.Compact = flagCompact
 	f.TrustForwarded = flagTrustXFF
 	f.Host = flagHost
+	f.OpsOnly = flagOpsOnly
+	for _, lvl := range flagLevel {
+		for _, l := range strings.Split(lvl, ",") {
+			l = strings.ToLower(strings.TrimSpace(l))
+			if l != "" {
+				f.Level = append(f.Level, l)
+			}
+		}
+	}
 
 	if flagSlow != "" {
 		dur, err := time.ParseDuration(flagSlow)

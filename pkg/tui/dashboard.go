@@ -30,10 +30,12 @@ const (
 	viewTopPaths
 	viewTopUA
 	viewGeo
+	viewOperational
 )
 
 type Model struct {
 	engine      *analysis.Engine
+	opEngine    *analysis.OperationalEngine
 	detector    *analysis.Detector
 	linesCh     chan string
 	ready       bool
@@ -43,6 +45,7 @@ type Model struct {
 	stats       *types.Stats
 	rps         float64
 	recentLogs  []*types.LogEntry
+	recentOps   []*types.OperationalEntry
 	windowStart time.Time
 
 	ipTable      table.Model
@@ -83,9 +86,11 @@ func NewModelWithGeoIP(linesCh chan string, g *enrich.GeoIP) Model {
 	det := analysis.NewDetector()
 	eng := analysis.New(types.Filters{})
 	eng.SetDetector(det)
+	opEng := analysis.NewOperationalEngine(types.Filters{})
 
 	return Model{
 		engine:      eng,
+		opEngine:    opEng,
 		detector:    det,
 		linesCh:     linesCh,
 		current:     viewSummary,
@@ -148,18 +153,22 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "7":
 			m.current = viewGeo
 			m = m.refreshTables()
+		case "8":
+			m.current = viewOperational
 		case "tab", "right":
-			m.current = (m.current + 1) % (viewGeo + 1)
+			m.current = (m.current + 1) % (viewOperational + 1)
 			m = m.refreshTables()
 		case "shift+tab", "left":
-			m.current = (m.current + viewGeo) % (viewGeo + 1)
+			m.current = (m.current + viewOperational) % (viewOperational + 1)
 			m = m.refreshTables()
 		case "r":
 			eng := analysis.New(types.Filters{})
 			eng.SetDetector(m.detector)
 			m.engine = eng
+			m.opEngine = analysis.NewOperationalEngine(types.Filters{})
 			m.stats = nil
 			m.recentLogs = make([]*types.LogEntry, 0, 20)
+			m.recentOps = nil
 			m.windowStart = time.Now()
 		}
 
@@ -167,16 +176,27 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		line := string(msg)
 		entry, err := parser.Parse(line)
 		if err == nil && entry != nil {
-			if m.geoip != nil && entry.RemoteIP != "" {
-				if info, lerr := m.geoip.Lookup(entry.RemoteIP); lerr == nil {
-					entry.Geo = info
+			switch e := entry.(type) {
+			case *types.LogEntry:
+				if m.geoip != nil && e.RemoteIP != "" {
+					if info, lerr := m.geoip.Lookup(e.RemoteIP); lerr == nil {
+						e.Geo = info
+					}
+				}
+				m.engine.Process(e)
+				if len(m.recentLogs) >= 15 {
+					m.recentLogs = m.recentLogs[1:]
+				}
+				m.recentLogs = append(m.recentLogs, e)
+			case *types.OperationalEntry:
+				if m.opEngine != nil {
+					m.opEngine.Process(e)
+				}
+				m.recentOps = append(m.recentOps, e)
+				if len(m.recentOps) > 50 {
+					m.recentOps = m.recentOps[len(m.recentOps)-50:]
 				}
 			}
-			m.engine.Process(entry)
-			if len(m.recentLogs) >= 15 {
-				m.recentLogs = m.recentLogs[1:]
-			}
-			m.recentLogs = append(m.recentLogs, entry)
 		}
 		return m, waitForLines(m.linesCh)
 
@@ -190,8 +210,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			eng := analysis.New(types.Filters{})
 			eng.SetDetector(m.detector)
 			m.engine = eng
+			m.opEngine = analysis.NewOperationalEngine(types.Filters{})
 			m.stats = nil
 			m.recentLogs = make([]*types.LogEntry, 0, 20)
+			m.recentOps = nil
 			m.windowStart = time.Now()
 		}
 		m.engine.Finalize()
@@ -345,6 +367,8 @@ func (m Model) View() string {
 		m.renderUA(&b)
 	case viewGeo:
 		m.renderGeo(&b)
+	case viewOperational:
+		m.renderOperational(&b)
 	}
 
 	b.WriteString("\n")
@@ -354,7 +378,7 @@ func (m Model) View() string {
 }
 
 func (m Model) viewTabs() string {
-	tabs := []string{"Summary", "Realtime", "Security", "Top IPs", "Top Paths", "User Agents", "Geo"}
+	tabs := []string{"Summary", "Realtime", "Security", "Top IPs", "Top Paths", "User Agents", "Geo", "Ops"}
 	var parts []string
 	for i, t := range tabs {
 		if view(i) == m.current {
@@ -500,6 +524,81 @@ func (m Model) renderGeo(b *strings.Builder) {
 	b.WriteString(m.countryTable.View())
 	fmt.Fprintf(b, "\n\n  %s\n\n", styleLabel.Render("Top ASN"))
 	b.WriteString(m.asnTable.View())
+}
+
+func (m Model) renderOperational(b *strings.Builder) {
+	if m.opEngine == nil || m.opEngine.Stats().TotalEvents == 0 {
+		fmt.Fprintf(b, "  %s\n  No operational events yet.\n", styleInfo.Render("ℹ Operational Events"))
+		return
+	}
+	st := m.opEngine.Stats()
+
+	fmt.Fprintf(b, "  %s  (%d events", styleLabel.Render("Operational Events"), st.TotalEvents)
+	if st.Errors > 0 {
+		fmt.Fprintf(b, ", %s%d errors%s", styleError.Render(""), st.Errors, "")
+	}
+	fmt.Fprintf(b, ")\n\n")
+
+	// Level breakdown
+	fmt.Fprintf(b, "  %s\n", styleLabel.Render("By Level"))
+	for _, lvl := range []string{"error", "warn", "info", "debug"} {
+		if c, ok := st.LevelCounts[lvl]; ok && c > 0 {
+			var style lipgloss.Style
+			switch lvl {
+			case "error":
+				style = styleError
+			case "warn":
+				style = styleWarn
+			case "info":
+				style = styleOK
+			default:
+				style = styleTailDim
+			}
+			fmt.Fprintf(b, "    %s  %s\n", style.Render(fmt.Sprintf("%-5s", lvl)), fmt.Sprintf("%d", c))
+		}
+	}
+
+	// Top loggers
+	if len(st.LoggerCounts) > 0 {
+		fmt.Fprintf(b, "\n  %s\n", styleLabel.Render("By Logger"))
+		for _, item := range analysis.TopN(st.LoggerCounts, 5) {
+			fmt.Fprintf(b, "    %-30s  %d\n", item.Key, item.Count)
+		}
+	}
+
+	// Top messages
+	if len(st.MsgCounts) > 0 {
+		fmt.Fprintf(b, "\n  %s\n", styleLabel.Render("Top Messages"))
+		for _, item := range analysis.TopN(st.MsgCounts, 8) {
+			fmt.Fprintf(b, "    %-50s  %d\n", item.Key, item.Count)
+		}
+	}
+
+	// Recent operational events (last 15)
+	if len(m.recentOps) > 0 {
+		fmt.Fprintf(b, "\n  %s\n", styleLabel.Render("Recent Events"))
+		start := 0
+		if len(m.recentOps) > 15 {
+			start = len(m.recentOps) - 15
+		}
+		for _, e := range m.recentOps[start:] {
+			timeStr := styleTailDim.Render(e.Timestamp.Format("15:04:05"))
+			var lvlStr string
+			switch e.Level {
+			case "error":
+				lvlStr = styleError.Render("ERROR")
+			case "warn":
+				lvlStr = styleWarn.Render("WARN ")
+			default:
+				lvlStr = styleTailDim.Render(fmt.Sprintf("%-5s", e.Level))
+			}
+			loggerStr := ""
+			if e.Logger != "" {
+				loggerStr = styleInfo.Render("[" + e.Logger + "]")
+			}
+			fmt.Fprintf(b, "  %s  %s  %s  %s\n", timeStr, lvlStr, loggerStr, e.Msg)
+		}
+	}
 }
 
 func truncate(s string, n int) string {

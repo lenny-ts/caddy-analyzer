@@ -141,7 +141,7 @@ Caddy v2 uses a **structured JSON log format** that differs from the Common/Comb
 | **Threat Intel** | Offline GeoIP enrichment (MaxMind GeoLite2 / DB-IP mmdb, no API key) with auto-download. `top country` / `top asn` dimensions. Country/ASN sections in the default report. Auto-discovery in cwd, `~/.config/caddy-analyzer/`, `/var/lib/caddy-analyzer/`, `/usr/share/GeoIP/` |
 | **Traffic Analysis** | Classifies human users vs crawlers (Googlebot, Bingbot, Yandex, DuckDuckBot) and automated scrapers |
 | **Diff Engine** | Side-by-side comparison of two log files detecting 5xx spikes, RPS shifts, and latency regressions |
-| **TUI Dashboard** | 7-tab Bubbletea/Lipgloss interface with live streaming, security alerts, top metrics, and GeoIP country/ASN |
+| **TUI Dashboard** | 8-tab Bubbletea/Lipgloss interface with live streaming, security alerts, top metrics, GeoIP country/ASN, and operational (non-HTTP) events |
 | **HTML Reports** | Standalone dark-mode single-file HTML reports for sharing with your team |
 | **Data Sources** | Local files, stdin, Docker (`docker://`), Kubernetes (`k8s://`), systemd journalctl (`journalctl://`) |
 | **Filtering** | Entry-level filters auto-switch to color-coded log listings. Supports CIDR, status classes, methods, path globs |
@@ -239,7 +239,7 @@ Subcommands:
 | `--detect` | `-d` | `false` | Enable security threat detection |
 | `--format` | `-f` | `table` | Output format: `table`, `json`, `csv`, `html` |
 | `--output` | `-o` | `""` | Write report to file |
-| `--watch` | `-w` | `false` | Launch 7-tab interactive TUI dashboard (Summary, Realtime, Security, Top IPs/Paths, User Agents, Geo) |
+| `--watch` | `-w` | `false` | Launch 8-tab interactive TUI dashboard (Summary, Realtime, Security, Top IPs/Paths, User Agents, Geo, Operational) |
 | `--top` | `-t` | `10` | Max top entries in tables (0 disables) |
 | `--from` | | `""` | Time filter start (RFC3339 or relative: `5m`, `1h`, `2d`) |
 | `--to` | | `""` | Time filter end (RFC3339) |
@@ -258,6 +258,8 @@ Subcommands:
 | `--errors-only` | `-e` | `false` | Filter errors only |
 | `--no-bots` | | `false` | Exclude bot/crawler traffic |
 | `--bots-only` | | `false` | Include only bot traffic |
+| `--level` | | | Filter operational (non-HTTP) events by level: `error`, `warn`, `info`, `debug`. Repeatable or comma-separated |
+| `--ops-only` | | `false` | Show only operational (non-HTTP) log events, hiding HTTP access entries |
 | `--grep` | | `""` | Regex search across URI, User-Agent, IP, Host (invalid pattern falls back to substring) |
 | `--compact` | `-c` | `false` | Compact output mode |
 | `--defang` | | `false` | Defang IPs and URLs in output (`.` → `[.]`, `http://` → `hxxp://`) for safe sharing |
