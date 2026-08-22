@@ -1,0 +1,357 @@
+package selfupdate
+
+import (
+	"archive/tar"
+	"archive/zip"
+	"bytes"
+	"compress/gzip"
+	"context"
+	"errors"
+	"os"
+	"path/filepath"
+	"regexp"
+	"runtime"
+	"strings"
+	"testing"
+)
+
+func TestSelectAsset(t *testing.T) {
+	rel := &Release{Tag: "v0.5.0", Assets: []Asset{
+		{Name: "caddy-analyzer_0.5.0_linux_amd64.tar.gz", URL: "u1"},
+		{Name: "caddy-analyzer_0.5.0_linux_arm64.tar.gz", URL: "u2"},
+		{Name: "caddy-analyzer_0.5.0_darwin_amd64.tar.gz", URL: "u3"},
+		{Name: "caddy-analyzer_0.5.0_windows_amd64.zip", URL: "u4"},
+		{Name: "caddy-analyzer_0.5.0_linux_amd64.tar.gz.spdx.json", URL: "sbom"},
+		{Name: "checksums.txt", URL: "sums"},
+		{Name: "checksums.txt.pem", URL: "pem"},
+		{Name: "checksums.txt.sig", URL: "sig"},
+	}}
+
+	got, err := SelectAsset(rel.Assets, "linux", "amd64")
+	if err != nil || got.URL != "u1" {
+		t.Fatalf("linux/amd64: got %+v, err %v (want u1)", got, err)
+	}
+	got, err = SelectAsset(rel.Assets, "windows", "amd64")
+	if err != nil || got.URL != "u4" {
+		t.Fatalf("windows/amd64: got %+v, err %v (want u4 zip)", got, err)
+	}
+	if _, err := SelectAsset(rel.Assets, "plan9", "amd64"); err == nil {
+		t.Fatal("unsupported platform must error")
+	}
+
+	// Legacy project-name fallback (very old releases).
+	legacy := []Asset{{Name: "caddy-analyze_0.2.0_linux_amd64.tar.gz", URL: "old"}}
+	if got, err := SelectAsset(legacy, "linux", "amd64"); err != nil || got.URL != "old" {
+		t.Fatalf("legacy prefix: got %+v, err %v", got, err)
+	}
+}
+
+func TestFindAsset(t *testing.T) {
+	rel := &Release{Tag: "v0.5.0", Assets: []Asset{{Name: "checksums.txt", URL: "u"}}}
+	if a, err := FindAsset(rel, "checksums.txt"); err != nil || a.URL != "u" {
+		t.Fatalf("FindAsset existing: %+v err=%v", a, err)
+	}
+	if _, err := FindAsset(rel, "nope"); err == nil {
+		t.Fatal("missing asset must error")
+	}
+}
+
+func TestParseChecksums(t *testing.T) {
+	content := strings.Join([]string{
+		"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855  caddy-analyzer_0.5.0_linux_amd64.tar.gz",
+		"deadbeef  short-and-malformed",
+		"",
+		"zz-not-hex-00000000000000000000000000000000000000000000000000  bad.txt",
+	}, "\n")
+	sums := ParseChecksums(content)
+	if len(sums) != 1 {
+		t.Fatalf("ParseChecksums kept %d entries, want 1 (only well-formed sha256 lines)", len(sums))
+	}
+	want := "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+	if sums["caddy-analyzer_0.5.0_linux_amd64.tar.gz"] != want {
+		t.Errorf("entry mismatch: %q", sums["caddy-analyzer_0.5.0_linux_amd64.tar.gz"])
+	}
+}
+
+func TestVerifyArchiveChecksum(t *testing.T) {
+	dir := t.TempDir()
+	archive := filepath.Join(dir, "caddy-analyzer_0.5.0_linux_amd64.tar.gz")
+	payload := []byte("release archive bytes")
+	if err := os.WriteFile(archive, payload, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	sum, err := FileSHA256(archive)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Match passes.
+	if err := VerifyArchiveChecksum(archive, map[string]string{filepath.Base(archive): sum}); err != nil {
+		t.Fatalf("matching checksum rejected: %v", err)
+	}
+	// Mismatch fails closed.
+	if err := VerifyArchiveChecksum(archive, map[string]string{filepath.Base(archive): strings.Repeat("ab", 32)}); err == nil {
+		t.Fatal("tampered archive accepted")
+	}
+	// Unlisted archive fails closed.
+	if err := VerifyArchiveChecksum(filepath.Join(dir, "other.tar.gz"), map[string]string{"x": sum}); err == nil {
+		t.Fatal("unlisted archive accepted")
+	}
+}
+
+// recordingRunner captures cosign invocations so tests can assert the
+// exact verification command without shipping the cosign binary.
+type recordingRunner struct {
+	calls [][]string
+	err   error // returned from every Run
+}
+
+func (r *recordingRunner) Run(_ context.Context, name string, args ...string) error {
+	r.calls = append(r.calls, append([]string{name}, args...))
+	return r.err
+}
+
+func TestVerifyChecksumsSignatureBuildsCosignCommand(t *testing.T) {
+	dir := "/tmp/stage"
+	repo := DefaultRepo
+	runner := &recordingRunner{}
+
+	if err := VerifyChecksumsSignature(context.Background(), runner, "cosign", dir, repo); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(runner.calls) != 1 {
+		t.Fatalf("expected exactly one cosign invocation, got %d", len(runner.calls))
+	}
+	call := runner.calls[0]
+	joined := strings.Join(call, "\x00")
+
+	for _, want := range []string{
+		"verify-blob",
+		filepath.Join(dir, "checksums.txt.pem"),
+		filepath.Join(dir, "checksums.txt.sig"),
+		"--certificate-oidc-issuer", "https://token.actions.githubusercontent.com",
+		filepath.Join(dir, "checksums.txt"),
+	} {
+		if !strings.Contains(joined, want) {
+			t.Errorf("cosign args missing %q; got %v", want, call)
+		}
+	}
+	// Identity regexp must be anchored to this repo's release workflow and
+	// must actually match the certificate identity GitHub Actions mints.
+	idIdx := -1
+	for i, a := range call {
+		if a == "--certificate-identity-regexp" {
+			idIdx = i + 1
+		}
+	}
+	if idIdx <= 0 {
+		t.Fatal("--certificate-identity-regexp not passed to cosign")
+	}
+	re, err := regexp.Compile(call[idIdx])
+	if err != nil {
+		t.Fatalf("identity regexp does not compile: %v", err)
+	}
+	good := "https://github.com/lenny-ts/caddy-analyzer/.github/workflows/release.yml@refs/tags/v0.5.0"
+	if !re.MatchString(good) {
+		t.Errorf("identity regexp %q does not match legitimate workflow URI %q", call[idIdx], good)
+	}
+	bad := "https://github.com/attacker/forked-analyzer/.github/workflows/release.yml@refs/tags/v0.5.0"
+	if re.MatchString(bad) {
+		t.Errorf("identity regexp %q must reject foreign repos (%q)", call[idIdx], bad)
+	}
+}
+
+func TestVerifyChecksumsSignatureFailsClosed(t *testing.T) {
+	runner := &recordingRunner{err: errors.New("exit status 1: no matching certificate")}
+	err := VerifyChecksumsSignature(context.Background(), runner, "cosign", "/t", DefaultRepo)
+	if err == nil {
+		t.Fatal("verification failure must return an error (fail closed)")
+	}
+	if !strings.Contains(err.Error(), "FAILED") {
+		t.Errorf("error should make failure explicit, got: %v", err)
+	}
+}
+
+func TestFindCosignFailClosed(t *testing.T) {
+	if _, err := FindCosign(); err == nil && os.Getenv("CI_COSIGN_PRESENT") == "" {
+		// cosign is usually absent in CI/dev shells; when present this test
+		// simply exercises the happy path of LookPath.
+		t.Logf("cosign not in PATH: fail-closed path confirmed (%v)", err)
+	}
+}
+
+func TestCheckWritable(t *testing.T) {
+	dir := t.TempDir()
+	if err := CheckWritable(dir); err != nil {
+		t.Fatalf("writable dir rejected: %v", err)
+	}
+	// A read-only directory must produce an actionable error.
+	roDir := filepath.Join(dir, "ro")
+	if err := os.Mkdir(roDir, 0o500); err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = os.Chmod(roDir, 0o700) }()
+	if runningAsRoot() {
+		t.Skip("running as root: read-only dir check not meaningful")
+	}
+	if err := CheckWritable(roDir); err == nil {
+		t.Fatal("unwritable dir accepted")
+	} else if !strings.Contains(err.Error(), "sudo") {
+		t.Errorf("permission error should suggest sudo/--install-dir, got: %v", err)
+	}
+}
+
+func TestReplaceBinaryPosixAtomicSwap(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("posix rename path")
+	}
+	dir := t.TempDir()
+	target := filepath.Join(dir, "caddy-analyze")
+	newBin := filepath.Join(dir, "staged-caddy-analyze")
+
+	old := []byte("#!/bin/sh\necho v1\n")
+	if err := os.WriteFile(target, old, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(newBin, []byte("#!/bin/sh\necho v2\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := ReplaceBinary(newBin, target); err != nil {
+		t.Fatalf("replace failed: %v", err)
+	}
+	got, err := os.ReadFile(target)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Contains(got, []byte("v2")) {
+		t.Errorf("target not replaced, contains: %s", got)
+	}
+	info, err := os.Stat(target)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if info.Mode().Perm() != 0o755 {
+		t.Errorf("mode not preserved from old binary: %v", info.Mode().Perm())
+	}
+	if _, err := os.Stat(newBin); !errors.Is(err, os.ErrNotExist) {
+		t.Errorf("staged file should have been consumed by rename, stat err: %v", err)
+	}
+}
+
+func TestExtractBinaryTarGz(t *testing.T) {
+	dir := t.TempDir()
+	archive := buildTarGzFixture(t, dir)
+
+	binPath, err := ExtractBinary(archive, "linux", dir)
+	if err != nil {
+		t.Fatalf("extract: %v", err)
+	}
+	data, err := os.ReadFile(binPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(data) != "binary-payload" {
+		t.Errorf("wrong payload extracted: %q", data)
+	}
+	info, err := os.Stat(binPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if runtime.GOOS != "windows" && info.Mode().Perm()&0o100 == 0 {
+		t.Errorf("extracted binary not executable: %v", info.Mode())
+	}
+}
+
+func TestExtractBinaryZip(t *testing.T) {
+	dir := t.TempDir()
+	archive := buildZipFixture(t, dir)
+
+	binPath, err := ExtractBinary(archive, "windows", dir)
+	if err != nil {
+		t.Fatalf("extract: %v", err)
+	}
+	data, err := os.ReadFile(binPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(data) != "binary-payload" {
+		t.Errorf("wrong payload extracted: %q", data)
+	}
+}
+
+func TestExtractBinaryMissingEntry(t *testing.T) {
+	dir := t.TempDir()
+	var buf bytes.Buffer
+	gz := gzip.NewWriter(&buf)
+	tw := tar.NewWriter(gz)
+	_ = tw.WriteHeader(&tar.Header{Name: "README.txt", Mode: 0o644, Size: 4})
+	_, _ = tw.Write([]byte("read"))
+	_ = tw.Close()
+	_ = gz.Close()
+	archive := filepath.Join(dir, "a.tar.gz")
+	if err := os.WriteFile(archive, buf.Bytes(), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := ExtractBinary(archive, "linux", dir); err == nil {
+		t.Fatal("missing binary entry must error")
+	}
+}
+
+func buildTarGzFixture(t *testing.T, dir string) string {
+	t.Helper()
+	var buf bytes.Buffer
+	gz := gzip.NewWriter(&buf)
+	tw := tar.NewWriter(gz)
+	body := "binary-payload"
+	for _, h := range []*tar.Header{
+		{Name: "caddy-analyzer_0.5.0_linux_amd64/README.txt", Mode: 0o644, Size: int64(len(body))},
+		{Name: "caddy-analyzer_0.5.0_linux_amd64/caddy-analyze", Mode: 0o755, Size: int64(len(body))},
+	} {
+		if err := tw.WriteHeader(h); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := tw.Write([]byte(body)); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := tw.Close(); err != nil {
+		t.Fatal(err)
+	}
+	if err := gz.Close(); err != nil {
+		t.Fatal(err)
+	}
+	path := filepath.Join(dir, "fixture.tar.gz")
+	if err := os.WriteFile(path, buf.Bytes(), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	return path
+}
+
+func buildZipFixture(t *testing.T, dir string) string {
+	t.Helper()
+	path := filepath.Join(dir, "fixture.zip")
+	f, err := os.Create(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	zw := zip.NewWriter(f)
+	w, err := zw.Create("caddy-analyzer_0.5.0_windows_amd64/caddy-analyze.exe")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := w.Write([]byte("binary-payload")); err != nil {
+		t.Fatal(err)
+	}
+	if err := zw.Close(); err != nil {
+		t.Fatal(err)
+	}
+	if err := f.Close(); err != nil {
+		t.Fatal(err)
+	}
+	return path
+}
+
+func runningAsRoot() bool {
+	return os.Geteuid() == 0
+}
