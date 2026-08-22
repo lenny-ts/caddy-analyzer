@@ -69,7 +69,7 @@ var (
 	flagOpsOnly    bool
 )
 
-var Version = "0.4.1-dev"
+var Version = "0.5.0-dev"
 
 var rootCmd = &cobra.Command{
 	Use:          "caddy-analyze [flags] [source...]",

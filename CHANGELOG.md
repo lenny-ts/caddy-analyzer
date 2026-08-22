@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-08-22
+
 ### Added
 - **Operational (non-HTTP) log support**: Caddy operational events — config loads, TLS certificate operations, upstream dial errors, admin shutdowns — are now parsed, filtered, and aggregated alongside HTTP access entries. Non-`"handled request"` JSON lines no longer get silently dropped: they populate a new "Operational Events" report section (total events, error count, level breakdown, top loggers, top messages) in every output format (`table`, `json`, `csv`, `html`). Unknown JSON fields are preserved in an `Extra` map and shown inline in `tail` output (e.g. `upstream=10.0.0.5:8080`). New flags: `--level error,warn,info,debug` filters operational events by level (repeatable/comma-separated), `--ops-only` hides HTTP entries entirely.
 - **Operational tab in `--watch` dashboard**: new 8th tab (key `8`) showing live operational event counts by level, logger, and message.
