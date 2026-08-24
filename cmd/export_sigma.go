@@ -1,16 +1,21 @@
 package cmd
 
 import (
-	"crypto/md5"
 	"fmt"
 	"io"
 	"os"
 	"strings"
 
+	"github.com/google/uuid"
 	"github.com/spf13/cobra"
 
 	"github.com/lenny-ts/caddy-analyzer/pkg/analysis"
 )
+
+// sigmaNamespace is the fixed namespace UUID used to derive deterministic
+// UUIDv5 identifiers for exported Sigma rules. It is generated once and must
+// never change, otherwise existing rules would receive new UUIDs on every run.
+var sigmaNamespace = uuid.MustParse("d17af9d5-d714-40a0-a935-8bc80b980109")
 
 var exportSigmaCmd = &cobra.Command{
 	Use:   "export-sigma [output-file]",
@@ -193,9 +198,7 @@ func writeSigmaRule(w io.Writer, r analysis.SigmaRuleInfo) error {
 }
 
 func sigmaUUID(title string) string {
-	h := md5.Sum([]byte("caddy-analyzer:sigma:" + title))
-	return fmt.Sprintf("%08x-%04x-%04x-%04x-%012x",
-		h[0:4], h[4:6], h[6:8], h[8:10], h[10:16])
+	return uuid.NewSHA1(sigmaNamespace, []byte("caddy-analyzer:sigma:"+title)).String()
 }
 
 func yamlEscape(s string) string {
