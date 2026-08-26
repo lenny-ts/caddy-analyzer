@@ -284,6 +284,7 @@ func TestBuildFiltersCountryASN(t *testing.T) {
 		{
 			name:    "lowercase countries normalized",
 			country: []string{"it", "Us"},
+			geoDB:   validDB,
 			check: func(t *testing.T, f types.Filters) {
 				t.Helper()
 				if len(f.Country) != 2 || f.Country[0] != "IT" || f.Country[1] != "US" {
@@ -294,6 +295,7 @@ func TestBuildFiltersCountryASN(t *testing.T) {
 		{
 			name: "asn parsed",
 			asn:  []int{12345, 67890},
+			geoDB: validDB,
 			check: func(t *testing.T, f types.Filters) {
 				t.Helper()
 				if len(f.ASN) != 2 || f.ASN[0] != 12345 || f.ASN[1] != 67890 {
