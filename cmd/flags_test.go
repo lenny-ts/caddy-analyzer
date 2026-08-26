@@ -293,8 +293,8 @@ func TestBuildFiltersCountryASN(t *testing.T) {
 			},
 		},
 		{
-			name: "asn parsed",
-			asn:  []int{12345, 67890},
+			name:  "asn parsed",
+			asn:   []int{12345, 67890},
 			geoDB: validDB,
 			check: func(t *testing.T, f types.Filters) {
 				t.Helper()
