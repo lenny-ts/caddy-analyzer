@@ -96,7 +96,7 @@ Subcommands:
 
 Filtering (activate colored log listing instead of report):
   --ip <ip/CIDR>         Filter by client IP or subnet
-  --country <codes>      Filter by client country (ISO 3166-1, e.g. IT,US; requires GeoIP)
+  --country <values>      Filter by client country (ISO codes e.g. IT,US or names e.g. Italy; requires GeoIP)
   --asn <numbers>        Filter by autonomous system number (e.g. 12345; requires GeoIP)
   -s, --status <codes>   Filter by HTTP status code(s)
   -m, --method <verb>    Filter by HTTP method
@@ -153,8 +153,8 @@ func init() {
 	flags.StringVarP(&flagSlow, "slow", "", "", "Filter requests slower than duration (e.g. 500ms, 1s)")
 	flags.StringVarP(&flagIP, "ip", "", "", "Filter by Remote IP")
 	flags.StringVarP(&flagExcludeIP, "exclude-ip", "", "", "Exclude Remote IP")
-	flags.StringSliceVarP(&flagCountry, "country", "", nil, "Keep only entries from these ISO 3166-1 country codes (e.g. IT,US; requires GeoIP)")
-	flags.StringSliceVarP(&flagExcludeCountry, "exclude-country", "", nil, "Drop entries from these ISO 3166-1 country codes (requires GeoIP)")
+	flags.StringSliceVarP(&flagCountry, "country", "", nil, "Keep only entries from these countries (ISO codes e.g. IT,US or full names e.g. Italy,United States; requires GeoIP)")
+	flags.StringSliceVarP(&flagExcludeCountry, "exclude-country", "", nil, "Drop entries from these countries (ISO codes or full names; requires GeoIP)")
 	flags.IntSliceVarP(&flagASN, "asn", "", nil, "Keep only entries from these autonomous system numbers (e.g. 12345,67890; requires GeoIP)")
 	flags.IntSliceVarP(&flagExcludeASN, "exclude-asn", "", nil, "Drop entries from these autonomous system numbers (requires GeoIP)")
 	flags.BoolVarP(&flagNoBots, "no-bots", "", false, "Exclude automated bot and crawler traffic")
@@ -991,25 +991,31 @@ func buildFilters() (types.Filters, error) {
 		}
 	}
 
+	var pendingCountryNames []string
 	for _, c := range flagCountry {
-		cc := strings.ToUpper(strings.TrimSpace(c))
-		if cc == "" {
+		v := strings.TrimSpace(c)
+		if v == "" {
 			continue
 		}
-		if err := validateCountryCode(cc); err != nil {
-			return f, fmt.Errorf("invalid --country %q: %w", c, err)
+		cc := strings.ToUpper(v)
+		if validateCountryCode(cc) == nil {
+			f.Country = append(f.Country, cc)
+		} else {
+			pendingCountryNames = append(pendingCountryNames, c)
 		}
-		f.Country = append(f.Country, cc)
 	}
+	var pendingExCountryNames []string
 	for _, c := range flagExcludeCountry {
-		cc := strings.ToUpper(strings.TrimSpace(c))
-		if cc == "" {
+		v := strings.TrimSpace(c)
+		if v == "" {
 			continue
 		}
-		if err := validateCountryCode(cc); err != nil {
-			return f, fmt.Errorf("invalid --exclude-country %q: %w", c, err)
+		cc := strings.ToUpper(v)
+		if validateCountryCode(cc) == nil {
+			f.ExcludeCountry = append(f.ExcludeCountry, cc)
+		} else {
+			pendingExCountryNames = append(pendingExCountryNames, c)
 		}
-		f.ExcludeCountry = append(f.ExcludeCountry, cc)
 	}
 	for _, a := range flagASN {
 		if a <= 0 {
@@ -1033,6 +1039,20 @@ func buildFilters() (types.Filters, error) {
 		if err := validateGeoIPAvailable(); err != nil {
 			return f, err
 		}
+	}
+	for _, raw := range pendingCountryNames {
+		cc := enrich.CountryCodeFromName(raw, flagGeoIPDB)
+		if cc == "" {
+			return f, fmt.Errorf("invalid --country %q: not a valid ISO code or country name", raw)
+		}
+		f.Country = append(f.Country, cc)
+	}
+	for _, raw := range pendingExCountryNames {
+		cc := enrich.CountryCodeFromName(raw, flagGeoIPDB)
+		if cc == "" {
+			return f, fmt.Errorf("invalid --exclude-country %q: not a valid ISO code or country name", raw)
+		}
+		f.ExcludeCountry = append(f.ExcludeCountry, cc)
 	}
 
 	return f, nil

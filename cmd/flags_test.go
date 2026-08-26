@@ -6,6 +6,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/lenny-ts/caddy-analyzer/pkg/enrich"
 	"github.com/lenny-ts/caddy-analyzer/pkg/types"
 )
 
@@ -320,12 +321,14 @@ func TestBuildFiltersCountryASN(t *testing.T) {
 		{
 			name:        "invalid country code rejected",
 			country:     []string{"ITA"},
+			geoDB:       validDB,
 			wantErr:     true,
 			errContains: "invalid --country",
 		},
 		{
 			name:        "non-numeric country code rejected",
 			excludeCty:  []string{"U1"},
+			geoDB:       validDB,
 			wantErr:     true,
 			errContains: "invalid --exclude-country",
 		},
@@ -378,6 +381,73 @@ func TestBuildFiltersCountryASN(t *testing.T) {
 				}
 				return
 			}
+			if err != nil {
+				t.Fatalf("expected no error, got %v", err)
+			}
+			if tt.check != nil {
+				tt.check(t, f)
+			}
+		})
+	}
+}
+
+func TestBuildFiltersCountryName(t *testing.T) {
+	origCountry, origGeoDB, origNoAutoDL :=
+		flagCountry, flagGeoIPDB, flagNoAutoDL
+	defer func() {
+		flagCountry, flagGeoIPDB, flagNoAutoDL =
+			origCountry, origGeoDB, origNoAutoDL
+	}()
+
+	dbPath := enrich.FindDB("")
+	if dbPath == "" {
+		t.Skip("no GeoIP mmdb found on this machine")
+	}
+
+	tests := []struct {
+		name    string
+		country []string
+		check   func(t *testing.T, f types.Filters)
+	}{
+		{
+			name:    "italy resolves to IT",
+			country: []string{"Italy"},
+			check: func(t *testing.T, f types.Filters) {
+				t.Helper()
+				if len(f.Country) != 1 || f.Country[0] != "IT" {
+					t.Fatalf("Country = %v, want [IT]", f.Country)
+				}
+			},
+		},
+		{
+			name:    "united states resolves to US",
+			country: []string{"united states"},
+			check: func(t *testing.T, f types.Filters) {
+				t.Helper()
+				if len(f.Country) != 1 || f.Country[0] != "US" {
+					t.Fatalf("Country = %v, want [US]", f.Country)
+				}
+			},
+		},
+		{
+			name:    "mixed code and name",
+			country: []string{"it", "France"},
+			check: func(t *testing.T, f types.Filters) {
+				t.Helper()
+				if len(f.Country) != 2 || f.Country[0] != "IT" || f.Country[1] != "FR" {
+					t.Fatalf("Country = %v, want [IT FR]", f.Country)
+				}
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			flagCountry = tt.country
+			flagGeoIPDB = dbPath
+			flagNoAutoDL = false
+
+			f, err := buildFilters()
 			if err != nil {
 				t.Fatalf("expected no error, got %v", err)
 			}
