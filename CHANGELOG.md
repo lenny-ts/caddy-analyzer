@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **GeoIP entry filters (`--country` / `--exclude-country` / `--asn` / `--exclude-asn`) (#21)**: keep or drop log entries by GeoIP country code (ISO 3166-1, case-insensitive) and autonomous system number, in `caddy-analyze`, `tail`, `top`, and `diff`. Same semantics as `--ip`/`--exclude-ip`: allowlist/denylist per dimension (mutually exclusive within a dimension, AND-combined across dimensions), unresolved entries (private IPs, mmdb misses) are dropped by allowlists and kept by denylists. Requires a GeoIP mmdb — validated up front with a clear error when an explicit `--geoip-db` is missing or auto-download is disabled without any discoverable database. Filters surface in the report header ("Filters:" line), JSON/CSV metadata, HTML reports, and trigger color-coded listing mode like other entry filters.
+
+### Fixed
+- **Enrich-before-filter order**: in one-shot mode and `tail`, entries are now GeoIP-enriched before filtering when geo-based filters are active, so `--country`/`--asn` see resolved data (`top`, `diff`, follow, and interval already enriched before the engine matched). Non-geo runs keep the filter-first optimization: rejected rows are still never looked up. #21
+
 ## [0.5.0] - 2026-08-22
 
 ### Added

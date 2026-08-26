@@ -30,43 +30,47 @@ import (
 )
 
 var (
-	flagFrom       string
-	flagTo         string
-	flagStatus     []string
-	flagMethod     string
-	flagPath       string
-	flagTop        int
-	flagFormat     string
-	flagFollow     bool
-	flagK8sNS      string
-	flagInterval   string
-	flagWatch      bool
-	flagDetect     bool
-	flagOutput     string
-	flag2xx        bool
-	flag3xx        bool
-	flag4xx        bool
-	flag5xx        bool
-	flagErrors     bool
-	flagSlow       string
-	flagIP         string
-	flagExcludeIP  string
-	flagNoBots     bool
-	flagBotsOnly   bool
-	flagGrep       string
-	flagCompact    bool
-	flagTrustXFF   bool
-	flagMaxCard    int
-	flagUARotation int
-	flagHost       string
-	flagMaxLatency string
-	flagMinSize    string
-	flagMaxSize    string
-	flagDefang     bool
-	flagGeoIPDB    string
-	flagNoAutoDL   bool
-	flagLevel      []string
-	flagOpsOnly    bool
+	flagFrom           string
+	flagTo             string
+	flagStatus         []string
+	flagMethod         string
+	flagPath           string
+	flagTop            int
+	flagFormat         string
+	flagFollow         bool
+	flagK8sNS          string
+	flagInterval       string
+	flagWatch          bool
+	flagDetect         bool
+	flagOutput         string
+	flag2xx            bool
+	flag3xx            bool
+	flag4xx            bool
+	flag5xx            bool
+	flagErrors         bool
+	flagSlow           string
+	flagIP             string
+	flagExcludeIP      string
+	flagCountry        []string
+	flagExcludeCountry []string
+	flagASN            []int
+	flagExcludeASN     []int
+	flagNoBots         bool
+	flagBotsOnly       bool
+	flagGrep           string
+	flagCompact        bool
+	flagTrustXFF       bool
+	flagMaxCard        int
+	flagUARotation     int
+	flagHost           string
+	flagMaxLatency     string
+	flagMinSize        string
+	flagMaxSize        string
+	flagDefang         bool
+	flagGeoIPDB        string
+	flagNoAutoDL       bool
+	flagLevel          []string
+	flagOpsOnly        bool
 )
 
 var Version = "0.5.0-dev"
@@ -92,6 +96,8 @@ Subcommands:
 
 Filtering (activate colored log listing instead of report):
   --ip <ip/CIDR>         Filter by client IP or subnet
+  --country <codes>      Filter by client country (ISO 3166-1, e.g. IT,US; requires GeoIP)
+  --asn <numbers>        Filter by autonomous system number (e.g. 12345; requires GeoIP)
   -s, --status <codes>   Filter by HTTP status code(s)
   -m, --method <verb>    Filter by HTTP method
   -p, --path <glob>      Filter by request path (glob pattern)
@@ -113,6 +119,7 @@ Examples:
   caddy-analyze /var/log/caddy/access.log
   caddy-analyze --detect /var/log/caddy/access.log
   caddy-analyze --ip 10.0.0.0/8 access.log
+  caddy-analyze --country IT,US access.log
   caddy-analyze --5xx --no-bots access.log
   caddy-analyze tail --ip 192.168.1.100 docker://caddy
   caddy-analyze top ip --5xx -t 20 access.log
@@ -146,6 +153,10 @@ func init() {
 	flags.StringVarP(&flagSlow, "slow", "", "", "Filter requests slower than duration (e.g. 500ms, 1s)")
 	flags.StringVarP(&flagIP, "ip", "", "", "Filter by Remote IP")
 	flags.StringVarP(&flagExcludeIP, "exclude-ip", "", "", "Exclude Remote IP")
+	flags.StringSliceVarP(&flagCountry, "country", "", nil, "Keep only entries from these ISO 3166-1 country codes (e.g. IT,US; requires GeoIP)")
+	flags.StringSliceVarP(&flagExcludeCountry, "exclude-country", "", nil, "Drop entries from these ISO 3166-1 country codes (requires GeoIP)")
+	flags.IntSliceVarP(&flagASN, "asn", "", nil, "Keep only entries from these autonomous system numbers (e.g. 12345,67890; requires GeoIP)")
+	flags.IntSliceVarP(&flagExcludeASN, "exclude-asn", "", nil, "Drop entries from these autonomous system numbers (requires GeoIP)")
 	flags.BoolVarP(&flagNoBots, "no-bots", "", false, "Exclude automated bot and crawler traffic")
 	flags.BoolVarP(&flagBotsOnly, "bots-only", "", false, "Include only automated bot traffic")
 	flags.StringVar(&flagGrep, "grep", "", "Search pattern across URI, User-Agent, Remote IP")
@@ -308,11 +319,18 @@ func runOnceMode(ctx context.Context, sources []types.LogSource, filters types.F
 					continue
 				}
 				applyForwarded(e, filters)
+				geoFiltered := geoFiltersActive(filters)
+				if geoFiltered {
+					// Country/ASN clauses read entry.Geo inside MatchEntry.
+					enrichGeoIP(e, geoip)
+				}
 				if !analysis.MatchEntry(e, filters) {
 					bar.Add(1)
 					continue
 				}
-				enrichGeoIP(e, geoip)
+				if !geoFiltered {
+					enrichGeoIP(e, geoip)
+				}
 				engine.Process(e)
 				processed++
 				if showListing {
@@ -379,20 +397,78 @@ func acceptEntry(entry *types.LogEntry, filters types.Filters) bool {
 	return analysis.MatchEntry(entry, filters)
 }
 
+// geoFiltersActive reports whether any filter reads the Geo-enriched entry
+// inside MatchEntry. When true, callers must run GeoIP enrichment before
+// filtering; otherwise filter-first keeps lookups off rejected rows.
+func geoFiltersActive(f types.Filters) bool {
+	return len(f.Country) > 0 || len(f.ExcludeCountry) > 0 ||
+		len(f.ASN) > 0 || len(f.ExcludeASN) > 0
+}
+
+// validateCountryCode accepts an ISO 3166-1 alpha-2 code (two ASCII letters).
+// Codes are uppercased by the caller before validation.
+func validateCountryCode(s string) error {
+	if len(s) != 2 {
+		return fmt.Errorf("expected a two-letter ISO 3166-1 code (e.g. IT, US)")
+	}
+	for _, r := range s {
+		if r < 'A' || r > 'Z' {
+			return fmt.Errorf("expected a two-letter ISO 3166-1 code (e.g. IT, US)")
+		}
+	}
+	return nil
+}
+
+// validateGeoIPAvailable fails fast when a --country/--asn filter cannot
+// possibly work: an explicit --geoip-db that does not exist, or no
+// discoverable mmdb while auto-download is disabled. When auto-download is
+// enabled and nothing is found yet, NewGeoIP will download on first use, so
+// validation passes.
+func validateGeoIPAvailable() error {
+	if flagGeoIPDB != "" {
+		if _, err := os.Stat(flagGeoIPDB); err != nil {
+			return fmt.Errorf("country/ASN filters require GeoIP: db not found: %s", flagGeoIPDB)
+		}
+		return nil
+	}
+	if !flagNoAutoDL {
+		return nil
+	}
+	if enrich.FindDB("") == "" {
+		return fmt.Errorf("--country/--exclude-country/--asn/--exclude-asn require GeoIP: specify --geoip-db or let auto-download run")
+	}
+	return nil
+}
+
 type geoLookuper interface {
 	Lookup(ip string) (types.GeoInfo, error)
 }
 
-// prepareEntry filters first, then enriches accepted rows only.
+// lookupGeo populates entry.Geo, ignoring lookup failures so unresolved IPs
+// simply keep their zero-value Geo.
+func lookupGeo(entry *types.LogEntry, geo geoLookuper) {
+	if geo == nil || entry.RemoteIP == "" {
+		return
+	}
+	if info, err := geo.Lookup(entry.RemoteIP); err == nil {
+		entry.Geo = info
+	}
+}
+
+// prepareEntry filters first and enriches accepted rows only — except when
+// geo-based filters are active: their clauses read entry.Geo inside
+// MatchEntry, so enrichment must happen before matching (rejected rows then
+// pay a cached mmdb lookup, acceptable per issue #21).
 func prepareEntry(entry *types.LogEntry, filters types.Filters, geo geoLookuper) bool {
+	if geoFiltersActive(filters) {
+		applyForwarded(entry, filters)
+		lookupGeo(entry, geo)
+		return analysis.MatchEntry(entry, filters)
+	}
 	if !acceptEntry(entry, filters) {
 		return false
 	}
-	if geo != nil && entry.RemoteIP != "" {
-		if info, err := geo.Lookup(entry.RemoteIP); err == nil {
-			entry.Geo = info
-		}
-	}
+	lookupGeo(entry, geo)
 	return true
 }
 
@@ -912,6 +988,50 @@ func buildFilters() (types.Filters, error) {
 	if flagExcludeIP != "" {
 		if err := validateIPOrCIDR(flagExcludeIP); err != nil {
 			return f, fmt.Errorf("invalid --exclude-ip %q: %w", flagExcludeIP, err)
+		}
+	}
+
+	for _, c := range flagCountry {
+		cc := strings.ToUpper(strings.TrimSpace(c))
+		if cc == "" {
+			continue
+		}
+		if err := validateCountryCode(cc); err != nil {
+			return f, fmt.Errorf("invalid --country %q: %w", c, err)
+		}
+		f.Country = append(f.Country, cc)
+	}
+	for _, c := range flagExcludeCountry {
+		cc := strings.ToUpper(strings.TrimSpace(c))
+		if cc == "" {
+			continue
+		}
+		if err := validateCountryCode(cc); err != nil {
+			return f, fmt.Errorf("invalid --exclude-country %q: %w", c, err)
+		}
+		f.ExcludeCountry = append(f.ExcludeCountry, cc)
+	}
+	for _, a := range flagASN {
+		if a <= 0 {
+			return f, fmt.Errorf("invalid --asn %d: must be a positive AS number", a)
+		}
+	}
+	for _, a := range flagExcludeASN {
+		if a <= 0 {
+			return f, fmt.Errorf("invalid --exclude-asn %d: must be a positive AS number", a)
+		}
+	}
+	f.ASN = append(f.ASN, flagASN...)
+	f.ExcludeASN = append(f.ExcludeASN, flagExcludeASN...)
+	if len(f.Country) > 0 && len(f.ExcludeCountry) > 0 {
+		return f, fmt.Errorf("--country and --exclude-country are mutually exclusive")
+	}
+	if len(f.ASN) > 0 && len(f.ExcludeASN) > 0 {
+		return f, fmt.Errorf("--asn and --exclude-asn are mutually exclusive")
+	}
+	if geoFiltersActive(f) {
+		if err := validateGeoIPAvailable(); err != nil {
+			return f, err
 		}
 	}
 

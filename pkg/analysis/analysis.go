@@ -376,6 +376,19 @@ func MatchEntry(entry *types.LogEntry, filters types.Filters) bool {
 	if filters.ExcludeIP != "" && ipMatch(filters.ExcludeIP, entry.RemoteIP) {
 		return false
 	}
+	// Geo-based filters read the enriched entry (see types.Filters).
+	if len(filters.Country) > 0 && !containsString(filters.Country, entry.Geo.CountryCode) {
+		return false
+	}
+	if len(filters.ExcludeCountry) > 0 && containsString(filters.ExcludeCountry, entry.Geo.CountryCode) {
+		return false
+	}
+	if len(filters.ASN) > 0 && !containsInt(filters.ASN, int(entry.Geo.ASN)) {
+		return false
+	}
+	if len(filters.ExcludeASN) > 0 && containsInt(filters.ExcludeASN, int(entry.Geo.ASN)) {
+		return false
+	}
 	if filters.GrepPattern != "" {
 		target := entry.URI + " " + entry.UserAgent + " " + entry.RemoteIP + " " + entry.Host
 		if !grepCompile(filters.GrepPattern).match(target) {
@@ -401,6 +414,24 @@ func ipMatch(pattern, ip string) bool {
 		return prefix.Contains(addr)
 	}
 	return pattern == ip
+}
+
+func containsString(list []string, s string) bool {
+	for _, v := range list {
+		if v == s {
+			return true
+		}
+	}
+	return false
+}
+
+func containsInt(list []int, v int) bool {
+	for _, n := range list {
+		if n == v {
+			return true
+		}
+	}
+	return false
 }
 
 // globCache caches compiled glob patterns so a multi-million-line log does

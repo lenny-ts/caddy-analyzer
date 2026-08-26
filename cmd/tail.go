@@ -12,6 +12,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/lenny-ts/caddy-analyzer/pkg/analysis"
+	"github.com/lenny-ts/caddy-analyzer/pkg/enrich"
 	"github.com/lenny-ts/caddy-analyzer/pkg/output"
 	"github.com/lenny-ts/caddy-analyzer/pkg/parser"
 	"github.com/lenny-ts/caddy-analyzer/pkg/types"
@@ -103,6 +104,17 @@ func runTail(cmd *cobra.Command, args []string) error {
 		det.SetUARotationThreshold(flagUARotation)
 	}
 
+	// Only spin up GeoIP when geo-based filters need it: enriching before
+	// matching is required for --country/--asn, but a plain tail must not
+	// trigger an mmdb auto-download.
+	var geoip *enrich.GeoIP
+	if geoFiltersActive(filters) {
+		geoip = newGeoIPEnricher()
+		if geoip != nil {
+			defer func() { _ = geoip.Close() }()
+		}
+	}
+
 	for line := range fanInFollow(ctx, sources) {
 		entry, err := parser.Parse(line)
 		if err != nil || entry == nil {
@@ -113,6 +125,7 @@ func runTail(cmd *cobra.Command, args []string) error {
 			if filters.OpsOnly {
 				continue
 			}
+			enrichGeoIP(e, geoip)
 			if !analysis.MatchEntry(e, filters) {
 				continue
 			}

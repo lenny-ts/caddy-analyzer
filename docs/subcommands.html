@@ -18,7 +18,7 @@
     <meta name="twitter:description" content="Complete CLI reference: tail, top, diff, config, guard, blocklist, block, unban, export-sigma.">
     <script>try{var t=localStorage.getItem('caddy-docs-theme');if(t==='light')document.documentElement.setAttribute('data-theme','light');}catch(e){}
     document.documentElement.classList.add('decor-paused');</script>
-    <meta name="doc:modified" content="2026-08-22T15:54:59+02:00">
+    <meta name="doc:modified" content="2026-08-22T17:05:28+02:00">
     <meta name="color-scheme" content="dark light">
     <link rel="manifest" href="manifest.json">
     <link rel="apple-touch-icon" href="apple-touch-icon.png">
@@ -104,6 +104,30 @@
                         <td>—</td>
                         <td><code>""</code></td>
                         <td>Exclude IP or CIDR subnet. <code>caddy-analyze --exclude-ip 10.0.0.0/8</code></td>
+                    </tr>
+                    <tr>
+                        <td><code>--country</code></td>
+                        <td>—</td>
+                        <td><code>""</code></td>
+                        <td>Keep only entries from these ISO 3166-1 country codes (case-insensitive). Requires GeoIP. <code>caddy-analyze --country IT,US</code></td>
+                    </tr>
+                    <tr>
+                        <td><code>--exclude-country</code></td>
+                        <td>—</td>
+                        <td><code>""</code></td>
+                        <td>Drop entries from these ISO 3166-1 country codes (unresolved entries are kept). Requires GeoIP. <code>caddy-analyze --exclude-country CN,RU</code></td>
+                    </tr>
+                    <tr>
+                        <td><code>--asn</code></td>
+                        <td>—</td>
+                        <td><code>""</code></td>
+                        <td>Keep only entries from these autonomous system numbers. Requires GeoIP. <code>caddy-analyze --asn 12345,67890</code></td>
+                    </tr>
+                    <tr>
+                        <td><code>--exclude-asn</code></td>
+                        <td>—</td>
+                        <td><code>""</code></td>
+                        <td>Drop entries from these autonomous system numbers (unresolved entries are kept). Requires GeoIP. <code>caddy-analyze --exclude-asn 12345</code></td>
                     </tr>
                     <tr>
                         <td><code>--status</code></td>
@@ -218,13 +242,14 @@
             </div>
 
             <h3>Filter Behavior: Listing vs Report</h3>
-            <p>When entry-level filters (<code>--ip</code>, <code>-s</code>, <code>-m</code>, <code>-p</code>, <code>--5xx</code>, <code>--no-bots</code>, <code>--grep</code>, etc.) are active, <code>caddy-analyze</code> automatically switches to a color-coded log listing instead of the aggregate report. Active filters are shown in the output header for all formats.</p>
+            <p>When entry-level filters (<code>--ip</code>, <code>--country</code>, <code>--asn</code>, <code>-s</code>, <code>-m</code>, <code>-p</code>, <code>--5xx</code>, <code>--no-bots</code>, <code>--grep</code>, etc.) are active, <code>caddy-analyze</code> automatically switches to a color-coded log listing instead of the aggregate report. Active filters are shown in the output header for all formats.</p>
 <pre>caddy-analyze --ip 10.0.0.0/8 access.log
 15 entries matched
 
 14:29:01  204 OK  OPTIONS /heartbeat  (0 B, 1.05ms) - 104.28.161.103
 14:29:01  200 OK  POST /heartbeat     (0 B, 4.04ms) - 104.28.161.103</pre>
             <p>Use <code>-f json</code>, <code>-f csv</code>, <code>-f html</code>, or <code>-o &lt;file&gt;</code> to force the aggregate report. Time-based filters (<code>--from</code>, <code>--to</code>) alone still show the report.</p>
+            <p><strong>Note:</strong> <code>--country</code>, <code>--exclude-country</code>, <code>--asn</code> and <code>--exclude-asn</code> require a GeoIP mmdb database (auto-discovered, passed via <code>--geoip-db</code>, or auto-downloaded on first run). They cannot be combined: <code>--country</code> and <code>--exclude-country</code> are mutually exclusive (same for the ASN pair); combining dimensions (e.g. <code>--country IT --exclude-asn 12345</code>) ANDs them.</p>
 
             <h3>Display &amp; Output Configuration Flags</h3>
             <div class="table-wrap">

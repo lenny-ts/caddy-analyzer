@@ -144,7 +144,7 @@ Caddy v2 uses a **structured JSON log format** that differs from the Common/Comb
 | **TUI Dashboard** | 8-tab Bubbletea/Lipgloss interface with live streaming, security alerts, top metrics, GeoIP country/ASN, and operational (non-HTTP) events |
 | **HTML Reports** | Standalone dark-mode single-file HTML reports for sharing with your team |
 | **Data Sources** | Local files, stdin, Docker (`docker://`), Kubernetes (`k8s://`), systemd journalctl (`journalctl://`) |
-| **Filtering** | Entry-level filters auto-switch to color-coded log listings. Supports CIDR, status classes, methods, path globs |
+| **Filtering** | Entry-level filters auto-switch to color-coded log listings. Supports CIDR, status classes, methods, path globs, and GeoIP country/ASN |
 
 ---
 
@@ -259,6 +259,10 @@ Subcommands:
 | `--slow` | | `""` | Filter requests slower than duration |
 | `--ip` | | `""` | Filter by client IP or CIDR subnet |
 | `--exclude-ip` | | `""` | Exclude IP or CIDR subnet |
+| `--country` | | `""` | Keep only entries from these ISO 3166-1 country codes, e.g. `IT,US` (case-insensitive). Requires GeoIP mmdb |
+| `--exclude-country` | | `""` | Drop entries from these ISO 3166-1 country codes. Unresolved entries are kept. Requires GeoIP mmdb |
+| `--asn` | | `""` | Keep only entries from these autonomous system numbers, e.g. `12345,67890`. Requires GeoIP mmdb |
+| `--exclude-asn` | | `""` | Drop entries from these autonomous system numbers. Unresolved entries are kept. Requires GeoIP mmdb |
 | `--status` | `-s` | `""` | Filter by status code(s) |
 | `--method` | `-m` | `""` | Filter by HTTP method |
 | `--path` | `-p` | `""` | Filter by path glob |

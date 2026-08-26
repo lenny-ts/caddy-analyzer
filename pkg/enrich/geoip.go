@@ -206,6 +206,20 @@ func autoDownloadGeoIP() (countryPath, asnPath string, err error) {
 	return countryPath, asnPath, nil
 }
 
+// FindDB resolves the effective country mmdb path without opening it or
+// downloading anything: an explicit non-empty path is returned as-is,
+// otherwise geoIPSearchPaths are probed in order. Returns "" when nothing
+// is found (auto-download may still provide one at open time).
+func FindDB(path string) string {
+	if path != "" {
+		return path
+	}
+	if p, ok := findFirst(geoIPSearchPaths); ok {
+		return p
+	}
+	return ""
+}
+
 // NewGeoIP opens the mmdb file at path. If path is empty, auto-discovers
 // the first matching file in geoIPSearchPaths. If no file is found and
 // auto-download is enabled, downloads the DB-IP lite mmdb to

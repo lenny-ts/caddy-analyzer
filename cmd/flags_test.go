@@ -1,8 +1,12 @@
 package cmd
 
 import (
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/lenny-ts/caddy-analyzer/pkg/types"
 )
 
 func TestValidateFlags(t *testing.T) {
@@ -249,5 +253,135 @@ func TestHelpTextCategoryCount(t *testing.T) {
 	}
 	if strings.Contains(guardCmd.Long, "22 categories") || strings.Contains(guardCmd.Long, "23 categories") {
 		t.Errorf("guard help: still says old category count")
+	}
+}
+
+func TestBuildFiltersCountryASN(t *testing.T) {
+	origIP, origCountry, origExCty, origASN, origExASN, origGeoDB, origNoAutoDL :=
+		flagExcludeIP, flagCountry, flagExcludeCountry, flagASN, flagExcludeASN, flagGeoIPDB, flagNoAutoDL
+	defer func() {
+		flagExcludeIP, flagCountry, flagExcludeCountry, flagASN, flagExcludeASN, flagGeoIPDB, flagNoAutoDL =
+			origIP, origCountry, origExCty, origASN, origExASN, origGeoDB, origNoAutoDL
+	}()
+
+	// Existing dummy db so geo-requiring cases pass validation on any machine.
+	validDB := filepath.Join(t.TempDir(), "GeoIP.mmdb")
+	if err := os.WriteFile(validDB, nil, 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	tests := []struct {
+		name        string
+		country     []string
+		excludeCty  []string
+		asn         []int
+		excludeASN  []int
+		geoDB       string
+		wantErr     bool
+		errContains string
+		check       func(t *testing.T, f types.Filters)
+	}{
+		{
+			name:    "lowercase countries normalized",
+			country: []string{"it", "Us"},
+			check: func(t *testing.T, f types.Filters) {
+				t.Helper()
+				if len(f.Country) != 2 || f.Country[0] != "IT" || f.Country[1] != "US" {
+					t.Fatalf("Country = %v, want [IT US]", f.Country)
+				}
+			},
+		},
+		{
+			name: "asn parsed",
+			asn:  []int{12345, 67890},
+			check: func(t *testing.T, f types.Filters) {
+				t.Helper()
+				if len(f.ASN) != 2 || f.ASN[0] != 12345 || f.ASN[1] != 67890 {
+					t.Fatalf("ASN = %v, want [12345 67890]", f.ASN)
+				}
+			},
+		},
+		{
+			name:        "country pair mutually exclusive",
+			country:     []string{"IT"},
+			excludeCty:  []string{"US"},
+			wantErr:     true,
+			errContains: "--country and --exclude-country are mutually exclusive",
+		},
+		{
+			name:        "asn pair mutually exclusive",
+			asn:         []int{12345},
+			excludeASN:  []int{67890},
+			wantErr:     true,
+			errContains: "--asn and --exclude-asn are mutually exclusive",
+		},
+		{
+			name:        "invalid country code rejected",
+			country:     []string{"ITA"},
+			wantErr:     true,
+			errContains: "invalid --country",
+		},
+		{
+			name:        "non-numeric country code rejected",
+			excludeCty:  []string{"U1"},
+			wantErr:     true,
+			errContains: "invalid --exclude-country",
+		},
+		{
+			name:        "zero asn rejected",
+			asn:         []int{0},
+			wantErr:     true,
+			errContains: "invalid --asn",
+		},
+		{
+			name:        "negative exclude-asn rejected",
+			excludeASN:  []int{-1},
+			wantErr:     true,
+			errContains: "invalid --exclude-asn",
+		},
+		{
+			name:       "cross dimensions allowed",
+			country:    []string{"IT"},
+			excludeASN: []int{12345},
+			geoDB:      validDB,
+			check: func(t *testing.T, f types.Filters) {
+				t.Helper()
+				if len(f.Country) != 1 || f.Country[0] != "IT" || len(f.ExcludeASN) != 1 || f.ExcludeASN[0] != 12345 {
+					t.Fatalf("filters = %+v, want country IT + exclude-asn 12345", f)
+				}
+			},
+		},
+		{
+			name:        "missing explicit geoip db fails fast",
+			country:     []string{"IT"},
+			geoDB:       "/nonexistent/deterministic.mmdb",
+			wantErr:     true,
+			errContains: "require GeoIP",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			flagExcludeIP, flagCountry, flagExcludeCountry = "", tt.country, tt.excludeCty
+			flagASN, flagExcludeASN = tt.asn, tt.excludeASN
+			flagGeoIPDB, flagNoAutoDL = tt.geoDB, true
+
+			f, err := buildFilters()
+			if tt.wantErr {
+				if err == nil {
+					t.Fatalf("expected error, got nil")
+				}
+				if !strings.Contains(err.Error(), tt.errContains) {
+					t.Fatalf("expected error containing %q, got %v", tt.errContains, err)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("expected no error, got %v", err)
+			}
+			if tt.check != nil {
+				tt.check(t, f)
+			}
+		})
 	}
 }

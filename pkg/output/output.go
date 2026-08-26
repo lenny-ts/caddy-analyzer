@@ -119,11 +119,7 @@ func (r *Report) activeFilters() []string {
 		f = append(f, "--to "+r.filters.To.Format(time.RFC3339))
 	}
 	if len(r.filters.Status) > 0 {
-		strs := make([]string, len(r.filters.Status))
-		for i, s := range r.filters.Status {
-			strs[i] = fmt.Sprintf("%d", s)
-		}
-		f = append(f, "--status "+strings.Join(strs, ","))
+		f = append(f, "--status "+joinInts(r.filters.Status))
 	}
 	if r.filters.Method != "" {
 		f = append(f, "--method "+r.filters.Method)
@@ -139,6 +135,18 @@ func (r *Report) activeFilters() []string {
 	}
 	if r.filters.ExcludeIP != "" {
 		f = append(f, "--exclude-ip "+r.filters.ExcludeIP)
+	}
+	if len(r.filters.Country) > 0 {
+		f = append(f, "--country "+strings.Join(r.filters.Country, ","))
+	}
+	if len(r.filters.ExcludeCountry) > 0 {
+		f = append(f, "--exclude-country "+strings.Join(r.filters.ExcludeCountry, ","))
+	}
+	if len(r.filters.ASN) > 0 {
+		f = append(f, "--asn "+joinInts(r.filters.ASN))
+	}
+	if len(r.filters.ExcludeASN) > 0 {
+		f = append(f, "--exclude-asn "+joinInts(r.filters.ExcludeASN))
 	}
 	if r.filters.Only2xx {
 		f = append(f, "--2xx")
@@ -168,6 +176,15 @@ func (r *Report) activeFilters() []string {
 		f = append(f, "--grep "+r.filters.GrepPattern)
 	}
 	return f
+}
+
+// joinInts renders an int list comma-separated for the active-filters line.
+func joinInts(vals []int) string {
+	strs := make([]string, len(vals))
+	for i, v := range vals {
+		strs[i] = fmt.Sprintf("%d", v)
+	}
+	return strings.Join(strs, ",")
 }
 
 func (r *Report) Print() error {
@@ -1068,7 +1085,9 @@ func FmtLogEntry(e *types.LogEntry, defang bool) string {
 
 func HasEntryFilters(f types.Filters) bool {
 	return len(f.Status) > 0 || f.Method != "" || f.PathGlob != "" || f.Host != "" ||
-		f.RemoteIP != "" || f.ExcludeIP != "" || f.Only2xx || f.Only3xx || f.Only4xx || f.Only5xx ||
+		f.RemoteIP != "" || f.ExcludeIP != "" ||
+		len(f.Country) > 0 || len(f.ExcludeCountry) > 0 || len(f.ASN) > 0 || len(f.ExcludeASN) > 0 ||
+		f.Only2xx || f.Only3xx || f.Only4xx || f.Only5xx ||
 		f.ErrorsOnly || f.NoBots || f.BotsOnly || f.MinLatency > 0 || f.MaxLatency > 0 ||
 		f.MinSize > 0 || f.MaxSize > 0 || f.GrepPattern != ""
 }

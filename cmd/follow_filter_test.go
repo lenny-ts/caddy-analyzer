@@ -192,3 +192,36 @@ func TestRunIntervalModeDoesNotBucketRejectedRows(t *testing.T) {
 		t.Fatalf("rejected GET must not appear in the report:\n%s", text)
 	}
 }
+
+func TestPrepareEntryEnrichesBeforeMatchForGeoFilters(t *testing.T) {
+	geo := &countingGeo{}
+
+	// countingGeo always returns US: with --country IT the row must be
+	// dropped even though enrichment happened before matching.
+	it := &types.LogEntry{Method: "GET", Status: 200, URI: "/", RemoteIP: "1.1.1.1"}
+	if prepareEntry(it, types.Filters{Country: []string{"IT"}}, geo) {
+		t.Fatal("country allowlist must drop a US-enriched row")
+	}
+	if it.Geo.CountryCode != "US" {
+		t.Fatalf("rejected row Geo = %q, want enriched before match", it.Geo.CountryCode)
+	}
+
+	us := &types.LogEntry{Method: "GET", Status: 200, URI: "/", RemoteIP: "8.8.8.8"}
+	if !prepareEntry(us, types.Filters{ExcludeCountry: []string{"CN"}}, geo) {
+		t.Fatal("denylist must keep a non-CN row")
+	}
+	if len(geo.hits) != 2 || geo.hits[0] != "1.1.1.1" || geo.hits[1] != "8.8.8.8" {
+		t.Fatalf("lookups = %v, want both rows looked up", geo.hits)
+	}
+
+	// Non-geo runs keep the filter-first optimization: rejected rows are
+	// never looked up.
+	geo2 := &countingGeo{}
+	get := &types.LogEntry{Method: "GET", Status: 200, URI: "/"}
+	if prepareEntry(get, types.Filters{Method: "POST"}, geo2) {
+		t.Fatal("method filter must drop GET")
+	}
+	if len(geo2.hits) != 0 {
+		t.Fatalf("lookups = %v, want none for rejected rows without geo filters", geo2.hits)
+	}
+}
