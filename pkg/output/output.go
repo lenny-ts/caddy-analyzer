@@ -1079,8 +1079,13 @@ func FmtLogEntry(e *types.LogEntry, defang bool) string {
 		uaInfo = fmt.Sprintf(" [%s/%s]", stripANSI(e.OS), stripANSI(e.Browser))
 	}
 
-	return fmt.Sprintf("%s  %s  %s %s  (%s, %s) - %s%s",
-		timeStr, statusStr, methodStr, pathStr, FormatBytes(e.Size), FormatDuration(e.Duration), ipStr, uaInfo)
+	geoInfo := ""
+	if e.Geo.CountryCode != "" {
+		geoInfo = fmt.Sprintf(" [%s]", e.Geo.CountryCode)
+	}
+
+	return fmt.Sprintf("%s  %s  %s %s  (%s, %s) - %s%s%s",
+		timeStr, statusStr, methodStr, pathStr, FormatBytes(e.Size), FormatDuration(e.Duration), ipStr, geoInfo, uaInfo)
 }
 
 func HasEntryFilters(f types.Filters) bool {

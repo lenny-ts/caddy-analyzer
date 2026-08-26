@@ -165,6 +165,11 @@ func printColorizedLog(e *types.LogEntry, det *analysis.Detector) error {
 		uaInfo = fmt.Sprintf(" [%s/%s]", e.OS, e.Browser)
 	}
 
+	geoInfo := ""
+	if e.Geo.CountryCode != "" {
+		geoInfo = fmt.Sprintf(" [%s]", e.Geo.CountryCode)
+	}
+
 	// Run detection
 	var dets []analysis.Detection
 	if det != nil {
@@ -214,8 +219,8 @@ func printColorizedLog(e *types.LogEntry, det *analysis.Detector) error {
 		}
 	}
 
-	_, err := fmt.Printf("%s  %s  %s %s  (%s, %s) - %s%s%s\n",
-		timeStr, statusStr, methodStr, pathStr, sizeStr, durStr, ipStyled, uaInfo, threatSuffix)
+	_, err := fmt.Printf("%s  %s  %s %s  (%s, %s) - %s%s%s%s\n",
+		timeStr, statusStr, methodStr, pathStr, sizeStr, durStr, ipStyled, geoInfo, uaInfo, threatSuffix)
 	return err
 }
 
