@@ -40,7 +40,7 @@ Dimensions:
 
 Useful Flags:
   -t, --top <N>      Number of top entries to display (default: 10)
-  -b, --by <dim>     Specify dimension via flag (path, ip, ua, status, method, host, bandwidth)
+  -b, --by <dim>     Specify dimension via flag (path, ip, ua, status, method, host, bandwidth, country, asn)
   --5xx              Filter only 5xx server error requests
   --slow <duration>  Filter requests taking longer than duration (e.g. 500ms, 1s)
   --no-bots          Exclude search engine crawlers and automated bots
@@ -59,7 +59,7 @@ Examples:
 }
 
 func init() {
-	topCmd.Flags().StringVarP(&flagTopBy, "by", "b", "", "Dimension to group by (path, ip, ua, status, method, host, bandwidth)")
+	topCmd.Flags().StringVarP(&flagTopBy, "by", "b", "", "Dimension to group by (path, ip, ua, status, method, host, bandwidth, country, asn)")
 	rootCmd.AddCommand(topCmd)
 }
 
@@ -132,7 +132,7 @@ func runTopCmd(cmd *cobra.Command, args []string) error {
 
 	dim := strings.ToLower(dimension)
 	if _, ok := topFieldForDimension(dim); !ok {
-		return fmt.Errorf("unknown dimension: %s (supported: path, ip, ua, status, method, host, bandwidth)", dim)
+		return fmt.Errorf("unknown dimension: %s (supported: path, ip, ua, status, method, host, bandwidth, country, asn)", dim)
 	}
 
 	var w io.Writer = os.Stdout
