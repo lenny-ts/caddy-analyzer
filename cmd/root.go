@@ -119,6 +119,21 @@ Examples:
   caddy-analyze diff base.log current.log
 `,
 	RunE: runAnalysis,
+	// Tuning is resolved once, before any subcommand runs, because the
+	// setters it calls are not safe to use after work has started (#25).
+	PersistentPreRunE: func(cmd *cobra.Command, _ []string) error {
+		cfg, _, err := config.Load()
+		if err != nil {
+			// A broken config file is reported by the commands that need it;
+			// tuning simply falls back to defaults rather than blocking a run.
+			cfg = nil
+		}
+		f := cmd.Flags()
+		return applyTuning(cfg,
+			f.Changed("geo-cache-ttl"),
+			f.Changed("geo-cache-size"),
+			f.Changed("iptables-timeout"))
+	},
 }
 
 func Execute() {
@@ -152,6 +167,10 @@ func init() {
 	flags.BoolVarP(&flagCompact, "compact", "c", false, "Compact output mode")
 	flags.BoolVarP(&flagTrustXFF, "trust-forwarded", "", false, "Trust X-Forwarded-For / X-Real-IP for client IP (use behind a reverse proxy/CDN)")
 	flags.IntVarP(&flagMaxCard, "max-cardinality", "", 100000, "Max distinct keys tracked per counter (paths, IPs, UAs). 0 = unlimited. Bounds memory on huge-cardinality logs")
+	flags.DurationVar(&flagGeoCacheTTL, "geo-cache-ttl", 24*time.Hour,
+		"How long a GeoIP lookup stays cached. 0 disables caching, which is much slower on busy traffic")
+	flags.IntVar(&flagGeoCacheSize, "geo-cache-size", 50000,
+		"Max cached GeoIP lookups. 0 disables caching")
 	flags.IntVarP(&flagUARotation, "ua-rotation", "", 10, "Distinct User-Agents from one IP before scanner/rotation heuristic fires (0 = default)")
 	flags.StringVar(&flagHost, "host", "", "Filter by request host (substring match, case-insensitive)")
 	flags.StringArrayVar(&flagLevel, "level", nil, "Filter operational logs by level (error, warn, info, debug). Repeatable")
