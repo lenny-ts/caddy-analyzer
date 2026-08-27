@@ -104,7 +104,7 @@ func writeSigmaRule(w io.Writer, r analysis.SigmaRuleInfo) error {
 			return err
 		}
 		for _, p := range r.URIPatterns {
-			if err := writef("        uri|re: %s\n", yamlQuote(p)); err != nil {
+			if err := writef("        uri|re: %s\n", yamlEscape(p)); err != nil {
 				return err
 			}
 		}
@@ -115,7 +115,7 @@ func writeSigmaRule(w io.Writer, r analysis.SigmaRuleInfo) error {
 			return err
 		}
 		for _, p := range r.UAPatterns {
-			if err := writef("        user_agent|re: %s\n", yamlQuote(p)); err != nil {
+			if err := writef("        user_agent|re: %s\n", yamlEscape(p)); err != nil {
 				return err
 			}
 		}
@@ -126,7 +126,7 @@ func writeSigmaRule(w io.Writer, r analysis.SigmaRuleInfo) error {
 			return err
 		}
 		for _, p := range r.AuthPatterns {
-			if err := writef("        authorization|re: %s\n", yamlQuote(p)); err != nil {
+			if err := writef("        authorization|re: %s\n", yamlEscape(p)); err != nil {
 				return err
 			}
 		}
@@ -137,7 +137,7 @@ func writeSigmaRule(w io.Writer, r analysis.SigmaRuleInfo) error {
 			return err
 		}
 		for _, p := range r.RawPatterns {
-			if err := writef("        raw_uri|re: %s\n", yamlQuote(p)); err != nil {
+			if err := writef("        raw_uri|re: %s\n", yamlEscape(p)); err != nil {
 				return err
 			}
 		}
@@ -199,12 +199,6 @@ func sigmaUUID(title string) string {
 }
 
 func yamlEscape(s string) string {
-	s = strings.ReplaceAll(s, `\`, `\\`)
-	s = strings.ReplaceAll(s, `"`, `\"`)
-	return `"` + s + `"`
-}
-
-func yamlQuote(s string) string {
 	s = strings.ReplaceAll(s, `\`, `\\`)
 	s = strings.ReplaceAll(s, `"`, `\"`)
 	return `"` + s + `"`
