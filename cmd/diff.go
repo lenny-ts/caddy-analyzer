@@ -196,6 +196,14 @@ func formatDeltaFloat(d float64, unit string) string {
 	return fmt.Sprintf("0 %s", unit)
 }
 
+// formatDurationDelta renders a latency delta for the diff table.
+//
+// The zero case returns a literal "0ms" rather than output.FormatDuration(0),
+// which returns "N/A" for any non-positive input. "N/A" means "no data" --
+// the right thing when a run recorded no latency at all -- but a zero delta
+// means "no change", which is data. formatDelta and formatDeltaFloat above
+// take the same line, returning "0" and "0 <unit>"; all three leave the zero
+// unstyled so only a real movement is coloured.
 func formatDurationDelta(d float64) string {
 	durStr := output.FormatDuration(d)
 	if d > 0 {
