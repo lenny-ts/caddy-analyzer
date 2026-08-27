@@ -973,6 +973,9 @@ func parseTime(s string) (time.Time, error) {
 	if t, err := time.Parse(time.RFC3339, s); err == nil {
 		return t, nil
 	}
+	if s == "" {
+		return time.Time{}, fmt.Errorf("empty time")
+	}
 	unit := s[len(s)-1:]
 	n, err := strconv.Atoi(s[:len(s)-1])
 	if err != nil {
