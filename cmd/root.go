@@ -5,7 +5,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"net"
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -905,36 +904,17 @@ func buildFilters() (types.Filters, error) {
 	}
 
 	if flagIP != "" {
-		if err := validateIPOrCIDR(flagIP); err != nil {
-			return f, fmt.Errorf("invalid --ip %q: %w", flagIP, err)
+		if err := validateIP(flagIP); err != nil {
+			return f, fmt.Errorf("--ip: %w", err)
 		}
 	}
 	if flagExcludeIP != "" {
-		if err := validateIPOrCIDR(flagExcludeIP); err != nil {
-			return f, fmt.Errorf("invalid --exclude-ip %q: %w", flagExcludeIP, err)
+		if err := validateIP(flagExcludeIP); err != nil {
+			return f, fmt.Errorf("--exclude-ip: %w", err)
 		}
 	}
 
 	return f, nil
-}
-
-// validateIPOrCIDR accepts a bare IP or a CIDR. Used to fail fast on a typo'd
-// --ip / --exclude-ip filter instead of silently returning "no log entries
-// found" when the CIDR fails to parse inside MatchEntry.
-func validateIPOrCIDR(s string) error {
-	if s == "" {
-		return nil
-	}
-	if strings.HasPrefix(s, "-") {
-		return fmt.Errorf("looks like a flag")
-	}
-	if net.ParseIP(s) != nil {
-		return nil
-	}
-	if _, _, err := net.ParseCIDR(s); err == nil {
-		return nil
-	}
-	return fmt.Errorf("not a valid IP or CIDR")
 }
 
 // parseSize parses a byte size. A bare integer is bytes. A suffix of k/kb, m/mb,
