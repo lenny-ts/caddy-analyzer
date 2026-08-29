@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- **Sigma rule UUIDs are now RFC 4122 version 5 (#23)**: `sigmaUUID` derived its identifier from MD5 and formatted the digest as `8-4-4-4-12`, which looks like a UUID but is not one — the version and variant bits were whatever the hash produced, so a consumer validating the `id` field would reject the rule. Identifiers are now `uuidV5(sigmaNamespace, "caddy-analyzer:sigma:" + title)`, matching Sigma's own convention. The namespace is derived once as `uuidV5(DNS, "caddy-analyzer")` and hardcoded as a constant, so identifiers stay stable across runs and releases. **Rules exported before this release carry different UUIDs**; regenerate them once. Implemented against `crypto/sha1` rather than adding a module dependency, and checked against RFC 4122's published test vector.
+
 ## [0.5.0] - 2026-08-22
 
 ### Added
