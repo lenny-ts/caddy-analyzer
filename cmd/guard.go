@@ -47,6 +47,10 @@ const minBlocklistRefresh = 1 * time.Hour
 
 func init() {
 	guardCmd.Flags().IntVarP(&guardLimit, "limit", "l", 100, "Max requests before blocking (0 disables)")
+	// Only on guard (and the block/unban commands that share the firewall
+	// path): the timeout is meaningless anywhere iptables is not invoked.
+	guardCmd.Flags().DurationVar(&flagIPTablesTimeout, "iptables-timeout", 10*time.Second,
+		"Timeout for each iptables invocation. Raise it for a huge ruleset on a busy box")
 	guardCmd.Flags().StringVarP(&guardWindow, "window", "w", "1m", "Monitoring time window")
 	guardCmd.Flags().StringVarP(&guardDuration, "duration", "d", "10m", "Block duration (e.g. 10m, 1h). 0 = permanent")
 	guardCmd.Flags().IntVarP(&guardAuthLimit, "auth-limit", "", 10, "Max auth failures (401/403) before blocking (0 disables)")

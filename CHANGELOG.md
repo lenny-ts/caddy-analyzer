@@ -7,8 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.1] - 2026-08-29
+
+### Fixed
+- **Docker log monitoring (`docker://`) not capturing entries (#57)**: `execLines` only read the child process's stdout via `StdoutPipe`, but Caddy v2 (and other tools) write access logs to stderr by default. `docker logs` preserves this stream separation, so all log data went to stderr and was silently dropped. Replaced `StdoutPipe` with `io.Pipe()` and set both `cmd.Stdout` and `cmd.Stderr` to the pipe writer, merging the two streams. A separate goroutine calls `cmd.Wait()` then closes the pipe to avoid a deadlock where the scanner blocks on `io.PipeReader.Read` while the writer is still open. `docker://container` sources now work regardless of whether the target writes to stdout, stderr, or both.
+
 ### Changed
-- **Sigma rule UUIDs are now RFC 4122 version 5 (#23)**: `sigmaUUID` derived its identifier from MD5 and formatted the digest as `8-4-4-4-12`, which looks like a UUID but is not one — the version and variant bits were whatever the hash produced, so a consumer validating the `id` field would reject the rule. Identifiers are now `uuidV5(sigmaNamespace, "caddy-analyzer:sigma:" + title)`, matching Sigma's own convention. The namespace is derived once as `uuidV5(DNS, "caddy-analyzer")` and hardcoded as a constant, so identifiers stay stable across runs and releases. **Rules exported before this release carry different UUIDs**; regenerate them once. Implemented against `crypto/sha1` rather than adding a module dependency, and checked against RFC 4122's published test vector.
+- **Deduplicate `yamlEscape`/`yamlQuote`**: removed `yamlQuote` in `cmd/export_sigma.go`, an exact copy of `yamlEscape`; its four call sites now call `yamlEscape`. #48 — @dchaudhari7177
+
+### Fixed (also in 0.5.1)
+- **Zero-duration delta formatting**: `formatDurationDelta(0)` now uses the shared `output.FormatDuration` formatter instead of a hardcoded `"0ms"`, returning `"N/A"` consistently. #47 — @Labeeb2339
 
 ## [0.5.0] - 2026-08-22
 
