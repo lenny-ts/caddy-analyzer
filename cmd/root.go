@@ -86,7 +86,7 @@ Sources:
 
 Subcommands:
   tail [source...]       Colorized real-time log viewer
-  top <dimension>        Quick top-N metric inspector (path, ip, ua, status, method, host, bandwidth)
+  top <dimension>        Quick top-N metric inspector (path, ip, ua, status, method, host, bandwidth, country, asn)
   diff <log1> <log2>     Compare two log files for RPS shifts, 5xx spikes, and latency changes
 
 Filtering (activate colored log listing instead of report):
@@ -114,6 +114,7 @@ Examples:
   caddy-analyze --ip 10.0.0.0/8 access.log
   caddy-analyze --5xx --no-bots access.log
   caddy-analyze tail --ip 192.168.1.100 docker://caddy
+  caddy-analyze tail --detect docker://caddy
   caddy-analyze top ip --5xx -t 20 access.log
   caddy-analyze diff base.log current.log
 `,
