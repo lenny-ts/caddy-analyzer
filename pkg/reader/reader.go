@@ -338,17 +338,16 @@ func (r *JournalctlReader) Read(ctx context.Context) (<-chan string, error) {
 }
 
 func execLines(ctx context.Context, cmd *exec.Cmd, out chan string) (<-chan string, error) {
-	stdout, err := cmd.StdoutPipe()
-	if err != nil {
-		return nil, fmt.Errorf("stdout pipe: %w", err)
-	}
+	pr, pw := io.Pipe()
+	cmd.Stdout = pw
+	cmd.Stderr = pw
 	if err := cmd.Start(); err != nil {
 		return nil, fmt.Errorf("start command: %w", err)
 	}
 
 	go func() {
 		defer close(out)
-		scanner := bufio.NewScanner(stdout)
+		scanner := bufio.NewScanner(pr)
 		scanner.Buffer(make([]byte, 1024*1024), 1024*1024)
 		for scanner.Scan() {
 			select {
@@ -359,6 +358,7 @@ func execLines(ctx context.Context, cmd *exec.Cmd, out chan string) (<-chan stri
 				return
 			}
 		}
+		_ = pw.Close()
 		if err := cmd.Wait(); err != nil && ctx.Err() == nil {
 			fmt.Fprintf(os.Stderr, "error: command exited: %v\n", err)
 		}
