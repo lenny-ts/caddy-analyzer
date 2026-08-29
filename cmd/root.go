@@ -548,6 +548,24 @@ func runFollowMode(ctx context.Context, sources []types.LogSource, filters types
 		windowStart = time.Now()
 	}
 
+	// emitReport finalizes the current window and prints it. It takes no
+	// arguments on purpose: resetEngine reassigns engine and opEngine, so a
+	// closure over the variables always reads whichever engine is live now.
+	// A print failure is reported and swallowed, as before, so one bad write
+	// does not end the follow session.
+	emitReport := func() {
+		engine.Finalize()
+		report := output.NewReportWithSections(engine, output.ParseFormat(flagFormat), flagTop, sections)
+		report.SetDetect(flagDetect)
+		report.SetDefang(flagDefang)
+		report.SetFilters(filters)
+		report.SetOperationalStats(opEngine.Stats())
+		report.SetWriter(w)
+		if err := report.Print(); err != nil {
+			fmt.Fprintf(os.Stderr, "write report: %v\n", err)
+		}
+	}
+
 	for line := range fanInFollow(ctx, sources) {
 		entry, err := parser.Parse(line)
 		if err != nil || entry == nil {
@@ -562,31 +580,13 @@ func runFollowMode(ctx context.Context, sources []types.LogSource, filters types
 			opEngine.Process(e)
 		}
 		if time.Since(last) > 5*time.Second {
-			engine.Finalize()
-			report := output.NewReportWithSections(engine, output.ParseFormat(flagFormat), flagTop, sections)
-			report.SetDetect(flagDetect)
-			report.SetDefang(flagDefang)
-			report.SetFilters(filters)
-			report.SetOperationalStats(opEngine.Stats())
-			report.SetWriter(w)
-			if err := report.Print(); err != nil {
-				fmt.Fprintf(os.Stderr, "write report: %v\n", err)
-			}
+			emitReport()
 			if time.Since(windowStart) > window {
 				resetEngine()
 			}
 			last = time.Now()
 		} else if time.Since(windowStart) > window {
-			engine.Finalize()
-			report := output.NewReportWithSections(engine, output.ParseFormat(flagFormat), flagTop, sections)
-			report.SetDetect(flagDetect)
-			report.SetDefang(flagDefang)
-			report.SetFilters(filters)
-			report.SetOperationalStats(opEngine.Stats())
-			report.SetWriter(w)
-			if err := report.Print(); err != nil {
-				fmt.Fprintf(os.Stderr, "write report: %v\n", err)
-			}
+			emitReport()
 			resetEngine()
 		}
 	}
