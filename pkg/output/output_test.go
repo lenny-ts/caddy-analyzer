@@ -315,3 +315,73 @@ func TestDefangDetectionMap(t *testing.T) {
 		t.Errorf("unexpected defanged record: %+v", v[0])
 	}
 }
+
+// TestActiveFiltersRendersEveryFilter pins that each filter field reaches the
+// "Filters:" header line. Five of them (--max-latency, --min-size, --max-size,
+// --level, --ops-only) used to be silently dropped, so a report produced with
+// them looked identical to one produced without.
+func TestActiveFiltersRendersEveryFilter(t *testing.T) {
+	tests := []struct {
+		name    string
+		filters types.Filters
+		want    string
+	}{
+		{"max-latency", types.Filters{MaxLatency: 1.5}, "--max-latency 1500ms"},
+		{"min-size", types.Filters{MinSize: 1024}, "--min-size 1.00 KB"},
+		{"max-size", types.Filters{MaxSize: 1048576}, "--max-size 1.00 MB"},
+		{"level single", types.Filters{Level: []string{"error"}}, "--level error"},
+		{"level repeated", types.Filters{Level: []string{"error", "warn"}}, "--level error,warn"},
+		{"ops-only", types.Filters{OpsOnly: true}, "--ops-only"},
+		// Regressions on the blocks that already worked.
+		{"slow", types.Filters{MinLatency: 0.5}, "--slow 500ms"},
+		{"grep", types.Filters{GrepPattern: "wp-admin"}, "--grep wp-admin"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			r := NewReport(analysis.New(types.Filters{}), FormatTable, 5)
+			r.SetFilters(tt.filters)
+			got := r.activeFilters()
+			for _, s := range got {
+				if s == tt.want {
+					return
+				}
+			}
+			t.Errorf("activeFilters() = %v, missing %q", got, tt.want)
+		})
+	}
+}
+
+// TestActiveFiltersZeroValuesAreOmitted guards the other direction: an unset
+// filter must not appear. --ops-only is a bool and the rest are compared
+// against zero, so a `>= 0` typo would print every flag on every report.
+func TestActiveFiltersZeroValuesAreOmitted(t *testing.T) {
+	r := NewReport(analysis.New(types.Filters{}), FormatTable, 5)
+	r.SetFilters(types.Filters{})
+	if got := r.activeFilters(); len(got) != 0 {
+		t.Errorf("activeFilters() on empty Filters = %v, want none", got)
+	}
+}
+
+// TestActiveFiltersCombined checks the five new blocks coexist with the old
+// ones in one report, which is how they are actually used.
+func TestActiveFiltersCombined(t *testing.T) {
+	r := NewReport(analysis.New(types.Filters{}), FormatTable, 5)
+	r.SetFilters(types.Filters{
+		MinLatency: 0.1,
+		MaxLatency: 1,
+		MinSize:    1024,
+		MaxSize:    1024 * 1024,
+		Level:      []string{"error", "warn"},
+		OpsOnly:    true,
+		Method:     "POST",
+	})
+	got := strings.Join(r.activeFilters(), ", ")
+	for _, want := range []string{
+		"--method POST", "--slow 100ms", "--max-latency 1000ms",
+		"--min-size 1.00 KB", "--max-size 1.00 MB", "--level error,warn", "--ops-only",
+	} {
+		if !strings.Contains(got, want) {
+			t.Errorf("activeFilters() = %q, missing %q", got, want)
+		}
+	}
+}
