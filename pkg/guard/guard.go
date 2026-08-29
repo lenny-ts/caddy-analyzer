@@ -1147,3 +1147,20 @@ func (g *Guard) runBlocklistRefresh(ctx context.Context, logf func(string, ...in
 func (g *Guard) BlocklistHits() int64 {
 	return g.blocklistHits.Load()
 }
+
+// SetIPTablesTimeout overrides the per-invocation firewall command timeout.
+// Call once at startup: runCmd reads this without synchronisation, so changing
+// it while the guard is running is a data race.
+//
+// The timeout must be positive. A zero or negative value would make every
+// invocation fail immediately with a context deadline, turning a tuning knob
+// into an outage, so it is ignored.
+func SetIPTablesTimeout(d time.Duration) {
+	if d <= 0 {
+		return
+	}
+	iptablesTimeout = d
+}
+
+// IPTablesTimeout reports the timeout currently in effect.
+func IPTablesTimeout() time.Duration { return iptablesTimeout }

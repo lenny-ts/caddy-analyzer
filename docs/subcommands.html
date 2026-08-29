@@ -18,7 +18,7 @@
     <meta name="twitter:description" content="Complete CLI reference: tail, top, diff, config, guard, blocklist, block, unban, export-sigma.">
     <script>try{var t=localStorage.getItem('caddy-docs-theme');if(t==='light')document.documentElement.setAttribute('data-theme','light');}catch(e){}
     document.documentElement.classList.add('decor-paused');</script>
-    <meta name="doc:modified" content="2026-08-22T15:54:59+02:00">
+    <meta name="doc:modified" content="2026-08-22T17:05:28+02:00">
     <meta name="color-scheme" content="dark light">
     <link rel="manifest" href="manifest.json">
     <link rel="apple-touch-icon" href="apple-touch-icon.png">
@@ -294,6 +294,18 @@
                         <td>Compact output mode (smaller, condensed tables). <code>caddy-analyze -c</code></td>
                     </tr>
                     <tr>
+                        <td><code>--geo-cache-ttl</code></td>
+                        <td>—</td>
+                        <td><code>24h</code></td>
+                        <td>How long a resolved GeoIP lookup stays cached. <code>0</code> disables caching, which is dramatically slower on busy traffic. Overrides <code>tuning.geo_cache_ttl</code> in the config file.</td>
+                    </tr>
+                    <tr>
+                        <td><code>--geo-cache-size</code></td>
+                        <td>—</td>
+                        <td><code>50000</code></td>
+                        <td>Max cached GeoIP lookups. <code>0</code> disables caching. Raise it on a high-traffic server to avoid evictions; lower it on a low-memory box. Overrides <code>tuning.geo_cache_size</code>.</td>
+                    </tr>
+                    <tr>
                         <td><code>--max-cardinality</code></td>
                         <td>—</td>
                         <td><code>100000</code></td>
@@ -534,6 +546,12 @@ caddy-analyze blocklist init --global          # write to global config</pre>
                         <td>—</td>
                         <td><code>50</code></td>
                         <td>Max 404 responses before blocking (directory brute-force defense)</td>
+                    </tr>
+                    <tr>
+                        <td><code>--iptables-timeout</code></td>
+                        <td>—</td>
+                        <td><code>10s</code></td>
+                        <td>Timeout for each <code>iptables</code> invocation. Raise it for a huge ruleset on a busy box, where the default causes hard-to-diagnose "iptables timed out" failures; lower it in a test environment. Must be positive. Overrides <code>tuning.iptables_timeout</code>.</td>
                     </tr>
                     <tr>
                         <td><code>--audit-log</code></td>
