@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- **Deduplicate `yamlEscape`/`yamlQuote`**: removed `yamlQuote` in `cmd/export_sigma.go`, an exact copy of `yamlEscape`; its four call sites now call `yamlEscape`. #48 — @dchaudhari7177
+
+### Fixed
+- **Zero-duration delta formatting**: `formatDurationDelta(0)` now uses the shared `output.FormatDuration` formatter instead of a hardcoded `"0ms"`, returning `"N/A"` consistently. #47 — @Labeeb2339
+  
 ## [0.5.0] - 2026-08-22
 
 ### Added
