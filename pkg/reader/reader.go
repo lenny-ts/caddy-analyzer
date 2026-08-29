@@ -346,6 +346,11 @@ func execLines(ctx context.Context, cmd *exec.Cmd, out chan string) (<-chan stri
 	}
 
 	go func() {
+		_ = cmd.Wait()
+		_ = pw.Close()
+	}()
+
+	go func() {
 		defer close(out)
 		scanner := bufio.NewScanner(pr)
 		scanner.Buffer(make([]byte, 1024*1024), 1024*1024)
@@ -357,10 +362,6 @@ func execLines(ctx context.Context, cmd *exec.Cmd, out chan string) (<-chan stri
 				_ = cmd.Wait()
 				return
 			}
-		}
-		_ = pw.Close()
-		if err := cmd.Wait(); err != nil && ctx.Err() == nil {
-			fmt.Fprintf(os.Stderr, "error: command exited: %v\n", err)
 		}
 	}()
 
