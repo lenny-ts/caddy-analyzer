@@ -18,7 +18,7 @@
     <meta name="twitter:description" content="Complete CLI reference: tail, top, diff, config, guard, blocklist, block, unban, export-sigma.">
     <script>try{var t=localStorage.getItem('caddy-docs-theme');if(t==='light')document.documentElement.setAttribute('data-theme','light');}catch(e){}
     document.documentElement.classList.add('decor-paused');</script>
-    <meta name="doc:modified" content="2026-08-22T17:05:28+02:00">
+    <meta name="doc:modified" content="2026-08-27T13:52:28+05:30">
     <meta name="color-scheme" content="dark light">
     <link rel="manifest" href="manifest.json">
     <link rel="apple-touch-icon" href="apple-touch-icon.png">
@@ -618,6 +618,12 @@ caddy-analyze blocklist init --global          # write to global config</pre>
                         <td>—</td>
                         <td><code>""</code></td>
                         <td>Comma-separated ISO country codes to block immediately (e.g. <code>CN,RU,IR</code>). Requires a GeoIP mmdb; the guard fails fast if none is found.</td>
+                    </tr>
+                    <tr>
+                        <td><code>--firewall-backend</code></td>
+                        <td>—</td>
+                        <td><code>auto</code></td>
+                        <td>Firewall backend: <code>auto</code> (detect Docker/nftables), <code>iptables</code> (INPUT chain), <code>docker</code> (DOCKER-USER chain), <code>nftables</code> (nft sets), <code>hybrid</code> (INPUT + DOCKER-USER).</td>
                     </tr>
                     <tr>
                         <td><code>--no-blocklist</code></td>
