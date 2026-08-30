@@ -282,6 +282,9 @@ type Guard struct {
 	// blocklistHits counts IPs blocked via blocklist or country-block
 	// for stats reporting.
 	blocklistHits atomic.Int64
+	// pendingBlock is set by checkImmediateBlock and consumed by Run to
+	// log the ban in terminal output.
+	pendingBlock *Candidate
 }
 
 // ipBucket holds per-second counters for one IP.
@@ -874,20 +877,24 @@ func (g *Guard) checkImmediateBlock(ip string) bool {
 	}
 	if g.blocklistMgr != nil {
 		if hit, source := g.blocklistMgr.Contains(ip); hit {
+			c := &Candidate{IP: ip, Count: 1, Why: "blocklist: " + source}
 			ctx, cancel := context.WithTimeout(context.Background(), iptablesTimeout)
 			defer cancel()
-			g.block(ctx, Candidate{IP: ip, Count: 1, Why: "blocklist: " + source}, time.Now())
+			g.block(ctx, *c, time.Now())
 			g.blocklistHits.Add(1)
+			g.pendingBlock = c
 			return true
 		}
 	}
 	if g.geoip != nil && len(g.countryBlock) > 0 {
 		info, err := g.geoip.Lookup(ip)
 		if err == nil && info.CountryCode != "" && g.countryBlock[info.CountryCode] {
+			c := &Candidate{IP: ip, Count: 1, Why: "country-block: " + info.CountryCode}
 			ctx, cancel := context.WithTimeout(context.Background(), iptablesTimeout)
 			defer cancel()
-			g.block(ctx, Candidate{IP: ip, Count: 1, Why: "country-block: " + info.CountryCode}, time.Now())
+			g.block(ctx, *c, time.Now())
 			g.blocklistHits.Add(1)
+			g.pendingBlock = c
 			return true
 		}
 	}
@@ -1155,6 +1162,10 @@ func (g *Guard) Run(ctx context.Context, linesCh <-chan string, logf func(string
 				return
 			}
 			g.Evaluate(line)
+			if c := g.pendingBlock; c != nil {
+				g.pendingBlock = nil
+				logf("[%s] + %s blocked (%s)\n", time.Now().Format("15:04:05"), c.IP, c.Why)
+			}
 
 		case <-ticker.C:
 			blocked := g.Tick(ctx)

@@ -278,3 +278,95 @@ func TestUARotationThreshold(t *testing.T) {
 		t.Errorf("threshold reset = %d, want > 0", got)
 	}
 }
+
+func TestMatchEntryGeoFilters(t *testing.T) {
+	tests := []struct {
+		name    string
+		filters types.Filters
+		geo     types.GeoInfo
+		want    bool
+	}{
+		{
+			name:    "country allowlist hit",
+			filters: types.Filters{Country: []string{"IT", "US"}},
+			geo:     types.GeoInfo{CountryCode: "IT"},
+			want:    true,
+		},
+		{
+			name:    "country allowlist miss",
+			filters: types.Filters{Country: []string{"IT"}},
+			geo:     types.GeoInfo{CountryCode: "DE"},
+			want:    false,
+		},
+		{
+			name:    "country allowlist drops unresolved",
+			filters: types.Filters{Country: []string{"IT"}},
+			geo:     types.GeoInfo{},
+			want:    false,
+		},
+		{
+			name:    "country denylist drops match",
+			filters: types.Filters{ExcludeCountry: []string{"CN", "RU"}},
+			geo:     types.GeoInfo{CountryCode: "RU"},
+			want:    false,
+		},
+		{
+			name:    "country denylist keeps other",
+			filters: types.Filters{ExcludeCountry: []string{"CN"}},
+			geo:     types.GeoInfo{CountryCode: "US"},
+			want:    true,
+		},
+		{
+			name:    "country denylist keeps unresolved",
+			filters: types.Filters{ExcludeCountry: []string{"CN"}},
+			geo:     types.GeoInfo{},
+			want:    true,
+		},
+		{
+			name:    "asn allowlist hit",
+			filters: types.Filters{ASN: []int{12345, 67890}},
+			geo:     types.GeoInfo{ASN: 67890},
+			want:    true,
+		},
+		{
+			name:    "asn allowlist drops unresolved (ASN 0)",
+			filters: types.Filters{ASN: []int{12345}},
+			geo:     types.GeoInfo{},
+			want:    false,
+		},
+		{
+			name:    "asn denylist drops match",
+			filters: types.Filters{ExcludeASN: []int{15169}},
+			geo:     types.GeoInfo{ASN: 15169},
+			want:    false,
+		},
+		{
+			name:    "asn denylist keeps unresolved (ASN 0)",
+			filters: types.Filters{ExcludeASN: []int{15169}},
+			geo:     types.GeoInfo{},
+			want:    true,
+		},
+		{
+			name:    "country and asn AND-combined, both hit",
+			filters: types.Filters{Country: []string{"US"}, ASN: []int{15169}},
+			geo:     types.GeoInfo{CountryCode: "US", ASN: 15169},
+			want:    true,
+		},
+		{
+			name:    "country and asn AND-combined, asn misses",
+			filters: types.Filters{Country: []string{"US"}, ExcludeASN: []int{15169}},
+			geo:     types.GeoInfo{CountryCode: "US", ASN: 15169},
+			want:    false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			entry := &types.LogEntry{Status: 200}
+			entry.Geo = tt.geo
+			if got := MatchEntry(entry, tt.filters); got != tt.want {
+				t.Errorf("MatchEntry geo = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}

@@ -233,20 +233,31 @@ type LogSource struct {
 }
 
 type Filters struct {
-	From           time.Time
-	To             time.Time
-	HasFrom        bool
-	HasTo          bool
-	Status         []int
-	Method         string
-	PathGlob       string
-	Host           string
-	MinLatency     float64
-	MaxLatency     float64
-	MinSize        int64
-	MaxSize        int64
-	RemoteIP       string
-	ExcludeIP      string
+	From       time.Time
+	To         time.Time
+	HasFrom    bool
+	HasTo      bool
+	Status     []int
+	Method     string
+	PathGlob   string
+	Host       string
+	MinLatency float64
+	MaxLatency float64
+	MinSize    int64
+	MaxSize    int64
+	RemoteIP   string
+	ExcludeIP  string
+	// Country/ASN allow-deny lists, populated from --country,
+	// --exclude-country, --asn and --exclude-asn. Country codes are
+	// normalized to uppercase at flag parse time; ASNs must be positive.
+	// They read the Geo-enriched entry, so callers must enrich before
+	// matching (see cmd.geoFiltersActive). Unresolved entries (private IP
+	// or mmdb miss: empty country code, ASN 0) fail allowlists and pass
+	// denylists.
+	Country        []string
+	ExcludeCountry []string
+	ASN            []int
+	ExcludeASN     []int
 	Only2xx        bool
 	Only3xx        bool
 	Only4xx        bool

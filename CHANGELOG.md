@@ -5,6 +5,16 @@ All notable changes to `caddy-analyzer` will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.1] - 2026-08-31
+
+### Added
+- **GeoIP entry filters (#37)**: `--country`, `--exclude-country`, `--asn`, `--exclude-asn` filter log entries by GeoIP data. Supports both ISO codes (`IT`, `US`) and country names (`Italy`, `United States`). — @lenny-ts
+- **Auto-download cosign (#62)**: `caddy-analyze update` now automatically downloads cosign for signature verification when not installed, removing the manual setup requirement. — @lenny-ts
+
+### Fixed
+- **Guard output now shows blocklist/country-block bans (#83)**: blocklist and country-block bans were only logged to audit but not shown in terminal output. — @lenny-ts
+- **Unblock idempotent**: `unban` and guard expiry no longer fail with "partial unblock failures" when the iptables rule doesn't exist in one chain (hybrid mode). — @lenny-ts
+
 ## [0.6.0] - 2026-08-30
 
 ### Added
@@ -32,6 +42,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed (also in 0.5.1)
 - **Zero-duration delta formatting**: `formatDurationDelta(0)` now uses the shared `output.FormatDuration` formatter instead of a hardcoded `"0ms"`, returning `"N/A"` consistently. #47 — @Labeeb2339
+
+### Added
+- **GeoIP entry filters (`--country` / `--exclude-country` / `--asn` / `--exclude-asn`) (#21)**: keep or drop log entries by GeoIP country code (ISO 3166-1, case-insensitive) and autonomous system number, in `caddy-analyze`, `tail`, `top`, and `diff`. Same semantics as `--ip`/`--exclude-ip`: allowlist/denylist per dimension (mutually exclusive within a dimension, AND-combined across dimensions), unresolved entries (private IPs, mmdb misses) are dropped by allowlists and kept by denylists. Requires a GeoIP mmdb — validated up front with a clear error when an explicit `--geoip-db` is missing or auto-download is disabled without any discoverable database. Filters surface in the report header ("Filters:" line), JSON/CSV metadata, HTML reports, and trigger color-coded listing mode like other entry filters.
+
+### Fixed
+- **Enrich-before-filter order**: in one-shot mode and `tail`, entries are now GeoIP-enriched before filtering when geo-based filters are active, so `--country`/`--asn` see resolved data (`top`, `diff`, follow, and interval already enriched before the engine matched). Non-geo runs keep the filter-first optimization: rejected rows are still never looked up. #21
 
 ## [0.5.0] - 2026-08-22
 

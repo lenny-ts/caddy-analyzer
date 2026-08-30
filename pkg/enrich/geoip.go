@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 
@@ -210,6 +211,20 @@ func autoDownloadGeoIP() (countryPath, asnPath string, err error) {
 		fmt.Fprintf(os.Stderr, "  done.\n")
 	}
 	return countryPath, asnPath, nil
+}
+
+// FindDB resolves the effective country mmdb path without opening it or
+// downloading anything: an explicit non-empty path is returned as-is,
+// otherwise geoIPSearchPaths are probed in order. Returns "" when nothing
+// is found (auto-download may still provide one at open time).
+func FindDB(path string) string {
+	if path != "" {
+		return path
+	}
+	if p, ok := findFirst(geoIPSearchPaths); ok {
+		return p
+	}
+	return ""
 }
 
 // NewGeoIP opens the mmdb file at path. If path is empty, auto-discovers
@@ -473,6 +488,40 @@ func (g *GeoIP) evictExpired() {
 			delete(g.cache, k)
 		}
 	}
+}
+
+// CountryCodeFromName resolves a full country name (e.g. "Italy", "united states")
+// to its ISO 3166-1 alpha-2 code by scanning the country mmdb. Returns empty
+// string if no match is found. When dbPath is empty the default search paths
+// are used.
+func CountryCodeFromName(name, dbPath string) string {
+	if dbPath == "" {
+		dbPath = FindDB("")
+	}
+	if dbPath == "" {
+		return ""
+	}
+	db, err := maxminddb.Open(dbPath)
+	if err != nil {
+		return ""
+	}
+	defer func() { _ = db.Close() }() // read-only mmdb; close error safe to ignore
+
+	it := db.Networks()
+	needle := strings.ToLower(name)
+	var record countryRecord
+	for it.Next() {
+		if _, err := it.Network(&record); err != nil {
+			continue
+		}
+		if record.Country.ISOCode == "" {
+			continue
+		}
+		if en, ok := record.Country.Names["en"]; ok && strings.ToLower(en) == needle {
+			return record.Country.ISOCode
+		}
+	}
+	return ""
 }
 
 // SetGeoCacheTTL overrides how long a resolved GeoIP lookup stays usable.

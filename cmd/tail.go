@@ -12,6 +12,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/lenny-ts/caddy-analyzer/pkg/analysis"
+	"github.com/lenny-ts/caddy-analyzer/pkg/enrich"
 	"github.com/lenny-ts/caddy-analyzer/pkg/output"
 	"github.com/lenny-ts/caddy-analyzer/pkg/parser"
 	"github.com/lenny-ts/caddy-analyzer/pkg/types"
@@ -103,6 +104,17 @@ func runTail(cmd *cobra.Command, args []string) error {
 		det.SetUARotationThreshold(flagUARotation)
 	}
 
+	// Only spin up GeoIP when geo-based filters need it: enriching before
+	// matching is required for --country/--asn, but a plain tail must not
+	// trigger an mmdb auto-download.
+	var geoip *enrich.GeoIP
+	if geoFiltersActive(filters) {
+		geoip = newGeoIPEnricher()
+		if geoip != nil {
+			defer func() { _ = geoip.Close() }()
+		}
+	}
+
 	for line := range fanInFollow(ctx, sources) {
 		entry, err := parser.Parse(line)
 		if err != nil || entry == nil {
@@ -113,6 +125,7 @@ func runTail(cmd *cobra.Command, args []string) error {
 			if filters.OpsOnly {
 				continue
 			}
+			enrichGeoIP(e, geoip)
 			if !analysis.MatchEntry(e, filters) {
 				continue
 			}
@@ -150,6 +163,11 @@ func printColorizedLog(e *types.LogEntry, det *analysis.Detector) error {
 		uaInfo = fmt.Sprintf(" [%s]", lipgloss.NewStyle().Foreground(lipgloss.Color("208")).Render("🤖 "+e.BotName))
 	} else if e.Browser != "" || e.OS != "" {
 		uaInfo = fmt.Sprintf(" [%s/%s]", e.OS, e.Browser)
+	}
+
+	geoInfo := ""
+	if e.Geo.CountryCode != "" {
+		geoInfo = fmt.Sprintf(" [%s]", e.Geo.CountryCode)
 	}
 
 	// Run detection
@@ -201,8 +219,8 @@ func printColorizedLog(e *types.LogEntry, det *analysis.Detector) error {
 		}
 	}
 
-	_, err := fmt.Printf("%s  %s  %s %s  (%s, %s) - %s%s%s\n",
-		timeStr, statusStr, methodStr, pathStr, sizeStr, durStr, ipStyled, uaInfo, threatSuffix)
+	_, err := fmt.Printf("%s  %s  %s %s  (%s, %s) - %s%s%s%s\n",
+		timeStr, statusStr, methodStr, pathStr, sizeStr, durStr, ipStyled, geoInfo, uaInfo, threatSuffix)
 	return err
 }
 
