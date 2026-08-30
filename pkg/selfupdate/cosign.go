@@ -64,7 +64,7 @@ func EnsureCosign(ctx context.Context, client *http.Client) (string, string, err
 	}
 
 	// Make executable.
-	if err := os.Chmod(binPath, 0o755); err != nil {
+	if err := os.Chmod(binPath, 0o755); err != nil { //nosec G302 -- binary must be executable
 		_ = os.RemoveAll(tmpDir)
 		return "", "", fmt.Errorf("chmod cosign: %w", err)
 	}
