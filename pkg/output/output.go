@@ -172,6 +172,21 @@ func (r *Report) activeFilters() []string {
 	if r.filters.MinLatency > 0 {
 		f = append(f, "--slow "+fmt.Sprintf("%.0fms", r.filters.MinLatency*1000))
 	}
+	if r.filters.MaxLatency > 0 {
+		f = append(f, "--max-latency "+fmt.Sprintf("%.0fms", r.filters.MaxLatency*1000))
+	}
+	if r.filters.MinSize > 0 {
+		f = append(f, "--min-size "+FormatBytes(r.filters.MinSize))
+	}
+	if r.filters.MaxSize > 0 {
+		f = append(f, "--max-size "+FormatBytes(r.filters.MaxSize))
+	}
+	if len(r.filters.Level) > 0 {
+		f = append(f, "--level "+strings.Join(r.filters.Level, ","))
+	}
+	if r.filters.OpsOnly {
+		f = append(f, "--ops-only")
+	}
 	if r.filters.GrepPattern != "" {
 		f = append(f, "--grep "+r.filters.GrepPattern)
 	}

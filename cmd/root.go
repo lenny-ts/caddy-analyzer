@@ -5,7 +5,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"net"
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -73,7 +72,7 @@ var (
 	flagOpsOnly        bool
 )
 
-var Version = "0.5.0-dev"
+var Version = "0.6.0-dev"
 
 var rootCmd = &cobra.Command{
 	Use:          "caddy-analyze [flags] [source...]",
@@ -91,7 +90,7 @@ Sources:
 
 Subcommands:
   tail [source...]       Colorized real-time log viewer
-  top <dimension>        Quick top-N metric inspector (path, ip, ua, status, method, host, bandwidth)
+  top <dimension>        Quick top-N metric inspector (path, ip, ua, status, method, host, bandwidth, country, asn)
   diff <log1> <log2>     Compare two log files for RPS shifts, 5xx spikes, and latency changes
 
 Filtering (activate colored log listing instead of report):
@@ -122,10 +121,26 @@ Examples:
   caddy-analyze --country IT,US access.log
   caddy-analyze --5xx --no-bots access.log
   caddy-analyze tail --ip 192.168.1.100 docker://caddy
+  caddy-analyze tail --detect docker://caddy
   caddy-analyze top ip --5xx -t 20 access.log
   caddy-analyze diff base.log current.log
 `,
 	RunE: runAnalysis,
+	// Tuning is resolved once, before any subcommand runs, because the
+	// setters it calls are not safe to use after work has started (#25).
+	PersistentPreRunE: func(cmd *cobra.Command, _ []string) error {
+		cfg, _, err := config.Load()
+		if err != nil {
+			// A broken config file is reported by the commands that need it;
+			// tuning simply falls back to defaults rather than blocking a run.
+			cfg = nil
+		}
+		f := cmd.Flags()
+		return applyTuning(cfg,
+			f.Changed("geo-cache-ttl"),
+			f.Changed("geo-cache-size"),
+			f.Changed("iptables-timeout"))
+	},
 }
 
 func Execute() {
@@ -163,6 +178,10 @@ func init() {
 	flags.BoolVarP(&flagCompact, "compact", "c", false, "Compact output mode")
 	flags.BoolVarP(&flagTrustXFF, "trust-forwarded", "", false, "Trust X-Forwarded-For / X-Real-IP for client IP (use behind a reverse proxy/CDN)")
 	flags.IntVarP(&flagMaxCard, "max-cardinality", "", 100000, "Max distinct keys tracked per counter (paths, IPs, UAs). 0 = unlimited. Bounds memory on huge-cardinality logs")
+	flags.DurationVar(&flagGeoCacheTTL, "geo-cache-ttl", 24*time.Hour,
+		"How long a GeoIP lookup stays cached. 0 disables caching, which is much slower on busy traffic")
+	flags.IntVar(&flagGeoCacheSize, "geo-cache-size", 50000,
+		"Max cached GeoIP lookups. 0 disables caching")
 	flags.IntVarP(&flagUARotation, "ua-rotation", "", 10, "Distinct User-Agents from one IP before scanner/rotation heuristic fires (0 = default)")
 	flags.StringVar(&flagHost, "host", "", "Filter by request host (substring match, case-insensitive)")
 	flags.StringArrayVar(&flagLevel, "level", nil, "Filter operational logs by level (error, warn, info, debug). Repeatable")
@@ -625,6 +644,24 @@ func runFollowMode(ctx context.Context, sources []types.LogSource, filters types
 		windowStart = time.Now()
 	}
 
+	// emitReport finalizes the current window and prints it. It takes no
+	// arguments on purpose: resetEngine reassigns engine and opEngine, so a
+	// closure over the variables always reads whichever engine is live now.
+	// A print failure is reported and swallowed, as before, so one bad write
+	// does not end the follow session.
+	emitReport := func() {
+		engine.Finalize()
+		report := output.NewReportWithSections(engine, output.ParseFormat(flagFormat), flagTop, sections)
+		report.SetDetect(flagDetect)
+		report.SetDefang(flagDefang)
+		report.SetFilters(filters)
+		report.SetOperationalStats(opEngine.Stats())
+		report.SetWriter(w)
+		if err := report.Print(); err != nil {
+			fmt.Fprintf(os.Stderr, "write report: %v\n", err)
+		}
+	}
+
 	for line := range fanInFollow(ctx, sources) {
 		entry, err := parser.Parse(line)
 		if err != nil || entry == nil {
@@ -639,31 +676,13 @@ func runFollowMode(ctx context.Context, sources []types.LogSource, filters types
 			opEngine.Process(e)
 		}
 		if time.Since(last) > 5*time.Second {
-			engine.Finalize()
-			report := output.NewReportWithSections(engine, output.ParseFormat(flagFormat), flagTop, sections)
-			report.SetDetect(flagDetect)
-			report.SetDefang(flagDefang)
-			report.SetFilters(filters)
-			report.SetOperationalStats(opEngine.Stats())
-			report.SetWriter(w)
-			if err := report.Print(); err != nil {
-				fmt.Fprintf(os.Stderr, "write report: %v\n", err)
-			}
+			emitReport()
 			if time.Since(windowStart) > window {
 				resetEngine()
 			}
 			last = time.Now()
 		} else if time.Since(windowStart) > window {
-			engine.Finalize()
-			report := output.NewReportWithSections(engine, output.ParseFormat(flagFormat), flagTop, sections)
-			report.SetDetect(flagDetect)
-			report.SetDefang(flagDefang)
-			report.SetFilters(filters)
-			report.SetOperationalStats(opEngine.Stats())
-			report.SetWriter(w)
-			if err := report.Print(); err != nil {
-				fmt.Fprintf(os.Stderr, "write report: %v\n", err)
-			}
+			emitReport()
 			resetEngine()
 		}
 	}
@@ -981,13 +1000,13 @@ func buildFilters() (types.Filters, error) {
 	}
 
 	if flagIP != "" {
-		if err := validateIPOrCIDR(flagIP); err != nil {
-			return f, fmt.Errorf("invalid --ip %q: %w", flagIP, err)
+		if err := validateIP(flagIP); err != nil {
+			return f, fmt.Errorf("--ip: %w", err)
 		}
 	}
 	if flagExcludeIP != "" {
-		if err := validateIPOrCIDR(flagExcludeIP); err != nil {
-			return f, fmt.Errorf("invalid --exclude-ip %q: %w", flagExcludeIP, err)
+		if err := validateIP(flagExcludeIP); err != nil {
+			return f, fmt.Errorf("--exclude-ip: %w", err)
 		}
 	}
 
@@ -1058,25 +1077,6 @@ func buildFilters() (types.Filters, error) {
 	return f, nil
 }
 
-// validateIPOrCIDR accepts a bare IP or a CIDR. Used to fail fast on a typo'd
-// --ip / --exclude-ip filter instead of silently returning "no log entries
-// found" when the CIDR fails to parse inside MatchEntry.
-func validateIPOrCIDR(s string) error {
-	if s == "" {
-		return nil
-	}
-	if strings.HasPrefix(s, "-") {
-		return fmt.Errorf("looks like a flag")
-	}
-	if net.ParseIP(s) != nil {
-		return nil
-	}
-	if _, _, err := net.ParseCIDR(s); err == nil {
-		return nil
-	}
-	return fmt.Errorf("not a valid IP or CIDR")
-}
-
 // parseSize parses a byte size. A bare integer is bytes. A suffix of k/kb, m/mb,
 // g/gb (case-insensitive) multiplies by 1024^N. Examples: 512, 1kb, 1mb, 2gb.
 func parseSize(s string) (int64, error) {
@@ -1112,6 +1112,9 @@ func parseSize(s string) (int64, error) {
 func parseTime(s string) (time.Time, error) {
 	if t, err := time.Parse(time.RFC3339, s); err == nil {
 		return t, nil
+	}
+	if s == "" {
+		return time.Time{}, fmt.Errorf("empty time")
 	}
 	unit := s[len(s)-1:]
 	n, err := strconv.Atoi(s[:len(s)-1])

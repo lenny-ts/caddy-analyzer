@@ -5,7 +5,33 @@ All notable changes to `caddy-analyzer` will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.6.0] - 2026-08-30
+
+### Added
+- **Firewall backend redesign**: multi-backend support (iptables, Docker DOCKER-USER, nftables, hybrid) with automatic environment detection. Guard now applies rules to both INPUT and DOCKER-USER chains when Docker containers are detected, solving the issue where blocked IPs bypassed the firewall in Dockerised Caddy deployments. — @lenny-ts
+- **Whitelist command**: `caddy-analyze whitelist --add/--remove/--list/--init` manages the never-block list. Auto-loaded by guard via `/etc/caddy-analyzer/whitelist.txt`. — @lenny-ts
+- **Operational tuning flags (#56)**: `--geo-cache-ttl`, `--geo-cache-size`, `--iptables-timeout` replace compile-time constants. — @dchaudhari7177
+
+### Fixed
+- **`loadState` does not recreate iptables rules (#79)**: on guard restart, `loadState()` restores IPs to the in-memory map but did not call `blocker.Block()` to recreate iptables rules. Banned IPs could pass through until the sliding window filled again. — @lenny-ts
+- **Graceful shutdown**: guard now flushes state and suppresses noisy "context canceled" errors on Ctrl+C. — @lenny-ts
+- **Active filters not shown in report header (#51)**: `--max-latency`, `--min-size`, `--max-size`, `--level`, `--ops-only` were omitted from the "Filters:" line. — @dchaudhari7177
+- **`validateIP` / `validateIPOrCIDR` duplication (#49)**: unified into a single `validateIP`. — @dchaudhari7177
+
+### Changed
+- **Sigma rule UUIDs are now RFC 4122 version 5 (#59)**: MD5-based identifiers were not valid UUIDs. Now uses `uuidV5` with a derived namespace, matching Sigma conventions. **Rules exported before this release carry different UUIDs**. — @dchaudhari7177
+- **GitHub Actions SHA-pinned (#55)**: all third-party actions pinned to full commit SHAs. — @dchaudhari7177
+
+## [0.5.1] - 2026-08-29
+
+### Fixed
+- **Docker log monitoring (`docker://`) not capturing entries (#57)**: `execLines` only read the child process's stdout via `StdoutPipe`, but Caddy v2 (and other tools) write access logs to stderr by default. `docker logs` preserves this stream separation, so all log data went to stderr and was silently dropped. Replaced `StdoutPipe` with `io.Pipe()` and set both `cmd.Stdout` and `cmd.Stderr` to the pipe writer, merging the two streams. A separate goroutine calls `cmd.Wait()` then closes the pipe to avoid a deadlock where the scanner blocks on `io.PipeReader.Read` while the writer is still open. `docker://container` sources now work regardless of whether the target writes to stdout, stderr, or both.
+
+### Changed
+- **Deduplicate `yamlEscape`/`yamlQuote`**: removed `yamlQuote` in `cmd/export_sigma.go`, an exact copy of `yamlEscape`; its four call sites now call `yamlEscape`. #48 — @dchaudhari7177
+
+### Fixed (also in 0.5.1)
+- **Zero-duration delta formatting**: `formatDurationDelta(0)` now uses the shared `output.FormatDuration` formatter instead of a hardcoded `"0ms"`, returning `"N/A"` consistently. #47 — @Labeeb2339
 
 ### Added
 - **GeoIP entry filters (`--country` / `--exclude-country` / `--asn` / `--exclude-asn`) (#21)**: keep or drop log entries by GeoIP country code (ISO 3166-1, case-insensitive) and autonomous system number, in `caddy-analyze`, `tail`, `top`, and `diff`. Same semantics as `--ip`/`--exclude-ip`: allowlist/denylist per dimension (mutually exclusive within a dimension, AND-combined across dimensions), unresolved entries (private IPs, mmdb misses) are dropped by allowlists and kept by denylists. Requires a GeoIP mmdb — validated up front with a clear error when an explicit `--geoip-db` is missing or auto-download is disabled without any discoverable database. Filters surface in the report header ("Filters:" line), JSON/CSV metadata, HTML reports, and trigger color-coded listing mode like other entry filters.

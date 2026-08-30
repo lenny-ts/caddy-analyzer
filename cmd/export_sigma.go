@@ -1,7 +1,8 @@
 package cmd
 
 import (
-	"crypto/md5"
+	"crypto/sha1"
+	"encoding/hex"
 	"fmt"
 	"io"
 	"os"
@@ -104,7 +105,7 @@ func writeSigmaRule(w io.Writer, r analysis.SigmaRuleInfo) error {
 			return err
 		}
 		for _, p := range r.URIPatterns {
-			if err := writef("        uri|re: %s\n", yamlQuote(p)); err != nil {
+			if err := writef("        uri|re: %s\n", yamlEscape(p)); err != nil {
 				return err
 			}
 		}
@@ -115,7 +116,7 @@ func writeSigmaRule(w io.Writer, r analysis.SigmaRuleInfo) error {
 			return err
 		}
 		for _, p := range r.UAPatterns {
-			if err := writef("        user_agent|re: %s\n", yamlQuote(p)); err != nil {
+			if err := writef("        user_agent|re: %s\n", yamlEscape(p)); err != nil {
 				return err
 			}
 		}
@@ -126,7 +127,7 @@ func writeSigmaRule(w io.Writer, r analysis.SigmaRuleInfo) error {
 			return err
 		}
 		for _, p := range r.AuthPatterns {
-			if err := writef("        authorization|re: %s\n", yamlQuote(p)); err != nil {
+			if err := writef("        authorization|re: %s\n", yamlEscape(p)); err != nil {
 				return err
 			}
 		}
@@ -137,7 +138,7 @@ func writeSigmaRule(w io.Writer, r analysis.SigmaRuleInfo) error {
 			return err
 		}
 		for _, p := range r.RawPatterns {
-			if err := writef("        raw_uri|re: %s\n", yamlQuote(p)); err != nil {
+			if err := writef("        raw_uri|re: %s\n", yamlEscape(p)); err != nil {
 				return err
 			}
 		}
@@ -192,19 +193,70 @@ func writeSigmaRule(w io.Writer, r analysis.SigmaRuleInfo) error {
 	return nil
 }
 
+// uuidNamespaceDNS is the DNS namespace from RFC 4122 Appendix C.
+var uuidNamespaceDNS = [16]byte{
+	0x6b, 0xa7, 0xb8, 0x10, 0x9d, 0xad, 0x11, 0xd1,
+	0x80, 0xb4, 0x00, 0xc0, 0x4f, 0xd4, 0x30, 0xc8,
+}
+
+// sigmaNamespace is the namespace every Sigma rule UUID is derived under.
+//
+// Derived once, deterministically, as uuidV5(uuidNamespaceDNS,
+// "caddy-analyzer"), and hardcoded thereafter. It must never change: a rule
+// that has been published carries its UUID forever, and rederiving the
+// namespace would silently reissue every rule under a new identity.
+const sigmaNamespace = "a64194cb-8d9e-5cf8-a2c3-a0ddce730456"
+
+// uuidV5 implements RFC 4122 section 4.3: SHA-1 over the namespace bytes
+// followed by the name, truncated to 16 bytes, with the version and variant
+// bits overwritten.
+//
+// Written against crypto/sha1 rather than taking a dependency on
+// github.com/google/uuid, which would add a module for twelve lines. The
+// implementation is checked against the RFC's own worked example in
+// TestUUIDV5MatchesRFC4122Vector.
+//
+// SHA-1 is used because RFC 4122 specifies it for version 5; this is a naming
+// scheme, not a security property.
+func uuidV5(namespace [16]byte, name string) string {
+	h := sha1.New()
+	h.Write(namespace[:])
+	h.Write([]byte(name))
+
+	var u [16]byte
+	copy(u[:], h.Sum(nil))
+	u[6] = (u[6] & 0x0f) | 0x50 // version 5
+	u[8] = (u[8] & 0x3f) | 0x80 // RFC 4122 variant
+
+	return fmt.Sprintf("%x-%x-%x-%x-%x", u[0:4], u[4:6], u[6:8], u[8:10], u[10:16])
+}
+
+// parseUUID reads the canonical 8-4-4-4-12 hex form.
+func parseUUID(s string) ([16]byte, error) {
+	var u [16]byte
+	hexOnly := strings.ReplaceAll(s, "-", "")
+	if len(hexOnly) != 32 {
+		return u, fmt.Errorf("not a UUID: %q", s)
+	}
+	b, err := hex.DecodeString(hexOnly)
+	if err != nil {
+		return u, fmt.Errorf("not a UUID: %q: %w", s, err)
+	}
+	copy(u[:], b)
+	return u, nil
+}
+
 func sigmaUUID(title string) string {
-	h := md5.Sum([]byte("caddy-analyzer:sigma:" + title))
-	return fmt.Sprintf("%08x-%04x-%04x-%04x-%012x",
-		h[0:4], h[4:6], h[6:8], h[8:10], h[10:16])
+	// The namespace is a compile-time constant in canonical form, so this
+	// cannot fail; TestSigmaNamespaceIsWellFormed proves it.
+	ns, err := parseUUID(sigmaNamespace)
+	if err != nil {
+		panic("sigmaNamespace is not a valid UUID: " + err.Error())
+	}
+	return uuidV5(ns, "caddy-analyzer:sigma:"+title)
 }
 
 func yamlEscape(s string) string {
-	s = strings.ReplaceAll(s, `\`, `\\`)
-	s = strings.ReplaceAll(s, `"`, `\"`)
-	return `"` + s + `"`
-}
-
-func yamlQuote(s string) string {
 	s = strings.ReplaceAll(s, `\`, `\\`)
 	s = strings.ReplaceAll(s, `"`, `\"`)
 	return `"` + s + `"`

@@ -16,10 +16,16 @@ import (
 	"github.com/lenny-ts/caddy-analyzer/pkg/types"
 )
 
-const (
-	geoCacheTTL     = 24 * time.Hour
+// Cache tuning. var, not const, so SetGeoCacheTTL and SetGeoCacheMaxSize can
+// override them at startup; nothing reads them outside a comparison.
+var (
+	// geoCacheTTL is how long a resolved lookup stays usable.
+	geoCacheTTL = 24 * time.Hour
+	// geoCacheMaxSize caps the in-memory lookup cache.
 	geoCacheMaxSize = 50000
+)
 
+const (
 	// geoipCountryURL is the MaxMind GeoLite2 country mmdb download URL.
 	// Uses the P3TERX/GeoLite.mmdb GitHub release mirror, which repackages
 	// the official MaxMind GeoLite2 databases and is updated daily.
@@ -517,3 +523,35 @@ func CountryCodeFromName(name, dbPath string) string {
 	}
 	return ""
 }
+
+// SetGeoCacheTTL overrides how long a resolved GeoIP lookup stays usable.
+// Call once at startup, before any Enricher is built: the cache is read
+// without synchronising on this value, so changing it mid-run is a data race.
+//
+// A ttl of 0 disables caching entirely — every lookup re-reads the mmdb, which
+// is dramatically slower on busy traffic. A negative ttl is ignored, since it
+// would mean the same thing as 0 while reading like a mistake.
+func SetGeoCacheTTL(ttl time.Duration) {
+	if ttl < 0 {
+		return
+	}
+	geoCacheTTL = ttl
+}
+
+// SetGeoCacheMaxSize overrides the maximum number of cached GeoIP lookups.
+// Call once at startup, for the same reason as SetGeoCacheTTL.
+//
+// A size of 0 disables caching. A negative size is ignored.
+func SetGeoCacheMaxSize(size int) {
+	if size < 0 {
+		return
+	}
+	geoCacheMaxSize = size
+}
+
+// GeoCacheTTL reports the current cache TTL, so a caller can show what is in
+// effect rather than re-deriving the default.
+func GeoCacheTTL() time.Duration { return geoCacheTTL }
+
+// GeoCacheMaxSize reports the current cache size cap.
+func GeoCacheMaxSize() int { return geoCacheMaxSize }

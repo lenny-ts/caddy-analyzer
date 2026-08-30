@@ -204,5 +204,5 @@ func formatDurationDelta(d float64) string {
 	if d < 0 {
 		return styleDiffGood.Render("-" + output.FormatDuration(-d))
 	}
-	return "0ms"
+	return output.FormatDuration(d)
 }

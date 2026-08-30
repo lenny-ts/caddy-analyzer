@@ -92,10 +92,13 @@ func Run(ctx context.Context, opts *Options) error {
 		return err
 	}
 	// Fail closed if cosign is unavailable — never fall back to an
-	// unverified download.
-	cosignPath, err := FindCosign()
+	// unverified download. Try to auto-download if not in PATH.
+	cosignPath, cosignTmpDir, err := EnsureCosign(ctx, opts.HTTPClient)
 	if err != nil {
 		return err
+	}
+	if cosignTmpDir != "" {
+		defer func() { _ = os.RemoveAll(cosignTmpDir) }()
 	}
 
 	// Stage inside destDir so the final swap is an atomic same-filesystem rename.

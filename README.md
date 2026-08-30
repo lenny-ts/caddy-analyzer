@@ -66,7 +66,7 @@ Output example:
        [scanner] Scanner / automated tool detected GET /admin
 ```
 
-> **Guard mode** (`caddy-analyze guard`) extends detection with automatic `iptables` banning — blocks offending IPs at the firewall on configurable thresholds. Uses a **sliding window** (per-IP, per-second buckets) so attackers cannot evade limits by straddling a tick boundary. Supports audit logging (`--audit-log`), state persistence across restarts (`--state-file`), an IP allowlist (`--never-block` / `--never-block-file`), distributed-scan defense (`--subnet-limit`), RPS anomaly alerting (`--rps-anomaly`), and `--trust-forwarded` for deployments behind a reverse proxy/CDN. Pattern-detection blocks are filtered by confidence via `--detect-confidence` (default 8, `0` disables). **Blocklist feeds** (Spamhaus DROP, FireHOL, CINS, Tor, Emerging Threats, AbuseIPDB) trigger immediate blocks via a CIDR trie; `--country-block CN,RU,IR` blocks by GeoIP country code.
+> **Guard mode** (`caddy-analyze guard`) extends detection with automatic firewall blocking — blocks offending IPs via `iptables`, Docker `DOCKER-USER` chain, or `nftables` depending on the environment. **Auto-detection** selects the right backend: when Docker containers with Caddy are found, rules are applied to both `INPUT` and `DOCKER-USER` chains so traffic is blocked regardless of network path. Uses a **sliding window** (per-IP, per-second buckets) so attackers cannot evade limits by straddling a tick boundary. Supports audit logging (`--audit-log`), state persistence across restarts (`--state-file`), an IP allowlist (`--never-block` / `--never-block-file` or `whitelist` command), distributed-scan defense (`--subnet-limit`), RPS anomaly alerting (`--rps-anomaly`), and `--trust-forwarded` for deployments behind a reverse proxy/CDN. Pattern-detection blocks are filtered by confidence via `--detect-confidence` (default 8, `0` disables). **Blocklist feeds** (Spamhaus DROP, FireHOL, CINS, Tor, Emerging Threats, AbuseIPDB) trigger immediate blocks via a CIDR trie; `--country-block CN,RU,IR` blocks by GeoIP country code.
 
 ---
 
@@ -239,6 +239,7 @@ Subcommands:
   config                       Manage default log source configuration
   block <ip...>                Manually block IP via iptables (--audit-log)
   unban <ip...>               Remove IP block from iptables (--all, --list, --audit-log)
+  whitelist                   Manage the never-block list (--add, --remove, --list, --init)
 ```
 </details>
 
@@ -297,6 +298,7 @@ Subcommands:
 | `--geoip-db` | | `""` | Path to GeoIP mmdb file (MaxMind GeoLite2 or DB-IP). Auto-discovers if empty |
 | `--no-auto-download` | | `false` | Disable automatic download of GeoLite2 mmdb on first run |
 | `--country-block` | | `""` | Comma-separated ISO country codes to block immediately (guard, e.g. `CN,RU,IR`). Requires GeoIP mmdb |
+| `--firewall-backend` | | `auto` | Firewall backend: `auto`, `iptables`, `docker`, `nftables`, `hybrid`. Auto detects Docker/nftables |
 | `--no-blocklist` | | `false` | Disable blocklist feed checking (guard) |
 | `--blocklist-refresh` | | `6h` | Background refresh interval for cached blocklist feeds (guard). Min `1h`; `0` disables |
 | `--cache-dir` | | `~/.cache/caddy-analyzer/blocklists` | Directory for cached blocklist files (guard, blocklist) |
