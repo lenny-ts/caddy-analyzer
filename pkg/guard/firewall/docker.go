@@ -75,8 +75,12 @@ func (b *DockerBackend) Block(ip string) error {
 
 func (b *DockerBackend) Unblock(ip string) error {
 	ctx := context.Background()
-	return RunCmd(ctx, b.Bin, "-D", ChainName, "-s", ip,
+	err := RunCmd(ctx, b.Bin, "-D", ChainName, "-s", ip,
 		"-m", "comment", "--comment", CommentMarker, "-j", "DROP")
+	if err != nil && IsBadRuleError(err) {
+		return nil
+	}
+	return err
 }
 
 func (b *DockerBackend) ListBlocked() ([]string, error) {

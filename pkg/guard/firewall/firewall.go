@@ -103,3 +103,13 @@ func IsChainError(err error) bool {
 	}
 	return strings.Contains(strings.ToLower(err.Error()), "already exists")
 }
+
+// IsBadRuleError checks if an error is a "bad rule" (rule doesn't exist) from iptables -D.
+func IsBadRuleError(err error) bool {
+	var exitErr *exec.ExitError
+	if !errors.As(err, &exitErr) || exitErr.ExitCode() != 1 {
+		return false
+	}
+	return strings.Contains(strings.ToLower(err.Error()), "bad rule") ||
+		strings.Contains(strings.ToLower(err.Error()), "does a matching rule")
+}
