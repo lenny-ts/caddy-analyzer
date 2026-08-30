@@ -5,6 +5,15 @@ All notable changes to `caddy-analyzer` will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.1] - 2026-08-31
+
+### Added
+- **GeoIP entry filters (#37)**: `--country`, `--exclude-country`, `--asn`, `--exclude-asn` filter log entries by GeoIP data. Supports both ISO codes (`IT`, `US`) and country names (`Italy`, `United States`). — @lenny-ts
+- **Auto-download cosign (#62)**: `caddy-analyze update` now automatically downloads cosign for signature verification when not installed, removing the manual setup requirement. — @lenny-ts
+
+### Fixed
+- **Unblock idempotent**: `unban` and guard expiry no longer fail with "partial unblock failures" when the iptables rule doesn't exist in one chain (hybrid mode). — @lenny-ts
+
 ## [0.6.0] - 2026-08-30
 
 ### Added
