@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Operational tuning flags (#56)**: `--geo-cache-ttl` (default 24h), `--geo-cache-size` (default 50000), and `--iptables-timeout` (default 10s) replace compile-time constants, allowing runtime tuning without recompilation. Values can also be set in `caddy-analyzer.json` under the `tuning` key; CLI flags take precedence. — @dchaudhari7177
+
+### Fixed
+- **Active filters not shown in report header (#51)**: `--max-latency`, `--min-size`, `--max-size`, `--level`, and `--ops-only` were parsed but silently omitted from the "Filters:" line in report output. — @dchaudhari7177
+- **`validateIP` / `validateIPOrCIDR` duplication (#49)**: unified into a single `validateIP` that accepts both bare IPs and CIDRs. — @dchaudhari7177
+
+### Changed
+- **Sigma rule UUIDs are now RFC 4122 version 5 (#59)**: `sigmaUUID` derived its identifier from MD5 and formatted the digest as `8-4-4-4-12`, which looks like a UUID but is not one — the version and variant bits were whatever the hash produced, so a consumer validating the `id` field would reject the rule. Identifiers are now `uuidV5(sigmaNamespace, "caddy-analyzer:sigma:" + title)`, matching Sigma's own convention. The namespace is derived once as `uuidV5(DNS, "caddy-analyzer")` and hardcoded as a constant, so identifiers stay stable across runs and releases. **Rules exported before this release carry different UUIDs**; regenerate them once. Implemented against `crypto/sha1` rather than adding a module dependency, and checked against RFC 4122's published test vector. — @dchaudhari7177
+- **GitHub Actions SHA-pinned (#55)**: all third-party actions (`actions/checkout`, `actions/configure-pages`, `actions/upload-pages-artifact`, `actions/deploy-pages`, `goreleaser/goreleaser-action`, `softprops/action-gh-release`) pinned to full commit SHAs with version comments for supply-chain hardening. — @dchaudhari7177
+- **`emitReport` extracted in `runFollowMode` (#53)**: reduced code duplication in the follow-mode interval logic. — @dchaudhari7177
+- **`top` dimension help text updated (#54)**: `country` and `asn` added to the documented dimension list. — @dchaudhari7177
+- **`tail --detect` example added to root help (#58)**. — @dchaudhari7177
+
+### Docs
+- **`parseTime` tests (#50)**: coverage for RFC3339, relative durations, empty input guard. — @dchaudhari7177
+- **`formatDurationDelta` zero-case documented (#52)**: comment and tests explaining why `0` returns `"0ms"` instead of `"N/A"`. — @dchaudhari7177
+- **Subcommands docs updated (#56)**: new tuning flags documented in the CLI reference table. — @dchaudhari7177
+
 ## [0.5.1] - 2026-08-29
 
 ### Fixed
