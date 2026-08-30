@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Auto-download cosign (#62)**: `caddy-analyze update` now automatically downloads cosign for signature verification when not installed, removing the manual setup requirement. — @lenny-ts
 
 ### Fixed
+- **Guard output now shows blocklist/country-block bans (#83)**: blocklist and country-block bans were only logged to audit but not shown in terminal output. — @lenny-ts
 - **Unblock idempotent**: `unban` and guard expiry no longer fail with "partial unblock failures" when the iptables rule doesn't exist in one chain (hybrid mode). — @lenny-ts
 
 ## [0.6.0] - 2026-08-30
