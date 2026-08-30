@@ -15,10 +15,16 @@ import (
 	"github.com/lenny-ts/caddy-analyzer/pkg/types"
 )
 
-const (
-	geoCacheTTL     = 24 * time.Hour
+// Cache tuning. var, not const, so SetGeoCacheTTL and SetGeoCacheMaxSize can
+// override them at startup; nothing reads them outside a comparison.
+var (
+	// geoCacheTTL is how long a resolved lookup stays usable.
+	geoCacheTTL = 24 * time.Hour
+	// geoCacheMaxSize caps the in-memory lookup cache.
 	geoCacheMaxSize = 50000
+)
 
+const (
 	// geoipCountryURL is the MaxMind GeoLite2 country mmdb download URL.
 	// Uses the P3TERX/GeoLite.mmdb GitHub release mirror, which repackages
 	// the official MaxMind GeoLite2 databases and is updated daily.
@@ -48,6 +54,13 @@ type GeoIP struct {
 	cacheMu   sync.Mutex
 	cache     map[string]geoCacheEntry
 	path      string
+	// loading is true while a background download is in progress; Lookups
+	// return a zero GeoInfo until the database is swapped in.
+	loading bool
+	// closed is set by Close so a racing backgroundLoad can release the
+	// freshly opened databases instead of swapping them into a GeoIP that
+	// the caller already stopped using.
+	closed bool
 }
 
 type geoCacheEntry struct {
@@ -82,9 +95,9 @@ var geoIPSearchPaths = []string{
 	"GeoLite2-Country.mmdb",
 	"dbip-country-lite.mmdb",
 	"dbip-city-lite.mmdb",
-	filepath.Join(os.Getenv("HOME"), ".config", "caddy-analyzer", "GeoIP.mmdb"),
-	filepath.Join(os.Getenv("HOME"), ".config", "caddy-analyzer", "GeoLite2-Country.mmdb"),
-	filepath.Join(os.Getenv("HOME"), ".config", "caddy-analyzer", "dbip-country-lite.mmdb"),
+	filepath.Join(userHomeDir(), ".config", "caddy-analyzer", "GeoIP.mmdb"),
+	filepath.Join(userHomeDir(), ".config", "caddy-analyzer", "GeoLite2-Country.mmdb"),
+	filepath.Join(userHomeDir(), ".config", "caddy-analyzer", "dbip-country-lite.mmdb"),
 	"/var/lib/caddy-analyzer/GeoIP.mmdb",
 	"/var/lib/caddy-analyzer/GeoLite2-Country.mmdb",
 	"/usr/share/GeoIP/GeoIP.mmdb",
@@ -96,8 +109,8 @@ var geoIPSearchPaths = []string{
 var geoIPASNSearchPaths = []string{
 	"GeoLite2-ASN.mmdb",
 	"dbip-asn-lite.mmdb",
-	filepath.Join(os.Getenv("HOME"), ".config", "caddy-analyzer", "GeoLite2-ASN.mmdb"),
-	filepath.Join(os.Getenv("HOME"), ".config", "caddy-analyzer", "dbip-asn-lite.mmdb"),
+	filepath.Join(userHomeDir(), ".config", "caddy-analyzer", "GeoLite2-ASN.mmdb"),
+	filepath.Join(userHomeDir(), ".config", "caddy-analyzer", "dbip-asn-lite.mmdb"),
 	"/var/lib/caddy-analyzer/GeoLite2-ASN.mmdb",
 	"/usr/share/GeoIP/GeoLite2-ASN.mmdb",
 }
@@ -106,6 +119,18 @@ var geoIPASNSearchPaths = []string{
 // lite mmdb when no GeoIP file is found. Must be called before NewGeoIP.
 func SetAutoDownload(enabled bool) {
 	autoDownload = enabled
+}
+
+// userHomeDir returns the current user's home directory. It prefers
+// os.UserHomeDir (which is cross-platform, resolving the right directory on
+// Windows where the HOME environment variable is typically unset) and falls
+// back to HOME when the OS-specific lookup fails, preserving the previous
+// behaviour on systems where only HOME is defined.
+func userHomeDir() string {
+	if home, err := os.UserHomeDir(); err == nil && home != "" {
+		return home
+	}
+	return os.Getenv("HOME")
 }
 
 // userConfigDir returns the directory where auto-downloaded mmdb files
@@ -230,6 +255,79 @@ func openGeoIP(countryPath, asnPath string) (*GeoIP, error) {
 	return g, nil
 }
 
+// NewGeoIPAsync is like NewGeoIP but, when no mmdb file is found and
+// auto-download is enabled, returns immediately with a lazy GeoIP that
+// downloads the database in the background. Lookups during the download
+// return a zero GeoInfo (no error); once the download completes the
+// database is swapped in atomically and subsequent lookups return real
+// data. This keeps interactive modes (notably --watch) responsive.
+func NewGeoIPAsync(path string) (*GeoIP, error) {
+	if path != "" {
+		return openGeoIP(path, "")
+	}
+	countryPath, ok := findFirst(geoIPSearchPaths)
+	if ok {
+		asnPath, _ := findFirst(geoIPASNSearchPaths)
+		return openGeoIP(countryPath, asnPath)
+	}
+	if !autoDownload {
+		return nil, fmt.Errorf("no GeoIP mmdb file found; pass --geoip-db or place a file in one of: %v", geoIPSearchPaths)
+	}
+	g := &GeoIP{
+		cache:   make(map[string]geoCacheEntry),
+		loading: true,
+	}
+	go g.backgroundLoad()
+	return g, nil
+}
+
+// backgroundLoad downloads the GeoLite2 country + ASN databases and swaps
+// them into the GeoIP. Intended to run as a goroutine from NewGeoIPAsync
+// so interactive modes are not blocked on startup. If Close is called
+// before the download finishes, the freshly opened databases are closed
+// and discarded.
+func (g *GeoIP) backgroundLoad() {
+	cp, ap, err := autoDownloadGeoIP()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "warning: geoip background download failed: %v\n", err)
+		g.mu.Lock()
+		g.loading = false
+		g.mu.Unlock()
+		return
+	}
+	real, err := openGeoIP(cp, ap)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "warning: geoip open failed: %v\n", err)
+		g.mu.Lock()
+		g.loading = false
+		g.mu.Unlock()
+		return
+	}
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	g.loading = false
+	if g.closed {
+		if real.countryDB != nil {
+			_ = real.countryDB.Close()
+		}
+		if real.asnDB != nil {
+			_ = real.asnDB.Close()
+		}
+		return
+	}
+	g.countryDB = real.countryDB
+	g.asnDB = real.asnDB
+	g.path = real.path
+}
+
+// Loading reports whether the GeoIP is still downloading its database in
+// the background. Lookups during this time return a zero GeoInfo.
+func (g *GeoIP) Loading() bool {
+	g.mu.RLock()
+	defer g.mu.RUnlock()
+	return g.loading
+}
+
 // findFirst returns the first path in the list that exists as a file.
 func findFirst(paths []string) (string, bool) {
 	for _, p := range paths {
@@ -243,10 +341,14 @@ func findFirst(paths []string) (string, bool) {
 	return "", false
 }
 
-// Close releases the mmdb file handles.
+// Close releases the mmdb file handles. It also marks the GeoIP as
+// closed so a racing background download (started by NewGeoIPAsync)
+// releases its freshly opened databases instead of swapping them in.
 func (g *GeoIP) Close() error {
 	g.mu.Lock()
 	defer g.mu.Unlock()
+	g.closed = true
+	g.loading = false
 	var err error
 	if g.countryDB != nil {
 		err = g.countryDB.Close()
@@ -266,7 +368,8 @@ func (g *GeoIP) Path() string {
 
 // Lookup returns GeoInfo for the given IP. For private/loopback IPs
 // returns a zero-value GeoInfo without hitting the database. Results
-// are cached for geoCacheTTL.
+// are cached for geoCacheTTL. While a background download is in
+// progress (see NewGeoIPAsync), returns a zero GeoInfo with no error.
 func (g *GeoIP) Lookup(ip string) (types.GeoInfo, error) {
 	if IsPrivateOrLoopback(ip) {
 		return types.GeoInfo{}, nil
@@ -278,6 +381,13 @@ func (g *GeoIP) Lookup(ip string) (types.GeoInfo, error) {
 
 	if info, ok := g.cacheGet(ip); ok {
 		return info, nil
+	}
+
+	g.mu.RLock()
+	loading := g.loading
+	g.mu.RUnlock()
+	if loading {
+		return types.GeoInfo{}, nil
 	}
 
 	info, err := g.lookupUncached(parsed)
@@ -364,3 +474,35 @@ func (g *GeoIP) evictExpired() {
 		}
 	}
 }
+
+// SetGeoCacheTTL overrides how long a resolved GeoIP lookup stays usable.
+// Call once at startup, before any Enricher is built: the cache is read
+// without synchronising on this value, so changing it mid-run is a data race.
+//
+// A ttl of 0 disables caching entirely — every lookup re-reads the mmdb, which
+// is dramatically slower on busy traffic. A negative ttl is ignored, since it
+// would mean the same thing as 0 while reading like a mistake.
+func SetGeoCacheTTL(ttl time.Duration) {
+	if ttl < 0 {
+		return
+	}
+	geoCacheTTL = ttl
+}
+
+// SetGeoCacheMaxSize overrides the maximum number of cached GeoIP lookups.
+// Call once at startup, for the same reason as SetGeoCacheTTL.
+//
+// A size of 0 disables caching. A negative size is ignored.
+func SetGeoCacheMaxSize(size int) {
+	if size < 0 {
+		return
+	}
+	geoCacheMaxSize = size
+}
+
+// GeoCacheTTL reports the current cache TTL, so a caller can show what is in
+// effect rather than re-deriving the default.
+func GeoCacheTTL() time.Duration { return geoCacheTTL }
+
+// GeoCacheMaxSize reports the current cache size cap.
+func GeoCacheMaxSize() int { return geoCacheMaxSize }

@@ -5,7 +5,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"net"
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -65,14 +64,17 @@ var (
 	flagDefang     bool
 	flagGeoIPDB    string
 	flagNoAutoDL   bool
+	flagLevel      []string
+	flagOpsOnly    bool
 )
 
-var Version = "0.4.0-dev"
+var Version = "0.6.0-dev"
 
 var rootCmd = &cobra.Command{
-	Use:   "caddy-analyze [flags] [source...]",
-	Short: "Analyze Caddy access logs from files, stdin, Docker, Kubernetes, or journalctl",
-	Args:  cobra.ArbitraryArgs,
+	Use:          "caddy-analyze [flags] [source...]",
+	Short:        "Analyze Caddy access logs from files, stdin, Docker, Kubernetes, or journalctl",
+	Args:         cobra.ArbitraryArgs,
+	SilenceUsage: true,
 	Long: `Analyze Caddy v2 access logs with security detection across 26 attack categories (SQLi, NoSQLi, XSS, SSTI, SSRF, RCE, path traversal, LFI wrappers, GraphQL, Log4j/JNDI, XXE, open redirect, LDAP/XPath/CRLF/SSI injection, prototype pollution, probes, scanners, UA rotation, JWT abuse, object enumeration, beaconing) using a dual-pass evasion-resistant engine.
 
 Sources:
@@ -84,7 +86,7 @@ Sources:
 
 Subcommands:
   tail [source...]       Colorized real-time log viewer
-  top <dimension>        Quick top-N metric inspector (path, ip, ua, status, method, host, bandwidth)
+  top <dimension>        Quick top-N metric inspector (path, ip, ua, status, method, host, bandwidth, country, asn)
   diff <log1> <log2>     Compare two log files for RPS shifts, 5xx spikes, and latency changes
 
 Filtering (activate colored log listing instead of report):
@@ -112,10 +114,26 @@ Examples:
   caddy-analyze --ip 10.0.0.0/8 access.log
   caddy-analyze --5xx --no-bots access.log
   caddy-analyze tail --ip 192.168.1.100 docker://caddy
+  caddy-analyze tail --detect docker://caddy
   caddy-analyze top ip --5xx -t 20 access.log
   caddy-analyze diff base.log current.log
 `,
 	RunE: runAnalysis,
+	// Tuning is resolved once, before any subcommand runs, because the
+	// setters it calls are not safe to use after work has started (#25).
+	PersistentPreRunE: func(cmd *cobra.Command, _ []string) error {
+		cfg, _, err := config.Load()
+		if err != nil {
+			// A broken config file is reported by the commands that need it;
+			// tuning simply falls back to defaults rather than blocking a run.
+			cfg = nil
+		}
+		f := cmd.Flags()
+		return applyTuning(cfg,
+			f.Changed("geo-cache-ttl"),
+			f.Changed("geo-cache-size"),
+			f.Changed("iptables-timeout"))
+	},
 }
 
 func Execute() {
@@ -149,8 +167,14 @@ func init() {
 	flags.BoolVarP(&flagCompact, "compact", "c", false, "Compact output mode")
 	flags.BoolVarP(&flagTrustXFF, "trust-forwarded", "", false, "Trust X-Forwarded-For / X-Real-IP for client IP (use behind a reverse proxy/CDN)")
 	flags.IntVarP(&flagMaxCard, "max-cardinality", "", 100000, "Max distinct keys tracked per counter (paths, IPs, UAs). 0 = unlimited. Bounds memory on huge-cardinality logs")
+	flags.DurationVar(&flagGeoCacheTTL, "geo-cache-ttl", 24*time.Hour,
+		"How long a GeoIP lookup stays cached. 0 disables caching, which is much slower on busy traffic")
+	flags.IntVar(&flagGeoCacheSize, "geo-cache-size", 50000,
+		"Max cached GeoIP lookups. 0 disables caching")
 	flags.IntVarP(&flagUARotation, "ua-rotation", "", 10, "Distinct User-Agents from one IP before scanner/rotation heuristic fires (0 = default)")
 	flags.StringVar(&flagHost, "host", "", "Filter by request host (substring match, case-insensitive)")
+	flags.StringArrayVar(&flagLevel, "level", nil, "Filter operational logs by level (error, warn, info, debug). Repeatable")
+	flags.BoolVarP(&flagOpsOnly, "ops-only", "", false, "Show only operational (non-HTTP) log events")
 	flags.StringVar(&flagMaxLatency, "max-latency", "", "Filter requests faster than duration (e.g. 500ms, 1s). Counterpart to --slow")
 	flags.StringVar(&flagMinSize, "min-size", "", "Filter responses at least this size (bytes, or k/mb/gb suffix e.g. 1mb)")
 	flags.StringVar(&flagMaxSize, "max-size", "", "Filter responses at most this size (bytes, or k/mb/gb suffix e.g. 512kb)")
@@ -197,7 +221,10 @@ func runAnalysis(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	sources := resolveSources(args)
+	sources, err := resolveSources(args)
+	if err != nil {
+		return err
+	}
 
 	filters, err := buildFilters()
 	if err != nil {
@@ -254,6 +281,7 @@ func validateFlags() error {
 
 func runOnceMode(ctx context.Context, sources []types.LogSource, filters types.Filters) error {
 	engine := analysis.New(filters)
+	opEngine := analysis.NewOperationalEngine(filters)
 	if flagDetect {
 		det := analysis.NewDetector()
 		det.SetUARotationThreshold(flagUARotation)
@@ -263,6 +291,7 @@ func runOnceMode(ctx context.Context, sources []types.LogSource, filters types.F
 	sections := types.DefaultTopSections()
 	var parseErrors, processed int64
 	var entries []*types.LogEntry
+	var opEntries []*types.OperationalEntry
 	showListing := output.HasEntryFilters(filters) && flagFormat == "table" && flagOutput == "" && !flagDetect
 
 	geoip := newGeoIPEnricher()
@@ -291,31 +320,48 @@ func runOnceMode(ctx context.Context, sources []types.LogSource, filters types.F
 				bar.Add(1)
 				continue
 			}
-			applyForwarded(entry, filters)
-			if !analysis.MatchEntry(entry, filters) {
-				bar.Add(1)
-				continue
+			switch e := entry.(type) {
+			case *types.LogEntry:
+				if filters.OpsOnly {
+					bar.Add(1)
+					continue
+				}
+				applyForwarded(e, filters)
+				if !analysis.MatchEntry(e, filters) {
+					bar.Add(1)
+					continue
+				}
+				enrichGeoIP(e, geoip)
+				engine.Process(e)
+				processed++
+				if showListing {
+					entries = append(entries, e)
+				}
+			case *types.OperationalEntry:
+				if !analysis.MatchOperational(e, filters) {
+					bar.Add(1)
+					continue
+				}
+				opEngine.Process(e)
+				if showListing {
+					opEntries = append(opEntries, e)
+				}
 			}
-			enrichGeoIP(entry, geoip)
-			engine.Process(entry)
-			processed++
 			bar.Add(1)
-			if showListing {
-				entries = append(entries, entry)
-			}
 		}
 	}
 
 	bar.Done()
 
-	if processed == 0 && parseErrors == 0 {
+	if processed == 0 && opEngine.Stats().TotalEvents == 0 && parseErrors == 0 {
 		fmt.Fprintln(os.Stderr, "no log entries found")
 		return nil
 	}
 
 	if showListing {
-		fmt.Fprintf(os.Stderr, "%d entries matched\n\n", len(entries))
+		fmt.Fprintf(os.Stderr, "%d entries matched\n\n", len(entries)+len(opEntries))
 		output.PrintLogEntries(entries, os.Stdout, flagDefang)
+		output.PrintOperationalEntries(opEntries, os.Stdout, flagDefang)
 		return nil
 	}
 
@@ -325,6 +371,7 @@ func runOnceMode(ctx context.Context, sources []types.LogSource, filters types.F
 	report.SetDetect(flagDetect)
 	report.SetDefang(flagDefang)
 	report.SetFilters(filters)
+	report.SetOperationalStats(opEngine.Stats())
 	if flagOutput != "" {
 		f, err := createOutputFile(flagOutput)
 		if err != nil {
@@ -344,12 +391,58 @@ func applyForwarded(entry *types.LogEntry, filters types.Filters) {
 	}
 }
 
+// acceptEntry rewrites the client IP when requested, then applies the same
+// filters as one-shot and tail mode.
+func acceptEntry(entry *types.LogEntry, filters types.Filters) bool {
+	applyForwarded(entry, filters)
+	return analysis.MatchEntry(entry, filters)
+}
+
+type geoLookuper interface {
+	Lookup(ip string) (types.GeoInfo, error)
+}
+
+// prepareEntry filters first, then enriches accepted rows only.
+func prepareEntry(entry *types.LogEntry, filters types.Filters, geo geoLookuper) bool {
+	if !acceptEntry(entry, filters) {
+		return false
+	}
+	if geo != nil && entry.RemoteIP != "" {
+		if info, err := geo.Lookup(entry.RemoteIP); err == nil {
+			entry.Geo = info
+		}
+	}
+	return true
+}
+
+// takeEntry is the follow/interval ingest step: prepare, then next only if accepted.
+func takeEntry(entry *types.LogEntry, filters types.Filters, geo geoLookuper, next func(*types.LogEntry)) {
+	if !prepareEntry(entry, filters, geo) {
+		return
+	}
+	next(entry)
+}
+
 // newGeoIPEnricher creates a GeoIP enricher from the --geoip-db flag or
 // auto-discovery. Returns nil if no mmdb file is available (non-fatal:
 // analysis continues without country/ASN data).
 func newGeoIPEnricher() *enrich.GeoIP {
 	enrich.SetAutoDownload(!flagNoAutoDL)
 	g, err := enrich.NewGeoIP(flagGeoIPDB)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "warning: geoip: %v (continuing without GeoIP)\n", err)
+		return nil
+	}
+	return g
+}
+
+// newGeoIPEnricherAsync is like newGeoIPEnricher but uses NewGeoIPAsync
+// so a missing mmdb is downloaded in the background instead of blocking
+// startup. Intended for interactive modes (--watch) where a 5-10 minute
+// download delay before the dashboard appears is unacceptable.
+func newGeoIPEnricherAsync() *enrich.GeoIP {
+	enrich.SetAutoDownload(!flagNoAutoDL)
+	g, err := enrich.NewGeoIPAsync(flagGeoIPDB)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "warning: geoip: %v (continuing without GeoIP)\n", err)
 		return nil
@@ -439,6 +532,7 @@ func runFollowMode(ctx context.Context, sources []types.LogSource, filters types
 	// fresh report.
 	const window = 5 * time.Minute
 	engine := analysis.New(filters)
+	opEngine := analysis.NewOperationalEngine(filters)
 	if flagDetect {
 		det := analysis.NewDetector()
 		det.SetUARotationThreshold(flagUARotation)
@@ -464,6 +558,7 @@ func runFollowMode(ctx context.Context, sources []types.LogSource, filters types
 
 	resetEngine := func() {
 		engine = analysis.New(filters)
+		opEngine = analysis.NewOperationalEngine(filters)
 		if flagDetect {
 			det := analysis.NewDetector()
 			det.SetUARotationThreshold(flagUARotation)
@@ -473,38 +568,45 @@ func runFollowMode(ctx context.Context, sources []types.LogSource, filters types
 		windowStart = time.Now()
 	}
 
+	// emitReport finalizes the current window and prints it. It takes no
+	// arguments on purpose: resetEngine reassigns engine and opEngine, so a
+	// closure over the variables always reads whichever engine is live now.
+	// A print failure is reported and swallowed, as before, so one bad write
+	// does not end the follow session.
+	emitReport := func() {
+		engine.Finalize()
+		report := output.NewReportWithSections(engine, output.ParseFormat(flagFormat), flagTop, sections)
+		report.SetDetect(flagDetect)
+		report.SetDefang(flagDefang)
+		report.SetFilters(filters)
+		report.SetOperationalStats(opEngine.Stats())
+		report.SetWriter(w)
+		if err := report.Print(); err != nil {
+			fmt.Fprintf(os.Stderr, "write report: %v\n", err)
+		}
+	}
+
 	for line := range fanInFollow(ctx, sources) {
 		entry, err := parser.Parse(line)
 		if err != nil || entry == nil {
 			continue
 		}
-		applyForwarded(entry, filters)
-		enrichGeoIP(entry, geoip)
-		engine.Process(entry)
-		if time.Since(last) > 5*time.Second {
-			engine.Finalize()
-			report := output.NewReportWithSections(engine, output.ParseFormat(flagFormat), flagTop, sections)
-			report.SetDetect(flagDetect)
-			report.SetDefang(flagDefang)
-			report.SetFilters(filters)
-			report.SetWriter(w)
-			if err := report.Print(); err != nil {
-				fmt.Fprintf(os.Stderr, "write report: %v\n", err)
+		switch e := entry.(type) {
+		case *types.LogEntry:
+			if !filters.OpsOnly {
+				takeEntry(e, filters, geoip, engine.Process)
 			}
+		case *types.OperationalEntry:
+			opEngine.Process(e)
+		}
+		if time.Since(last) > 5*time.Second {
+			emitReport()
 			if time.Since(windowStart) > window {
 				resetEngine()
 			}
 			last = time.Now()
 		} else if time.Since(windowStart) > window {
-			engine.Finalize()
-			report := output.NewReportWithSections(engine, output.ParseFormat(flagFormat), flagTop, sections)
-			report.SetDetect(flagDetect)
-			report.SetDefang(flagDefang)
-			report.SetFilters(filters)
-			report.SetWriter(w)
-			if err := report.Print(); err != nil {
-				fmt.Fprintf(os.Stderr, "write report: %v\n", err)
-			}
+			emitReport()
 			resetEngine()
 		}
 	}
@@ -514,6 +616,7 @@ func runFollowMode(ctx context.Context, sources []types.LogSource, filters types
 func runIntervalMode(ctx context.Context, sources []types.LogSource, filters types.Filters, interval time.Duration) error {
 	var current time.Time
 	var engine *analysis.Engine
+	var opEngine *analysis.OperationalEngine
 	sections := types.DefaultTopSections()
 	initial := true
 
@@ -532,15 +635,26 @@ func runIntervalMode(ctx context.Context, sources []types.LogSource, filters typ
 		w = f
 	}
 
-	reportFn := func(e *analysis.Engine, t time.Time) error {
+	reportFn := func(e *analysis.Engine, op *analysis.OperationalEngine, t time.Time) error {
 		e.Finalize()
 		fmt.Fprintf(w, "\n--- %s ---\n", t.Format(time.RFC3339))
 		report := output.NewReportWithSections(e, output.ParseFormat(flagFormat), flagTop, sections)
 		report.SetDetect(flagDetect)
 		report.SetDefang(flagDefang)
 		report.SetFilters(filters)
+		report.SetOperationalStats(op.Stats())
 		report.SetWriter(w)
 		return report.Print()
+	}
+
+	resetEngines := func() {
+		engine = analysis.New(filters)
+		opEngine = analysis.NewOperationalEngine(filters)
+		if flagDetect {
+			det := analysis.NewDetector()
+			det.SetUARotationThreshold(flagUARotation)
+			engine.SetDetector(det)
+		}
 	}
 
 	for _, src := range sources {
@@ -555,41 +669,67 @@ func runIntervalMode(ctx context.Context, sources []types.LogSource, filters typ
 			if err != nil || entry == nil {
 				continue
 			}
-			applyForwarded(entry, filters)
-			enrichGeoIP(entry, geoip)
-			bucket := entry.Timestamp.Truncate(interval)
-			if initial {
-				current = bucket
-				engine = analysis.New(filters)
-				if flagDetect {
-					det := analysis.NewDetector()
-					det.SetUARotationThreshold(flagUARotation)
-					engine.SetDetector(det)
+			switch e := entry.(type) {
+			case *types.LogEntry:
+				if filters.OpsOnly {
+					continue
 				}
-				initial = false
+				var accepted *types.LogEntry
+				takeEntry(e, filters, geoip, func(le *types.LogEntry) { accepted = le })
+				if accepted == nil {
+					continue
+				}
+				bucket := accepted.Timestamp.Truncate(interval)
+				if initial {
+					current = bucket
+					resetEngines()
+					initial = false
+				}
+				if bucket != current {
+					if err := reportFn(engine, opEngine, current); err != nil {
+						return err
+					}
+					resetEngines()
+					current = bucket
+				}
+				engine.Process(accepted)
+			case *types.OperationalEntry:
+				if !analysis.MatchOperational(e, filters) {
+					continue
+				}
+				bucket := e.Timestamp.Truncate(interval)
+				if initial {
+					current = bucket
+					resetEngines()
+					initial = false
+				}
+				if bucket != current {
+					if err := reportFn(engine, opEngine, current); err != nil {
+						return err
+					}
+					resetEngines()
+					current = bucket
+				}
+				opEngine.Process(e)
 			}
-			if bucket != current {
-				if err := reportFn(engine, current); err != nil {
-					return err
-				}
-				engine = analysis.New(filters)
-				if flagDetect {
-					det := analysis.NewDetector()
-					det.SetUARotationThreshold(flagUARotation)
-					engine.SetDetector(det)
-				}
-				current = bucket
-			}
-			engine.Process(entry)
 		}
 	}
-	if engine != nil && engine.Count() > 0 {
-		return reportFn(engine, current)
+	if engine != nil && (engine.Count() > 0 || (opEngine != nil && opEngine.Stats().TotalEvents > 0)) {
+		return reportFn(engine, opEngine, current)
 	}
 	return nil
 }
 
 func runWatch(ctx context.Context, sources []types.LogSource) error {
+	// --watch runs the dashboard in alt-screen raw mode, which takes over
+	// stdin. A StdinReader would race bubbletea for fd 0 and never receive
+	// log lines, so refuse it up front with a clear message.
+	for _, src := range sources {
+		if src.Type == types.SourceStdin {
+			return fmt.Errorf("--watch needs a followable source (file, docker://, k8s://, journalctl://); stdin is not supported")
+		}
+	}
+
 	linesCh := make(chan string, 10000)
 	var wg sync.WaitGroup
 	for _, src := range sources {
@@ -615,7 +755,7 @@ func runWatch(ctx context.Context, sources []types.LogSource) error {
 		close(linesCh)
 	}()
 
-	geoip := newGeoIPEnricher()
+	geoip := newGeoIPEnricherAsync()
 	if geoip != nil {
 		defer func() { _ = geoip.Close() }()
 	}
@@ -637,9 +777,9 @@ func createOutputFile(path string) (*os.File, error) {
 	return os.OpenFile(path, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0600)
 }
 
-func resolveSources(args []string) []types.LogSource {
+func resolveSources(args []string) ([]types.LogSource, error) {
 	if len(args) > 0 {
-		return parseSources(args)
+		return parseSources(args), nil
 	}
 	cfg, cfgPath, err := config.Load()
 	if err == nil && cfg != nil && cfg.Source != "" {
@@ -651,12 +791,12 @@ func resolveSources(args []string) []types.LogSource {
 				src.Namespace = cfg.Namespace
 			}
 		}
-		return []types.LogSource{src}
+		return []types.LogSource{src}, nil
 	}
 
 	fi, err := os.Stdin.Stat()
 	if err == nil && (fi.Mode()&os.ModeCharDevice) == 0 {
-		return []types.LogSource{{Type: types.SourceStdin}}
+		return []types.LogSource{{Type: types.SourceStdin}}, nil
 	}
 
 	candidates := []string{
@@ -669,11 +809,16 @@ func resolveSources(args []string) []types.LogSource {
 	for _, candidate := range candidates {
 		if _, err := os.Stat(candidate); err == nil {
 			fmt.Fprintf(os.Stderr, "auto-detected log file: %s\n", candidate)
-			return []types.LogSource{{Type: types.SourceFile, Path: candidate}}
+			return []types.LogSource{{Type: types.SourceFile, Path: candidate}}, nil
 		}
 	}
 
-	return []types.LogSource{{Type: types.SourceStdin}}
+	// No args, no config, stdin is a TTY (pipe case returned above), and
+	// no candidate file found: refuse to fall back to a blocking stdin
+	// read, which would hang forever with no output.
+	return nil, fmt.Errorf(`no log source specified and no config file found.
+specify a source: <file>, -, docker://<container>, k8s://<pod>, journalctl://<unit>
+or create caddy-analyzer.json with { "source": "/var/log/caddy/access.log" }`)
 }
 
 func parseSources(args []string) []types.LogSource {
@@ -733,6 +878,15 @@ func buildFilters() (types.Filters, error) {
 	f.Compact = flagCompact
 	f.TrustForwarded = flagTrustXFF
 	f.Host = flagHost
+	f.OpsOnly = flagOpsOnly
+	for _, lvl := range flagLevel {
+		for _, l := range strings.Split(lvl, ",") {
+			l = strings.ToLower(strings.TrimSpace(l))
+			if l != "" {
+				f.Level = append(f.Level, l)
+			}
+		}
+	}
 
 	if flagSlow != "" {
 		dur, err := time.ParseDuration(flagSlow)
@@ -770,36 +924,17 @@ func buildFilters() (types.Filters, error) {
 	}
 
 	if flagIP != "" {
-		if err := validateIPOrCIDR(flagIP); err != nil {
-			return f, fmt.Errorf("invalid --ip %q: %w", flagIP, err)
+		if err := validateIP(flagIP); err != nil {
+			return f, fmt.Errorf("--ip: %w", err)
 		}
 	}
 	if flagExcludeIP != "" {
-		if err := validateIPOrCIDR(flagExcludeIP); err != nil {
-			return f, fmt.Errorf("invalid --exclude-ip %q: %w", flagExcludeIP, err)
+		if err := validateIP(flagExcludeIP); err != nil {
+			return f, fmt.Errorf("--exclude-ip: %w", err)
 		}
 	}
 
 	return f, nil
-}
-
-// validateIPOrCIDR accepts a bare IP or a CIDR. Used to fail fast on a typo'd
-// --ip / --exclude-ip filter instead of silently returning "no log entries
-// found" when the CIDR fails to parse inside MatchEntry.
-func validateIPOrCIDR(s string) error {
-	if s == "" {
-		return nil
-	}
-	if strings.HasPrefix(s, "-") {
-		return fmt.Errorf("looks like a flag")
-	}
-	if net.ParseIP(s) != nil {
-		return nil
-	}
-	if _, _, err := net.ParseCIDR(s); err == nil {
-		return nil
-	}
-	return fmt.Errorf("not a valid IP or CIDR")
 }
 
 // parseSize parses a byte size. A bare integer is bytes. A suffix of k/kb, m/mb,
@@ -837,6 +972,9 @@ func parseSize(s string) (int64, error) {
 func parseTime(s string) (time.Time, error) {
 	if t, err := time.Parse(time.RFC3339, s); err == nil {
 		return t, nil
+	}
+	if s == "" {
+		return time.Time{}, fmt.Errorf("empty time")
 	}
 	unit := s[len(s)-1:]
 	n, err := strconv.Atoi(s[:len(s)-1])

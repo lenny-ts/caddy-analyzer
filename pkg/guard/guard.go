@@ -50,9 +50,22 @@ func runCmd(ctx context.Context, bin string, args ...string) error {
 	return nil
 }
 
+// Blocker is the interface for IP blocking backends. The guard domain uses
+// only this interface — concrete implementations are adapters selected at
+// startup (iptables, Docker DOCKER-USER chain, nftables, etc.).
 type Blocker interface {
 	Block(ip string) error
 	Unblock(ip string) error
+}
+
+// ChainBlocker extends Blocker with chain lifecycle management.
+// Implementations that manage a dedicated firewall chain should implement this.
+type ChainBlocker interface {
+	Blocker
+	// EnsureChain creates the dedicated chain and jump rule if missing.
+	EnsureChain() error
+	// Validate checks that the chain and jump rule are correctly positioned.
+	Validate() error
 }
 
 // GeoIPLookuper is the subset of *enrich.GeoIP used by the guard for
@@ -199,6 +212,10 @@ type Config struct {
 	// iptables blocker is used. Tests should provide a fake blocker
 	// so that loadState cleanup hits the fake, not real iptables.
 	Blocker Blocker
+	// FirewallBackend, if set, overrides Blocker and provides full
+	// chain lifecycle management (EnsureChain, Validate). When set,
+	// Blocker is ignored.
+	FirewallBackend Blocker
 	// BlocklistMgr, if non-nil, enables immediate blocking of IPs
 	// found in any configured blocklist feed. The manager must have
 	// been loaded (LoadAll or Refresh) before guard starts.
@@ -467,7 +484,9 @@ func (sc *slidingCounters) ips() []string {
 func New(cfg Config) *Guard {
 	sf := newStateFile(cfg.StatePath)
 	blocker := cfg.Blocker
-	if blocker == nil {
+	if cfg.FirewallBackend != nil {
+		blocker = cfg.FirewallBackend
+	} else if blocker == nil {
 		blocker = iptablesBlocker{}
 	}
 	countryBlock := make(map[string]bool)
@@ -496,6 +515,19 @@ func New(cfg Config) *Guard {
 	}
 	if cfg.UARotationThreshold > 0 {
 		g.detector.SetUARotationThreshold(cfg.UARotationThreshold)
+	}
+	// Ensure firewall chain exists and validate before loading state.
+	// The firewall.Backend interface includes EnsureChain and Validate.
+	if cb, ok := blocker.(interface {
+		EnsureChain() error
+		Validate() error
+	}); ok {
+		if err := cb.EnsureChain(); err != nil && cfg.OnError != nil {
+			cfg.OnError(fmt.Errorf("firewall setup: %w", err))
+		}
+		if err := cb.Validate(); err != nil && cfg.OnError != nil {
+			cfg.OnError(fmt.Errorf("firewall validation: %w", err))
+		}
 	}
 	g.loadState()
 	return g
@@ -592,11 +624,19 @@ func (g *Guard) loadState() {
 		case e.When.IsZero():
 			// Permanent block: always restore, regardless of current duration.
 			g.blocked[e.IP] = true
+			// Recreate the firewall rule — iptables rules may have been
+			// flushed while we were down (reboot, iptables -F, etc.).
+			if err := g.blocker.Block(e.IP); err != nil && g.cfg.OnError != nil {
+				g.cfg.OnError(fmt.Errorf("restore permanent block %s: %w", e.IP, err))
+			}
 		case g.cfg.BlockDuration <= 0:
 			// Temporary blocks recorded under a previous run: running in
 			// permanent mode now; preserve them as permanent to avoid
 			// silently dropping firewall protection while we were down.
 			g.blocked[e.IP] = true
+			if err := g.blocker.Block(e.IP); err != nil && g.cfg.OnError != nil {
+				g.cfg.OnError(fmt.Errorf("restore block %s: %w", e.IP, err))
+			}
 		case e.When.Before(now):
 			// Ban expired while the daemon was down: clean up the rule.
 			if err := g.blocker.Unblock(e.IP); err != nil && g.cfg.OnError != nil {
@@ -607,6 +647,10 @@ func (g *Guard) loadState() {
 			}
 		default:
 			g.blocked[e.IP] = true
+			// Recreate the firewall rule for still-valid temporary blocks.
+			if err := g.blocker.Block(e.IP); err != nil && g.cfg.OnError != nil {
+				g.cfg.OnError(fmt.Errorf("restore block %s: %w", e.IP, err))
+			}
 			g.expiries[e.IP] = e.When
 			g.initial = append(g.initial, expiryEntry{ip: e.IP, when: e.When})
 		}
@@ -666,6 +710,13 @@ func (g *Guard) saveState() {
 
 func (g *Guard) SetBlocker(b Blocker) {
 	g.blocker = b
+}
+
+// FlushState forces an immediate save of all blocked IPs to the state file.
+// Called during graceful shutdown to ensure no data is lost.
+func (g *Guard) FlushState() {
+	g.dirty.Store(true)
+	g.saveState()
 }
 
 // AddPermanentBlockToState records ip as a permanent block in the state
@@ -773,36 +824,43 @@ func (g *Guard) Evaluate(line string) {
 	if err != nil || entry == nil {
 		return
 	}
+	le, ok := entry.(*types.LogEntry)
+	if !ok {
+		// Operational entries (config loads, TLS events, upstream
+		// errors) are not HTTP requests and carry no RemoteIP/Status,
+		// so they cannot feed the sliding window, detector, or engine.
+		return
+	}
 	if g.cfg.TrustForwarded {
-		if ip := entry.EffectiveClientIP(true); ip != "" {
-			entry.RemoteIP = ip
+		if ip := le.EffectiveClientIP(true); ip != "" {
+			le.RemoteIP = ip
 		}
 	}
-	if g.IsBlocked(entry.RemoteIP) {
+	if g.IsBlocked(le.RemoteIP) {
 		return
 	}
 	// Blocklist and country-block: immediate block on match. The
 	// allowlist (--never-block) always wins over both — this is checked
 	// inside checkImmediateBlock so an allowlisted IP is never blocked
 	// by a feed or country rule.
-	if g.checkImmediateBlock(entry.RemoteIP) {
+	if g.checkImmediateBlock(le.RemoteIP) {
 		return
 	}
 	g.tickReqs.Add(1)
-	g.sliding.add(entry.RemoteIP, time.Now(), entry.Status == 401 || entry.Status == 403, entry.Status == 404, entry.Path())
+	g.sliding.add(le.RemoteIP, time.Now(), le.Status == 401 || le.Status == 403, le.Status == 404, le.Path())
 	if g.cfg.DetectionConfidence > 0 {
-		for _, det := range g.detector.DetectAll(entry) {
+		for _, det := range g.detector.DetectAll(le) {
 			if det.Confidence >= g.cfg.DetectionConfidence {
 				g.mu.Lock()
-				g.detectCounts[entry.RemoteIP]++
+				g.detectCounts[le.RemoteIP]++
 				g.mu.Unlock()
 				break
 			}
 		}
 	} else {
-		g.detector.Detect(entry)
+		g.detector.Detect(le)
 	}
-	g.engine.Process(entry)
+	g.engine.Process(le)
 }
 
 // checkImmediateBlock returns true if ip matches the blocklist or a
@@ -1140,3 +1198,20 @@ func (g *Guard) runBlocklistRefresh(ctx context.Context, logf func(string, ...in
 func (g *Guard) BlocklistHits() int64 {
 	return g.blocklistHits.Load()
 }
+
+// SetIPTablesTimeout overrides the per-invocation firewall command timeout.
+// Call once at startup: runCmd reads this without synchronisation, so changing
+// it while the guard is running is a data race.
+//
+// The timeout must be positive. A zero or negative value would make every
+// invocation fail immediately with a context deadline, turning a tuning knob
+// into an outage, so it is ignored.
+func SetIPTablesTimeout(d time.Duration) {
+	if d <= 0 {
+		return
+	}
+	iptablesTimeout = d
+}
+
+// IPTablesTimeout reports the timeout currently in effect.
+func IPTablesTimeout() time.Duration { return iptablesTimeout }

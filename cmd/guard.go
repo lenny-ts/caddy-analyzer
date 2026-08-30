@@ -18,6 +18,7 @@ import (
 	"github.com/lenny-ts/caddy-analyzer/pkg/config"
 	"github.com/lenny-ts/caddy-analyzer/pkg/enrich"
 	"github.com/lenny-ts/caddy-analyzer/pkg/guard"
+	"github.com/lenny-ts/caddy-analyzer/pkg/guard/firewall"
 	"github.com/lenny-ts/caddy-analyzer/pkg/reader"
 )
 
@@ -41,12 +42,17 @@ var (
 	guardNoBlocklist       bool
 	guardGeoIPDB           string
 	guardNoAutoDL          bool
+	guardFirewallBackend   string
 )
 
 const minBlocklistRefresh = 1 * time.Hour
 
 func init() {
 	guardCmd.Flags().IntVarP(&guardLimit, "limit", "l", 100, "Max requests before blocking (0 disables)")
+	// Only on guard (and the block/unban commands that share the firewall
+	// path): the timeout is meaningless anywhere iptables is not invoked.
+	guardCmd.Flags().DurationVar(&flagIPTablesTimeout, "iptables-timeout", 10*time.Second,
+		"Timeout for each iptables invocation. Raise it for a huge ruleset on a busy box")
 	guardCmd.Flags().StringVarP(&guardWindow, "window", "w", "1m", "Monitoring time window")
 	guardCmd.Flags().StringVarP(&guardDuration, "duration", "d", "10m", "Block duration (e.g. 10m, 1h). 0 = permanent")
 	guardCmd.Flags().IntVarP(&guardAuthLimit, "auth-limit", "", 10, "Max auth failures (401/403) before blocking (0 disables)")
@@ -66,6 +72,8 @@ func init() {
 	guardCmd.Flags().StringVarP(&guardGeoIPDB, "geoip-db", "", "", "Path to GeoIP mmdb file (auto-discovered if empty)")
 	guardCmd.Flags().BoolVarP(&guardNoAutoDL, "no-auto-download", "", false, "Disable automatic download of DB-IP lite mmdb on first run")
 	guardCmd.Flags().StringVarP(&blocklistCacheDir, "cache-dir", "", defaultBlocklistCacheDir(), "Directory for cached blocklist files")
+	guardCmd.Flags().StringVarP(&guardFirewallBackend, "firewall-backend", "", "auto",
+		"Firewall backend: auto, iptables, docker, nftables, hybrid (auto-detects Docker/nftables)")
 	rootCmd.AddCommand(guardCmd)
 }
 
@@ -97,8 +105,9 @@ Examples:
   caddy-analyze guard /var/log/caddy/access.log --country-block CN,RU,IR --geoip-db /etc/geoip/dbip-country-lite.mmdb
   caddy-analyze guard /var/log/caddy/access.log --no-blocklist
 `,
-	Args: cobra.ArbitraryArgs,
-	RunE: runGuard,
+	Args:         cobra.ArbitraryArgs,
+	RunE:         runGuard,
+	SilenceUsage: true,
 }
 
 func runGuard(cmd *cobra.Command, args []string) error {
@@ -131,7 +140,10 @@ func runGuard(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("guard requires root: run with sudo (iptables needs CAP_NET_ADMIN)")
 	}
 
-	sources := resolveSources(args)
+	sources, err := resolveSources(args)
+	if err != nil {
+		return err
+	}
 
 	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer cancel()
@@ -175,6 +187,8 @@ func runGuard(cmd *cobra.Command, args []string) error {
 	}
 
 	neverBlock := guardNeverBlock
+	// Load the whitelist file (managed by `caddy-analyze whitelist`).
+	// This is always loaded unless --never-block-file overrides it.
 	if guardNeverBlockFile != "" {
 		ips, err := loadIPList(guardNeverBlockFile)
 		if err != nil {
@@ -186,6 +200,21 @@ func runGuard(cmd *cobra.Command, args []string) error {
 				continue
 			}
 			neverBlock = append(neverBlock, ip)
+		}
+	} else if wlPath := WhitelistPath(); wlPath != "" {
+		if _, err := os.Stat(wlPath); err == nil {
+			ips, err := loadIPList(wlPath)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "warning: whitelist load: %v\n", err)
+			} else {
+				for _, ip := range ips {
+					if err := validateIP(ip); err != nil {
+						fmt.Fprintf(os.Stderr, "warning: skipping invalid whitelist entry %q: %v\n", ip, err)
+						continue
+					}
+					neverBlock = append(neverBlock, ip)
+				}
+			}
 		}
 	}
 
@@ -263,6 +292,23 @@ func runGuard(cmd *cobra.Command, args []string) error {
 		}
 	}
 
+	// Detect and configure firewall backend.
+	var fwBackend firewall.Backend
+	switch guardFirewallBackend {
+	case "iptables":
+		fwBackend = firewall.NewIptablesBackend("iptables", "INPUT")
+	case "docker":
+		fwBackend = firewall.NewDockerBackend("iptables")
+	case "nftables":
+		fwBackend = firewall.NewNftablesBackend("ip")
+	case "hybrid":
+		fwBackend = firewall.Detect(firewall.BackendHybrid)
+	case "auto":
+		fwBackend = firewall.Detect(firewall.BackendAuto)
+	default:
+		return fmt.Errorf("unknown firewall backend %q: use auto, iptables, docker, nftables, or hybrid", guardFirewallBackend)
+	}
+
 	g := guard.New(guard.Config{
 		Limit:               guardLimit,
 		AuthLimit:           guardAuthLimit,
@@ -286,6 +332,7 @@ func runGuard(cmd *cobra.Command, args []string) error {
 		BlocklistRefresh:    blocklistRefresh,
 		CountryBlock:        guardCountryBlock,
 		GeoIP:               geoip,
+		FirewallBackend:     fwBackend,
 	})
 
 	durMsg := duration.String()
@@ -300,6 +347,7 @@ func runGuard(cmd *cobra.Command, args []string) error {
 	}
 	fmt.Fprintf(os.Stderr, "Guard active — %s | %s | %s / %s | block: %s\n",
 		thr("auth", guardAuthLimit), thr("404", guardNotFoundLimit), thr("total", guardLimit), guardWindow, durMsg)
+	fmt.Fprintf(os.Stderr, "Firewall backend: %s\n", fwBackend.Name())
 	if guardDetectConfidence > 0 {
 		fmt.Fprintf(os.Stderr, "Pattern detection blocking: confidence >= %d\n", guardDetectConfidence)
 	} else {
@@ -317,6 +365,9 @@ func runGuard(cmd *cobra.Command, args []string) error {
 	if len(guardCountryBlock) > 0 && geoip != nil {
 		fmt.Fprintf(os.Stderr, "Country block: %s\n", strings.Join(guardCountryBlock, ", "))
 	}
+	if len(neverBlock) > 0 {
+		fmt.Fprintf(os.Stderr, "Whitelist: %d entries (%s)\n", len(neverBlock), whitelistFile)
+	}
 	fmt.Fprintf(os.Stderr, "Ctrl+C to stop\n\n")
 
 	logf := func(format string, args ...interface{}) {
@@ -331,10 +382,15 @@ func runGuard(cmd *cobra.Command, args []string) error {
 
 	select {
 	case <-ctx.Done():
+		fmt.Fprintln(os.Stderr, "\nShutting down gracefully...")
 		<-done
 	case <-done:
 	}
-	fmt.Fprintln(os.Stderr, "\nGuard stopped.")
+
+	// Final state flush — ensure all blocks are persisted to disk.
+	g.FlushState()
+
+	fmt.Fprintln(os.Stderr, "Guard stopped.")
 	if n := g.Count(); n > 0 {
 		fmt.Fprintf(os.Stderr, "IPs blocked this session: %d\n", n)
 	}

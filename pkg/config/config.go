@@ -17,6 +17,23 @@ type Config struct {
 	// not need to pass --blocklist-config / --no-default-blocklists on
 	// every invocation.
 	Blocklist *BlocklistConfig `json:"blocklist,omitempty"`
+	// Tuning holds operational knobs that used to be compile-time
+	// constants. Absent means "use the built-in defaults"; a CLI flag
+	// overrides whatever is here.
+	Tuning *TuningConfig `json:"tuning,omitempty"`
+}
+
+// TuningConfig carries the three operational values that were hardcoded
+// until #25. Durations are strings so the file stays human-editable
+// ("10s", "24h") rather than nanosecond integers.
+type TuningConfig struct {
+	// GeoCacheTTL is how long a resolved GeoIP lookup stays usable.
+	// "0" disables caching, which is dramatically slower on busy traffic.
+	GeoCacheTTL string `json:"geo_cache_ttl,omitempty"`
+	// GeoCacheSize caps the in-memory GeoIP lookup cache. 0 disables it.
+	GeoCacheSize int `json:"geo_cache_size,omitempty"`
+	// IPTablesTimeout bounds every firewall invocation. Must be positive.
+	IPTablesTimeout string `json:"iptables_timeout,omitempty"`
 }
 
 // BlocklistConfig holds the persistent blocklist preferences. It can

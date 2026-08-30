@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="view-transition" content="same-origin">
     <title>Subcommands &amp; Flags Specification — caddy-analyzer</title>
-    <meta name="description" content="Complete reference for caddy-analyze subcommands: tail, top, diff, config, guard, blocklist, block, unban, export-sigma. All flags and usage examples.">
+    <meta name="description" content="Complete reference for caddy-analyze subcommands: tail, top, diff, config, guard, blocklist, block, unban, export-sigma, update. All flags and usage examples.">
     <meta name="theme-color" content="#0a0a0c">
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E🛡️%3C/text%3E%3C/svg%3E">
     <meta property="og:title" content="Subcommands & Flags — caddy-analyzer">
@@ -18,7 +18,7 @@
     <meta name="twitter:description" content="Complete CLI reference: tail, top, diff, config, guard, blocklist, block, unban, export-sigma.">
     <script>try{var t=localStorage.getItem('caddy-docs-theme');if(t==='light')document.documentElement.setAttribute('data-theme','light');}catch(e){}
     document.documentElement.classList.add('decor-paused');</script>
-    <meta name="doc:modified" content="2026-08-17T22:05:02+02:00">
+    <meta name="doc:modified" content="2026-08-27T13:52:28+05:30">
     <meta name="color-scheme" content="dark light">
     <link rel="manifest" href="manifest.json">
     <link rel="apple-touch-icon" href="apple-touch-icon.png">
@@ -59,14 +59,14 @@
                     <li><a class="breadcrumb-current" aria-current="page" href="subcommands.html">Subcommands</a></li>
                 </ol>
             </nav>
-            <p class="doc-meta"><a href="https://github.com/lenny-ts/caddy-analyzer/releases" rel="noopener">v0.4.0</a> &middot; updated <time datetime="2026-08-17">2026-08-17</time> &middot; <a href="https://github.com/lenny-ts/caddy-analyzer" rel="noopener">GitHub</a></p>
+            <p class="doc-meta"><a href="https://github.com/lenny-ts/caddy-analyzer/releases" rel="noopener">v0.4.1</a> &middot; updated <time datetime="2026-08-18">2026-08-18</time> &middot; <a href="https://github.com/lenny-ts/caddy-analyzer" rel="noopener">GitHub</a></p>
             <h1>Subcommands &amp; Flags Specification</h1>
             <p class="subtitle">Complete technical reference for all CLI subcommands, flags, and options</p>
         </div>
 
         <section class="reveal">
             <h2>1. Comprehensive CLI Flags Reference</h2>
-            <p>The persistent flags below (from <code>--from</code> to <code>--namespace</code>) are inherited by every subcommand (<code>tail</code>, <code>top</code>, <code>diff</code>, <code>guard</code>, <code>blocklist</code>, <code>config</code>, <code>block</code>, <code>unban</code>, <code>export-sigma</code>) and the main analysis run. The root-only flags <code>--watch</code>, <code>--follow</code>, <code>--interval</code>, <code>--detect</code>, and <code>--version</code> are available only on <code>caddy-analyze</code> itself (see the "Display &amp; Output" table below).</p>
+            <p>The persistent flags below (from <code>--from</code> to <code>--namespace</code>) are inherited by every subcommand (<code>tail</code>, <code>top</code>, <code>diff</code>, <code>guard</code>, <code>blocklist</code>, <code>config</code>, <code>block</code>, <code>unban</code>, <code>export-sigma</code>, <code>update</code>) and the main analysis run. The root-only flags <code>--watch</code>, <code>--follow</code>, <code>--interval</code>, <code>--detect</code>, and <code>--version</code> are available only on <code>caddy-analyze</code> itself (see the "Display &amp; Output" table below).</p>
 
             <h3>Time Range &amp; Request Filters</h3>
             <div class="table-wrap">
@@ -172,6 +172,18 @@
                         <td>Include only bot traffic. <code>caddy-analyze --bots-only</code></td>
                     </tr>
                     <tr>
+                        <td><code>--level</code></td>
+                        <td>—</td>
+                        <td>—</td>
+                        <td>Filter operational (non-HTTP) events by level: <code>error</code>, <code>warn</code>, <code>info</code>, <code>debug</code>. Repeatable or comma-separated. <code>caddy-analyze --level error,warn</code></td>
+                    </tr>
+                    <tr>
+                        <td><code>--ops-only</code></td>
+                        <td>—</td>
+                        <td><code>false</code></td>
+                        <td>Show only operational (non-HTTP) log events, hiding HTTP access entries. <code>caddy-analyze --ops-only</code></td>
+                    </tr>
+                    <tr>
                         <td><code>--grep</code></td>
                         <td>—</td>
                         <td><code>""</code></td>
@@ -249,7 +261,7 @@
                         <td><code>--watch</code></td>
                         <td><code>-w</code></td>
                         <td><code>false</code></td>
-                        <td>Launch 7-tab interactive full-screen terminal TUI dashboard (Bubbletea) with Summary, Realtime, Security, Top IPs/Paths, User Agents, and Geo (GeoIP country/ASN) tabs. <code>caddy-analyze --watch</code></td>
+                        <td>Launch 8-tab interactive full-screen terminal TUI dashboard (Bubbletea) with Summary, Realtime, Security, Top IPs/Paths, User Agents, Geo (GeoIP country/ASN), and Operational (non-HTTP events) tabs. <code>caddy-analyze --watch</code></td>
                     </tr>
                     <tr>
                         <td><code>--top</code></td>
@@ -280,6 +292,18 @@
                         <td><code>-c</code></td>
                         <td><code>false</code></td>
                         <td>Compact output mode (smaller, condensed tables). <code>caddy-analyze -c</code></td>
+                    </tr>
+                    <tr>
+                        <td><code>--geo-cache-ttl</code></td>
+                        <td>—</td>
+                        <td><code>24h</code></td>
+                        <td>How long a resolved GeoIP lookup stays cached. <code>0</code> disables caching, which is dramatically slower on busy traffic. Overrides <code>tuning.geo_cache_ttl</code> in the config file.</td>
+                    </tr>
+                    <tr>
+                        <td><code>--geo-cache-size</code></td>
+                        <td>—</td>
+                        <td><code>50000</code></td>
+                        <td>Max cached GeoIP lookups. <code>0</code> disables caching. Raise it on a high-traffic server to avoid evictions; lower it on a low-memory box. Overrides <code>tuning.geo_cache_size</code>.</td>
                     </tr>
                     <tr>
                         <td><code>--max-cardinality</code></td>
@@ -361,6 +385,29 @@ caddy-analyze top asn /var/log/caddy/access.log</pre>
 <pre>caddy-analyze export-sigma                    # stdout
 caddy-analyze export-sigma rules.yml          # file
 caddy-analyze export-sigma - | sigma check    # pipe to validator</pre>
+
+            <h3><code>update</code></h3>
+            <p>Self-update: downloads the latest release from GitHub and replaces the running binary in place. Verification is <strong>fail closed</strong>: the release manifest (<code>checksums.txt</code>) must pass cosign keyless signature verification (certificate identity anchored to this repository's release workflow) and the archive SHA256 must match the signed manifest. If <code>cosign</code> is missing from PATH or any check fails, nothing is installed — there is no unverified fallback. The replacement is atomic (staged next to the target, then a single rename); on Windows the running <code>.exe</code> is moved aside as <code>.exe.old</code> and rolled back if installation fails.</p>
+            <div class="table-wrap">
+            <table>
+                <caption>update subcommand flags</caption>
+                <thead>
+                    <tr><th scope="col">Flag</th><th scope="col">Default</th><th scope="col">Description</th></tr>
+                </thead>
+                <tbody>
+                    <tr><td><code>--check</code></td><td><code>false</code></td><td>Report whether an update is available without downloading anything. Exits 0 either way.</td></tr>
+                    <tr><td><code>--version &lt;tag&gt;</code></td><td>—</td><td>Pin an exact release instead of the latest (e.g. <code>--version v0.5.0</code>). Downgrades require <code>--force</code>.</td></tr>
+                    <tr><td><code>--force</code></td><td><code>false</code></td><td>Reinstall even when already up to date; also permits downgrades.</td></tr>
+                    <tr><td><code>--install-dir &lt;dir&gt;</code></td><td>—</td><td>Replace <code>&lt;dir&gt;/caddy-analyze</code> instead of the running executable. Useful when the binary lives in a root-owned path you cannot write to directly.</td></tr>
+                </tbody>
+            </table>
+            </div>
+<pre>caddy-analyze update                     # install latest verified release
+caddy-analyze update --check             # report availability only
+caddy-analyze update --version v0.5.0    # pin an exact release
+caddy-analyze update --force             # reinstall / allow downgrade
+sudo caddy-analyze update                # binary in a root-owned path
+caddy-analyze update --install-dir ~/.local/bin</pre>
 
             <h3><code>blocklist &lt;action&gt;</code></h3>
             <p>Manages blocklist feeds used by the guard for immediate IP blocking. Feeds are downloaded, parsed (plain-text IP/CIDR or JSON Lines), and cached as a CIDR trie for O(1) lookup. Cache lives in <code>~/.cache/caddy-analyzer/blocklists/</code> (7-day TTL, configurable via <code>--cache-dir</code>).</p>
@@ -501,6 +548,12 @@ caddy-analyze blocklist init --global          # write to global config</pre>
                         <td>Max 404 responses before blocking (directory brute-force defense)</td>
                     </tr>
                     <tr>
+                        <td><code>--iptables-timeout</code></td>
+                        <td>—</td>
+                        <td><code>10s</code></td>
+                        <td>Timeout for each <code>iptables</code> invocation. Raise it for a huge ruleset on a busy box, where the default causes hard-to-diagnose "iptables timed out" failures; lower it in a test environment. Must be positive. Overrides <code>tuning.iptables_timeout</code>.</td>
+                    </tr>
+                    <tr>
                         <td><code>--audit-log</code></td>
                         <td>—</td>
                         <td><code>/var/log/caddy-analyzer-audit.jsonl</code></td>
@@ -565,6 +618,12 @@ caddy-analyze blocklist init --global          # write to global config</pre>
                         <td>—</td>
                         <td><code>""</code></td>
                         <td>Comma-separated ISO country codes to block immediately (e.g. <code>CN,RU,IR</code>). Requires a GeoIP mmdb; the guard fails fast if none is found.</td>
+                    </tr>
+                    <tr>
+                        <td><code>--firewall-backend</code></td>
+                        <td>—</td>
+                        <td><code>auto</code></td>
+                        <td>Firewall backend: <code>auto</code> (detect Docker/nftables), <code>iptables</code> (INPUT chain), <code>docker</code> (DOCKER-USER chain), <code>nftables</code> (nft sets), <code>hybrid</code> (INPUT + DOCKER-USER).</td>
                     </tr>
                     <tr>
                         <td><code>--no-blocklist</code></td>

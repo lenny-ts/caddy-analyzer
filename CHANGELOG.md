@@ -5,6 +5,59 @@ All notable changes to `caddy-analyzer` will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.0] - 2026-08-30
+
+### Added
+- **Firewall backend redesign**: multi-backend support (iptables, Docker DOCKER-USER, nftables, hybrid) with automatic environment detection. Guard now applies rules to both INPUT and DOCKER-USER chains when Docker containers are detected, solving the issue where blocked IPs bypassed the firewall in Dockerised Caddy deployments. — @lenny-ts
+- **Whitelist command**: `caddy-analyze whitelist --add/--remove/--list/--init` manages the never-block list. Auto-loaded by guard via `/etc/caddy-analyzer/whitelist.txt`. — @lenny-ts
+- **Operational tuning flags (#56)**: `--geo-cache-ttl`, `--geo-cache-size`, `--iptables-timeout` replace compile-time constants. — @dchaudhari7177
+
+### Fixed
+- **`loadState` does not recreate iptables rules (#79)**: on guard restart, `loadState()` restores IPs to the in-memory map but did not call `blocker.Block()` to recreate iptables rules. Banned IPs could pass through until the sliding window filled again. — @lenny-ts
+- **Graceful shutdown**: guard now flushes state and suppresses noisy "context canceled" errors on Ctrl+C. — @lenny-ts
+- **Active filters not shown in report header (#51)**: `--max-latency`, `--min-size`, `--max-size`, `--level`, `--ops-only` were omitted from the "Filters:" line. — @dchaudhari7177
+- **`validateIP` / `validateIPOrCIDR` duplication (#49)**: unified into a single `validateIP`. — @dchaudhari7177
+
+### Changed
+- **Sigma rule UUIDs are now RFC 4122 version 5 (#59)**: MD5-based identifiers were not valid UUIDs. Now uses `uuidV5` with a derived namespace, matching Sigma conventions. **Rules exported before this release carry different UUIDs**. — @dchaudhari7177
+- **GitHub Actions SHA-pinned (#55)**: all third-party actions pinned to full commit SHAs. — @dchaudhari7177
+
+## [0.5.1] - 2026-08-29
+
+### Fixed
+- **Docker log monitoring (`docker://`) not capturing entries (#57)**: `execLines` only read the child process's stdout via `StdoutPipe`, but Caddy v2 (and other tools) write access logs to stderr by default. `docker logs` preserves this stream separation, so all log data went to stderr and was silently dropped. Replaced `StdoutPipe` with `io.Pipe()` and set both `cmd.Stdout` and `cmd.Stderr` to the pipe writer, merging the two streams. A separate goroutine calls `cmd.Wait()` then closes the pipe to avoid a deadlock where the scanner blocks on `io.PipeReader.Read` while the writer is still open. `docker://container` sources now work regardless of whether the target writes to stdout, stderr, or both.
+
+### Changed
+- **Deduplicate `yamlEscape`/`yamlQuote`**: removed `yamlQuote` in `cmd/export_sigma.go`, an exact copy of `yamlEscape`; its four call sites now call `yamlEscape`. #48 — @dchaudhari7177
+
+### Fixed (also in 0.5.1)
+- **Zero-duration delta formatting**: `formatDurationDelta(0)` now uses the shared `output.FormatDuration` formatter instead of a hardcoded `"0ms"`, returning `"N/A"` consistently. #47 — @Labeeb2339
+
+## [0.5.0] - 2026-08-22
+
+### Added
+- **`update` subcommand for self-update with cosign verification (#16)**: `caddy-analyze update` downloads the latest GitHub release, verifies it, and atomically replaces the running binary. Verification is fail closed: cosign keyless signature check on `checksums.txt` (certificate identity anchored to this repo's release workflow) plus a SHA256 match against the signed manifest; a missing `cosign` binary or any verification failure aborts with nothing installed — no unverified fallback. Flags: `--check` (report only), `--version <tag>` (pin an exact release), `--force` (reinstall/allow downgrade), `--install-dir <dir>` (target another directory when the binary is root-owned). Handles GitHub API rate limits (cached last-check fallback for `--check`, actionable error otherwise), refuses downgrades without `--force`, preserves file permissions, and uses the Windows rename-aside trick for running `.exe` files.
+- **Operational (non-HTTP) log support**: Caddy operational events — config loads, TLS certificate operations, upstream dial errors, admin shutdowns — are now parsed, filtered, and aggregated alongside HTTP access entries. Non-`"handled request"` JSON lines no longer get silently dropped: they populate a new "Operational Events" report section (total events, error count, level breakdown, top loggers, top messages) in every output format (`table`, `json`, `csv`, `html`). Unknown JSON fields are preserved in an `Extra` map and shown inline in `tail` output (e.g. `upstream=10.0.0.5:8080`). New flags: `--level error,warn,info,debug` filters operational events by level (repeatable/comma-separated), `--ops-only` hides HTTP entries entirely.
+- **Operational tab in `--watch` dashboard**: new 8th tab (key `8`) showing live operational event counts by level, logger, and message.
+- **Sample log fixtures**: `testdata/sample.log` (68 curated lines, one per detection category plus benign baseline) and `testdata/large.log` (~50,000 lines, ~27 MB, ~95% benign / ~5% malicious cycling all 26 categories over 24h) — let users exercise every command, including the full detection engine, without a live Caddy server. All client IPs use TEST-NET ranges (RFC 5737), so nothing in the fixtures points at a real host.
+- **`testdata/generate.py`**: stdlib-only Python generator producing both fixtures. Supports `--sample` and `--large` flags. Deterministic output (seeded RNG, fixed epoch anchor matching `parser_test.go`); the script is the source of truth — re-run it instead of hand-editing the `.log` files.
+
+### Docs
+- **README**: new "Sample Logs & Test Fixtures" section covering usage (`caddy-analyze --detect testdata/sample.log`, `tail -d`, JSON output, HTML report, `diff`, large.log performance demo) and regeneration (`python3 testdata/generate.py`).
+- **docs/sources.html**: new "7. Sample Logs & Test Fixtures" section mirroring the README, with a fixtures table and the regeneration callout.
+
+## [0.4.1] - 2026-08-18
+
+### Fixed
+- **Apparent freeze with no log source (#19)**: when no source is specified, no config file exists, and stdin is a TTY, `caddy-analyzer` no longer falls back to a blocking stdin read that hangs forever with no output. It now prints a clear error listing the supported source formats. `StdinReader.Read` also rejects a TTY directly (defense-in-depth) and prints a "reading log lines from stdin..." hint in the pipe case. `--watch` refuses a stdin source up front instead of starting a dashboard that races bubbletea for fd 0. #19
+- **`--watch` startup blocked on GeoIP download**: `newGeoIPEnricher()` ran `autoDownloadGeoIP` synchronously (5-min per-file timeout), so the dashboard did not appear until the download finished. `--watch` now uses `NewGeoIPAsync`, which returns a lazy enricher that downloads in the background; lookups return a zero `GeoInfo` until the database is swapped in, and the Geo tab shows a "downloading in background..." hint. #19
+- **Usage spam on source errors**: `SilenceUsage: true` added to the root, `tail`, `top`, and `guard` commands so a missing source prints only the error (not the full help text). #19
+- **GeoIP search paths on Windows**: resolve home directory with `os.UserHomeDir()` instead of `os.Getenv("HOME")` (typically unset on Windows), so GeoIP/ASN databases are discovered under `C:\Users\<user>\.config\caddy-analyzer\` rather than `/.config/...`. PR by @MsfPablo. #27
+- **Follow/interval mode filters**: entry filters (method, status, --only-5xx, IP, grep, forwarded-IP) are now applied before GeoIP enrichment. Previously discarded rows were still enriched, wasting lookups and showing filtered-out entries in the live report. PR by @myukitty. #26
+
+### Changed
+- **TUI tab navigation**: simplified cycling through views with modulo arithmetic (no more boundary checks). PR by @intactov. #18
+
 ## [0.4.0] - 2026-08-17
 
 ### Added
