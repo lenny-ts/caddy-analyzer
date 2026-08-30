@@ -141,7 +141,7 @@ func addWhitelist(ips []string) error {
 	if err != nil {
 		return fmt.Errorf("open whitelist: %w", err)
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	added := 0
 	for _, ip := range ips {
@@ -229,7 +229,7 @@ func loadWhitelist() ([]string, error) {
 		}
 		return nil, fmt.Errorf("open whitelist: %w", err)
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	var entries []string
 	scanner := bufio.NewScanner(f)
