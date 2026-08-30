@@ -505,7 +505,7 @@ func CountryCodeFromName(name, dbPath string) string {
 	if err != nil {
 		return ""
 	}
-	defer db.Close()
+	defer func() { _ = db.Close() }() // read-only mmdb; close error safe to ignore
 
 	it := db.Networks()
 	needle := strings.ToLower(name)
