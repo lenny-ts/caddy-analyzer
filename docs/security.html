@@ -17,7 +17,7 @@
     <meta name="twitter:title" content="Threat Engine Guide — caddy-analyzer">
     <meta name="twitter:description" content="26-category threat detection: SQLi, XSS, Log4j, RCE, JWT, beaconing. MITRE tagged, Sigma export, iptables guard, blocklist feeds, country-block.">
     <script>try{var t=localStorage.getItem('caddy-docs-theme');if(t==='light')document.documentElement.setAttribute('data-theme','light');}catch(e){}</script>
-    <meta name="doc:modified" content="2026-08-22T15:54:59+02:00">
+    <meta name="doc:modified" content="2026-08-22T17:05:28+02:00">
     <meta name="color-scheme" content="dark light">
     <link rel="manifest" href="manifest.json">
     <link rel="apple-touch-icon" href="apple-touch-icon.png">
@@ -254,10 +254,10 @@
 
         <section class="reveal">
             <h2>4. Real-time Firewall Guard Daemon (guard)</h2>
-            <p>The <code>guard</code> subcommand monitors log streams and automatically adds offending IPs to Linux <code>iptables</code> DROP rules when attack thresholds are exceeded:</p>
+            <p>The <code>guard</code> subcommand monitors log streams and automatically blocks offending IPs via <code>iptables</code>, Docker <code>DOCKER-USER</code> chain, or <code>nftables</code> depending on the environment. <strong>Auto-detection</strong> selects the right backend: when Docker containers with Caddy are found, rules are applied to both <code>INPUT</code> and <code>DOCKER-USER</code> chains so traffic is blocked regardless of network path.</p>
             <div class="callout callout-danger">
                 <p class="callout-label">⚑ Root required</p>
-                <strong><code>guard</code> requires root/sudo</strong> because it modifies <code>iptables</code> rules. Run with <code>sudo</code> or as root, or integrate as a <a href="installation.html#6-systemd-service-guard-integration">systemd service</a>.
+                <strong><code>guard</code> requires root/sudo</strong> because it modifies firewall rules. Run with <code>sudo</code> or as root, or integrate as a <a href="installation.html#6-systemd-service-guard-integration">systemd service</a>.
             </div>
 <pre>sudo caddy-analyze guard --limit 50 --window 1m docker://my-caddy</pre>
 
@@ -276,11 +276,23 @@ sudo caddy-analyze block --state-file /var/lib/caddy-analyzer/blocked.json 203.0
 sudo caddy-analyze unban --state-file /var/lib/caddy-analyzer/blocked.json 203.0.113.5</pre>
 
             <h3>IP Allowlist (Never Block)</h3>
-            <p>Use <code>--never-block</code> to specify IPs/CIDRs that should never be banned, protecting trusted gateways, proxies, or health-check IPs from false-positive blocks. Use <code>--never-block-file</code> to load a larger allowlist from a file (one IP/CIDR per line, <code>#</code> comments supported). The two flags can be combined — entries are merged.</p>
-<pre>sudo caddy-analyze guard \
-  --never-block 10.0.0.0/8,192.168.1.1 \
-  --never-block-file /etc/caddy-analyzer/allowlist.txt \
-  docker://my-caddy</pre>
+            <p>Use <code>--never-block</code> to specify IPs/CIDRs that should never be banned, protecting trusted gateways, proxies, or health-check IPs from false-positive blocks. Use <code>--never-block-file</code> to load a larger allowlist from a file (one IP/CIDR per line, <code>#</code> comments supported). The two flags can be combined — entries are merged. You can also manage the allowlist with the <code>whitelist</code> subcommand:</p>
+<pre>sudo caddy-analyze whitelist --add 10.0.0.0/8,192.168.1.1
+sudo caddy-analyze whitelist --list
+sudo caddy-analyze guard --never-block-file /etc/caddy-analyzer/whitelist.txt docker://my-caddy</pre>
+
+            <h3>Firewall Backend</h3>
+            <p>By default (<code>--firewall-backend auto</code>), the guard detects the environment and selects the appropriate firewall mechanism:</p>
+            <ul>
+                <li><strong>Docker detected + Caddy containers running</strong> → hybrid mode: rules applied to both <code>INPUT</code> and <code>DOCKER-USER</code> chains</li>
+                <li><strong>Docker detected, no Caddy containers</strong> → <code>INPUT</code> chain only</li>
+                <li><strong>nftables backend</strong> → nft sets for O(1) lookup</li>
+                <li><strong>Default</strong> → <code>iptables INPUT</code> chain</li>
+            </ul>
+            <p>You can force a specific backend with <code>--firewall-backend</code>:</p>
+<pre>sudo caddy-analyze guard --firewall-backend docker docker://my-caddy
+sudo caddy-analyze guard --firewall-backend hybrid docker://my-caddy
+sudo caddy-analyze guard --firewall-backend nftables docker://my-caddy</pre>
 
             <h3>Pattern-Detection Blocking</h3>
             <p>Besides rate and status thresholds, <code>guard</code> also blocks IPs whose requests match security patterns (SQLi, XSS, RCE, etc.). Use <code>--detect-confidence &lt;1-10&gt;</code> to set the minimum confidence score required to trigger a block (default <code>8</code>); detections below the threshold are reported in the audit log but not blocked. Pass <code>0</code> to disable pattern-based blocking entirely:</p>

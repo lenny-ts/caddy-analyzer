@@ -7,6 +7,7 @@ import (
 	"github.com/lenny-ts/caddy-analyzer/pkg/config"
 	"github.com/lenny-ts/caddy-analyzer/pkg/enrich"
 	"github.com/lenny-ts/caddy-analyzer/pkg/guard"
+	"github.com/lenny-ts/caddy-analyzer/pkg/guard/firewall"
 )
 
 // Operational tuning, formerly compile-time constants (#25). The defaults here
@@ -53,6 +54,7 @@ func applyTuning(cfg *config.Config, geoTTLSet, geoSizeSet, iptablesSet bool) er
 				return fmt.Errorf("config tuning.iptables_timeout %q must be positive", t.IPTablesTimeout)
 			}
 			guard.SetIPTablesTimeout(d)
+			firewall.SetTimeout(d)
 		}
 	}
 
@@ -76,6 +78,7 @@ func applyTuning(cfg *config.Config, geoTTLSet, geoSizeSet, iptablesSet bool) er
 			return fmt.Errorf("--iptables-timeout must be positive")
 		}
 		guard.SetIPTablesTimeout(flagIPTablesTimeout)
+		firewall.SetTimeout(flagIPTablesTimeout)
 	}
 	return nil
 }

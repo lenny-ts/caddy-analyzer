@@ -50,9 +50,22 @@ func runCmd(ctx context.Context, bin string, args ...string) error {
 	return nil
 }
 
+// Blocker is the interface for IP blocking backends. The guard domain uses
+// only this interface — concrete implementations are adapters selected at
+// startup (iptables, Docker DOCKER-USER chain, nftables, etc.).
 type Blocker interface {
 	Block(ip string) error
 	Unblock(ip string) error
+}
+
+// ChainBlocker extends Blocker with chain lifecycle management.
+// Implementations that manage a dedicated firewall chain should implement this.
+type ChainBlocker interface {
+	Blocker
+	// EnsureChain creates the dedicated chain and jump rule if missing.
+	EnsureChain() error
+	// Validate checks that the chain and jump rule are correctly positioned.
+	Validate() error
 }
 
 // GeoIPLookuper is the subset of *enrich.GeoIP used by the guard for
@@ -199,6 +212,10 @@ type Config struct {
 	// iptables blocker is used. Tests should provide a fake blocker
 	// so that loadState cleanup hits the fake, not real iptables.
 	Blocker Blocker
+	// FirewallBackend, if set, overrides Blocker and provides full
+	// chain lifecycle management (EnsureChain, Validate). When set,
+	// Blocker is ignored.
+	FirewallBackend Blocker
 	// BlocklistMgr, if non-nil, enables immediate blocking of IPs
 	// found in any configured blocklist feed. The manager must have
 	// been loaded (LoadAll or Refresh) before guard starts.
@@ -467,7 +484,9 @@ func (sc *slidingCounters) ips() []string {
 func New(cfg Config) *Guard {
 	sf := newStateFile(cfg.StatePath)
 	blocker := cfg.Blocker
-	if blocker == nil {
+	if cfg.FirewallBackend != nil {
+		blocker = cfg.FirewallBackend
+	} else if blocker == nil {
 		blocker = iptablesBlocker{}
 	}
 	countryBlock := make(map[string]bool)
@@ -496,6 +515,19 @@ func New(cfg Config) *Guard {
 	}
 	if cfg.UARotationThreshold > 0 {
 		g.detector.SetUARotationThreshold(cfg.UARotationThreshold)
+	}
+	// Ensure firewall chain exists and validate before loading state.
+	// The firewall.Backend interface includes EnsureChain and Validate.
+	if cb, ok := blocker.(interface {
+		EnsureChain() error
+		Validate() error
+	}); ok {
+		if err := cb.EnsureChain(); err != nil && cfg.OnError != nil {
+			cfg.OnError(fmt.Errorf("firewall setup: %w", err))
+		}
+		if err := cb.Validate(); err != nil && cfg.OnError != nil {
+			cfg.OnError(fmt.Errorf("firewall validation: %w", err))
+		}
 	}
 	g.loadState()
 	return g
@@ -592,11 +624,19 @@ func (g *Guard) loadState() {
 		case e.When.IsZero():
 			// Permanent block: always restore, regardless of current duration.
 			g.blocked[e.IP] = true
+			// Recreate the firewall rule — iptables rules may have been
+			// flushed while we were down (reboot, iptables -F, etc.).
+			if err := g.blocker.Block(e.IP); err != nil && g.cfg.OnError != nil {
+				g.cfg.OnError(fmt.Errorf("restore permanent block %s: %w", e.IP, err))
+			}
 		case g.cfg.BlockDuration <= 0:
 			// Temporary blocks recorded under a previous run: running in
 			// permanent mode now; preserve them as permanent to avoid
 			// silently dropping firewall protection while we were down.
 			g.blocked[e.IP] = true
+			if err := g.blocker.Block(e.IP); err != nil && g.cfg.OnError != nil {
+				g.cfg.OnError(fmt.Errorf("restore block %s: %w", e.IP, err))
+			}
 		case e.When.Before(now):
 			// Ban expired while the daemon was down: clean up the rule.
 			if err := g.blocker.Unblock(e.IP); err != nil && g.cfg.OnError != nil {
@@ -607,6 +647,10 @@ func (g *Guard) loadState() {
 			}
 		default:
 			g.blocked[e.IP] = true
+			// Recreate the firewall rule for still-valid temporary blocks.
+			if err := g.blocker.Block(e.IP); err != nil && g.cfg.OnError != nil {
+				g.cfg.OnError(fmt.Errorf("restore block %s: %w", e.IP, err))
+			}
 			g.expiries[e.IP] = e.When
 			g.initial = append(g.initial, expiryEntry{ip: e.IP, when: e.When})
 		}
@@ -666,6 +710,13 @@ func (g *Guard) saveState() {
 
 func (g *Guard) SetBlocker(b Blocker) {
 	g.blocker = b
+}
+
+// FlushState forces an immediate save of all blocked IPs to the state file.
+// Called during graceful shutdown to ensure no data is lost.
+func (g *Guard) FlushState() {
+	g.dirty.Store(true)
+	g.saveState()
 }
 
 // AddPermanentBlockToState records ip as a permanent block in the state

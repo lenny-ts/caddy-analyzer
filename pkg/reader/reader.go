@@ -3,6 +3,7 @@ package reader
 import (
 	"bufio"
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -377,6 +378,10 @@ func isTerminal() bool {
 }
 
 func printReadError(path string, err error) {
+	// Suppress "context canceled" errors — these are normal during graceful shutdown.
+	if ctxErr := context.Canceled; errors.Is(err, ctxErr) {
+		return
+	}
 	if os.IsPermission(err) || strings.Contains(err.Error(), "permission denied") {
 		fmt.Fprintf(os.Stderr, "error: permission denied reading %s\n", path)
 		fmt.Fprintf(os.Stderr, "💡 Hint: Run with sudo: sudo caddy-analyze %s\n", path)
