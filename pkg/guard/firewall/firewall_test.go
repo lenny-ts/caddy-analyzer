@@ -50,7 +50,7 @@ func TestParseBlockedIPs(t *testing.T) {
 			want:   nil,
 		},
 		{
-			name:   "no matching rules",
+			name: "no matching rules",
 			output: `-P INPUT ACCEPT
 -A INPUT -j ACCEPT`,
 			want: nil,

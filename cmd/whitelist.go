@@ -75,7 +75,7 @@ func runWhitelist(cmd *cobra.Command, args []string) error {
 
 	// No flags provided — show help.
 	if !whitelistInit && !whitelistList && len(whitelistAdd) == 0 && len(whitelistRem) == 0 {
-		cmd.Help()
+		_ = cmd.Help()
 	}
 
 	return nil
@@ -104,7 +104,7 @@ func initWhitelist() error {
 #   192.168.1.1
 #   203.0.113.50/32
 `
-	if err := os.WriteFile(whitelistFile, []byte(header), 0644); err != nil {
+	if err := os.WriteFile(whitelistFile, []byte(header), 0600); err != nil {
 		return fmt.Errorf("create whitelist: %w", err)
 	}
 	fmt.Printf("  ✓ Whitelist created: %s\n", whitelistFile)
@@ -137,7 +137,7 @@ func addWhitelist(ips []string) error {
 		existSet[e] = true
 	}
 
-	f, err := os.OpenFile(whitelistFile, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0644)
+	f, err := os.OpenFile(whitelistFile, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0600)
 	if err != nil {
 		return fmt.Errorf("open whitelist: %w", err)
 	}
@@ -211,7 +211,7 @@ func removeWhitelist(ips []string) error {
 		content.WriteString("\n")
 	}
 
-	if err := os.WriteFile(whitelistFile, []byte(content.String()), 0644); err != nil {
+	if err := os.WriteFile(whitelistFile, []byte(content.String()), 0600); err != nil {
 		return fmt.Errorf("write whitelist: %w", err)
 	}
 

@@ -11,11 +11,11 @@ import (
 type BackendType string
 
 const (
-	BackendAuto      BackendType = "auto"
-	BackendIptables  BackendType = "iptables"
-	BackendDocker    BackendType = "docker"
-	BackendNftables  BackendType = "nftables"
-	BackendHybrid    BackendType = "hybrid"
+	BackendAuto     BackendType = "auto"
+	BackendIptables BackendType = "iptables"
+	BackendDocker   BackendType = "docker"
+	BackendNftables BackendType = "nftables"
+	BackendHybrid   BackendType = "hybrid"
 )
 
 // Detect returns the appropriate Backend for the current environment.
