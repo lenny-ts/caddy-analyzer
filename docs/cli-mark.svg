@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 160" role="img" aria-labelledby="title desc">
+  <title id="title">caddy-analyzer CLI mark</title>
+  <desc id="desc">A terminal prompt with an ascending analysis signal.</desc>
+  <defs>
+    <linearGradient id="cli-bg" x1="20" y1="20" x2="140" y2="140" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#2563EB"/>
+      <stop offset="1" stop-color="#1E3A8A"/>
+    </linearGradient>
+  </defs>
+  <rect x="8" y="8" width="144" height="144" rx="32" fill="url(#cli-bg)"/>
+  <rect x="29" y="36" width="102" height="88" rx="12" fill="#09090B" fill-opacity=".82" stroke="#93C5FD" stroke-opacity=".45" stroke-width="2"/>
+  <path d="m47 61 15 14-15 14" fill="none" stroke="#DBEAFE" stroke-linecap="round" stroke-linejoin="round" stroke-width="7"/>
+  <path d="M72 96h19" stroke="#60A5FA" stroke-linecap="round" stroke-width="7"/>
+  <path d="M103 101v-9m10 9V78m10 23V63" stroke="#BFDBFE" stroke-linecap="round" stroke-width="5"/>
+</svg>

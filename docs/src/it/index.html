@@ -1,13 +1,65 @@
-<!-- fm: title=caddy-analyzer — Documentazione italiana | description=Documentazione italiana di caddy-analyzer. | breadcrumb=Panoramica -->
+<!-- fm: title=caddy-analyzer — Analisi dei log Caddy v2 e rilevamento minacce | description=caddy-analyzer analizza nativamente i log JSON di Caddy v2, rileva 26 categorie di attacchi e può bloccare le minacce tramite iptables. | breadcrumb=Panoramica -->
 <div class="hero">
-  <div class="hero-badge">Traduzione italiana in arrivo</div>
-  <h1>La documentazione italiana<br>sta arrivando.</h1>
-  <p>Le pagine italiane verranno aggiunte progressivamente. Nel frattempo puoi consultare la documentazione inglese completa.</p>
+  <div class="hero-badge">v0.6.1 · Go 1.25 · Zero dipendenze · MIT</div>
+  <h1>Log JSON di Caddy,<br>finalmente leggibili e protetti.</h1>
+  <p>Caddy v2 scrive log JSON annidati (<code>request.uri</code>, <code>status</code>, <code>tls</code>, <code>headers</code>), non Common Log Format. <code>grep</code>, <code>goaccess</code> e <code>lnav</code> non li interpretano correttamente. <strong>caddy-analyzer</strong> li analizza nativamente, classifica il traffico e segnala gli attacchi con un motore a doppio passaggio e 26 categorie.</p>
   <div class="hero-actions">
-    <a class="btn btn-primary" href="../quickstart.html">Apri la quickstart inglese →</a>
-    <a class="btn btn-ghost" href="../index.html">Documentazione inglese</a>
+    <a class="btn btn-primary" href="../quickstart.html">Inizia in 60 secondi →</a>
+    <a class="btn btn-ghost" href="https://github.com/lenny-ts/caddy-analyzer">GitHub</a>
   </div>
 </div>
 
-<h2 id="stato">Stato della traduzione</h2>
-<p>Lo switch di lingua mantiene la stessa pagina quando la traduzione è disponibile. Per le pagine non ancora tradotte, porta qui per evitare link interrotti.</p>
+<div style="margin:18px 0 24px;border:1px solid var(--border);border-radius:12px;overflow:hidden;background:var(--code-bg);">
+  <div style="display:flex;align-items:center;gap:8px;padding:10px 14px;border-bottom:1px solid var(--border);background:var(--surface);font-size:0.80rem;color:var(--text-muted);">
+    <span style="width:10px;height:10px;border-radius:50%;background:#EF4444;display:inline-block;"></span>
+    <span style="width:10px;height:10px;border-radius:50%;background:#F59E0B;display:inline-block;"></span>
+    <span style="width:10px;height:10px;border-radius:50%;background:#22C55E;display:inline-block;"></span>
+    <span style="margin-left:8px;font-family:'JetBrains Mono',monospace;">caddy-analyzer --detect /var/log/caddy/access.log</span>
+  </div>
+<pre style="margin:0;border:none;border-radius:0;background:transparent;"><code>Periodo: 2026-08-31 00:00 → 01:00  ·  12.450 richieste  ·  RPS 3,46
+2xx ████████████████░░ 89%  ·  3xx ██░░░░ 2%  ·  4xx ███░░ 7%  ·  5xx █░░░░ 2%
+Media 4,2 KB  ·  P50 18ms  P95 210ms  ·  Umani 92%  Bot 8%
+
+IP principali
+  203.0.113.18    1.204  ████████████
+  198.51.100.23     892  ████████
+
+Sospetti (rilevamento a 26 categorie)
+  198.51.100.23  15 dannosi
+    [sql_injection T1190] GET /search?id=1' OR '1'='1 --
+    [xss T1189] GET /q=&lt;script&gt;alert(1)&lt;/script&gt;
+    [scanner] GET /.env  ·  GET /.git/config
+  203.0.113.18    8 dannosi
+    [path_traversal] GET /../../../../etc/passwd</code></pre>
+</div>
+
+<div class="stat-row">
+  <div class="stat"><div class="stat-num">26</div><div class="stat-label">Categorie</div></div>
+  <div class="stat"><div class="stat-num">~70K</div><div class="stat-label">Parse / sec</div></div>
+  <div class="stat"><div class="stat-num">~7K</div><div class="stat-label">Detect / sec</div></div>
+  <div class="stat"><div class="stat-num">0</div><div class="stat-label">Dipendenze</div></div>
+</div>
+
+<h2 id="cosa-risolve">Cosa risolve rispetto agli strumenti generici</h2>
+<div class="table-wrap"><table>
+<thead><tr><th></th><th>caddy-analyzer</th><th>goaccess / lnav / grep</th></tr></thead>
+<tbody>
+<tr><td>JSON Caddy nativo</td><td>✓ niente regex o configurazione</td><td>✗ non riconoscono i campi annidati</td></tr>
+<tr><td>Rilevamento a 26 categorie</td><td>✓ doppio passaggio con confidence score</td><td>✗</td></tr>
+<tr><td>Guard firewall</td><td>✓ iptables / DOCKER-USER / nftables</td><td>✗</td></tr>
+<tr><td>Sorgenti</td><td>file, stdin, docker://, k8s://, journalctl://</td><td>solo file</td></tr>
+</tbody>
+</table></div>
+
+<h2 id="documentazione">Documentazione</h2>
+<div class="doc-grid">
+  <a class="doc-card" href="../quickstart.html"><strong>Avvio rapido</strong><span>Installazione, primo comando e primo report, tutto copiabile.</span></a>
+  <a class="doc-card" href="../installation.html"><strong>Installazione</strong><span>Linux, macOS, Windows, Docker, binari e verifica.</span></a>
+  <a class="doc-card" href="../sources.html"><strong>Sorgenti log</strong><span>Come collegare ogni sorgente e quali permessi minimi servono.</span></a>
+  <a class="doc-card" href="../reference/cli.html"><strong>Riferimento CLI</strong><span>Tutte le opzioni e i sottocomandi.</span></a>
+  <a class="doc-card" href="../security.html"><strong>Motore minacce</strong><span>26 categorie, MITRE, Sigma e panoramica del guard.</span></a>
+  <a class="doc-card" href="../tui-html.html"><strong>Report TUI e HTML</strong><span>Dashboard live ed esportazione.</span></a>
+</div>
+
+<h2 id="prossimo-passo">Prossimo passo</h2>
+<p>È la prima volta che usi il progetto? Segui l'<a href="../quickstart.html">avvio rapido di 60 secondi</a>: ogni comando è copiabile e produce un report reale. Hai già installato tutto? Vai alla <a href="../guide/usage.html">guida all'utilizzo</a> o al <a href="../reference/cli.html">riferimento CLI</a>.</p>
