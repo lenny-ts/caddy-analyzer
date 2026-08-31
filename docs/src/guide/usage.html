@@ -4,7 +4,7 @@
 
 <h2 id="no-filter">No filter — aggregate report</h2>
 <pre><code>caddy-analyze testdata/sample.log</code></pre>
-<p>Renders period, RPS, 2xx/3xx/4xx/5xx bars, bytes, P50/P95/P99, human/bot, top paths/IPs/UAs/methods/hosts, countries/ASNs (if GeoIP), and operational counts.</p>
+<p>Renders period, RPS, 2xx/3xx/4xx/5xx bars, bytes, P50/P95/P99, human/bot, top paths/IPs/UAs/methods/hosts, countries/cities/ASNs (if GeoIP), and operational counts.</p>
 
 <h2 id="entry-filters">Entry filters → listing mode</h2>
 <p>When any entry-level filter is active and format is <code>table</code> without <code>-o</code>, the tool switches to a color-coded <em>listing</em> (not aggregate). Force the report with <code>-f json/csv/html</code> or <code>-o</code>.</p>
@@ -36,10 +36,11 @@ caddy-analyze --defang -f json testdata/sample.log      # 203.0.113.1 → 203[.]
 <h2 id="top">Top — ranked inspector</h2>
 <pre><code>caddy-analyze top ip testdata/sample.log
 caddy-analyze top path -t 20 --5xx testdata/sample.log
-caddy-analyze top country --country IT testdata/sample.log
-caddy-analyze top asn testdata/sample.log
+ caddy-analyze top country --country IT testdata/sample.log
+ caddy-analyze top city testdata/sample.log
+ caddy-analyze top asn testdata/sample.log
 caddy-analyze top -b bandwidth -f csv -o top.csv testdata/sample.log</code></pre>
-<p>Dimensions: <code>path, ip, ua, status, method, host, bandwidth, country, asn</code>. Country/asn need GeoIP (see <a href="configuration.html#tuning">Configuration → tuning</a>).</p>
+<p>Dimensions: <code>path, ip, ua, status, method, host, bandwidth, country, city, asn</code>. Country/asn need GeoIP; city needs a local city MMDB. City databases are discovered but never auto-downloaded.</p>
 
 <h2 id="diff">Diff — compare two logs</h2>
 <pre><code>caddy-analyze diff testdata/sample.log testdata/large.log

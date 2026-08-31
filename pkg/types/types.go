@@ -170,6 +170,10 @@ func (e *OperationalEntry) EffectiveLevel() string {
 type GeoInfo struct {
 	CountryCode string // ISO 3166-1 alpha-2, e.g. "US", "DE"
 	CountryName string // Human-readable, e.g. "United States"
+	City        string
+	Latitude    float64
+	Longitude   float64
+	Timezone    string
 	ASN         uint   // Autonomous System Number
 	ASNOrg      string // ASNOrganization, e.g. "AS15169 Google LLC"
 }
@@ -288,7 +292,14 @@ const (
 	TopRemoteIP   TopField = "remote_ip"
 	TopCountry    TopField = "country"
 	TopASN        TopField = "asn"
+	TopCity       TopField = "city"
 )
+
+type GeoLocation struct {
+	Latitude  float64 `json:"latitude"`
+	Longitude float64 `json:"longitude"`
+	Timezone  string  `json:"timezone,omitempty"`
+}
 
 type Stats struct {
 	TotalRequests    int64
@@ -310,6 +321,8 @@ type Stats struct {
 	// "US") and ASN strings (e.g. "AS15169") respectively.
 	CountryCounts map[string]int64
 	ASNCounts     map[string]int64
+	CityCounts    map[string]int64
+	CityLocations map[string]GeoLocation
 	// CountryNames maps ISO country codes (e.g. "IT") to human-readable
 	// names (e.g. "Italy") for display. Populated by the GeoIP enricher
 	// alongside CountryCounts.
@@ -379,10 +392,11 @@ type TopSections struct {
 	Host    bool
 	Country bool
 	ASN     bool
+	City    bool
 }
 
 func DefaultTopSections() TopSections {
-	return TopSections{Path: true, IP: true, UA: true, Method: true, Status: true, Host: true, Country: true, ASN: true}
+	return TopSections{Path: true, IP: true, UA: true, Method: true, Status: true, Host: true, Country: true, ASN: true, City: true}
 }
 
 func (e *LogEntry) Path() string {
@@ -414,6 +428,8 @@ func NewStats() *Stats {
 		CountryCounts:        make(map[string]int64),
 		ASNCounts:            make(map[string]int64),
 		CountryNames:         make(map[string]string),
+		CityCounts:           make(map[string]int64),
+		CityLocations:        make(map[string]GeoLocation),
 		MinDuration:          1<<63 - 1,
 	}
 }

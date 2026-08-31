@@ -6,6 +6,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [Unreleased]
 
+### Fixed
+- **`update --version` release lookup**: preserve the `v` prefix when querying GitHub for a pinned release tag.
+
+### Added
+- **Parallel analysis workers (#75)**: `--workers N` parallelizes log parsing while preserving input order for stateful detection and aggregation; `0` uses the available CPU count.
+- **City GeoIP enrichment and heatmap (#71)**: local City mmdb data now populates city and coordinates, with `top city`, city report sections, and an inline SVG geographic heatmap.
+- **Modern bot detection (#67)**: classify GPTBot, ChatGPT-User, ClaudeBot, anthropic-ai, Bytespider, CCBot, Amazonbot, Applebot-Extended, PerplexityBot, meta-externalagent, and DataForSeoBot as bots.
+
 ## [0.6.3] - 2026-08-31
 
 ### Fixed

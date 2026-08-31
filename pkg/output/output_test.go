@@ -100,6 +100,22 @@ func TestReportOutputs(t *testing.T) {
 	}
 }
 
+func TestHTMLReportRendersGeographicHeatmap(t *testing.T) {
+	engine := analysis.New(types.Filters{})
+	engine.Process(&types.LogEntry{URI: "/", Status: 200, Size: 1, Geo: types.GeoInfo{City: "Rome", Latitude: 41.9, Longitude: 12.5}})
+	engine.Finalize()
+
+	var buf bytes.Buffer
+	report := NewReport(engine, FormatHTML, 5)
+	report.SetWriter(&buf)
+	if err := report.Print(); err != nil {
+		t.Fatalf("Print failed: %v", err)
+	}
+	if !strings.Contains(buf.String(), "Geographic Attack Heatmap") {
+		t.Fatal("expected HTML report to contain geographic heatmap")
+	}
+}
+
 func TestSafeCell(t *testing.T) {
 	tests := []struct {
 		in   string

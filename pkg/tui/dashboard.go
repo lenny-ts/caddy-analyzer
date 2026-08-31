@@ -51,6 +51,7 @@ type Model struct {
 	ipTable      table.Model
 	pathTable    table.Model
 	countryTable table.Model
+	cityTable    table.Model
 	asnTable     table.Model
 	uaItems      []types.CountItem
 
@@ -268,6 +269,8 @@ func (m Model) initTables() Model {
 		table.WithFocused(false),
 		table.WithHeight(max(1, min(12, m.height-14))),
 	)
+	cityCols := []table.Column{{Title: "#", Width: 4}, {Title: "City", Width: 26}, {Title: "Requests", Width: 10}}
+	m.cityTable = table.New(table.WithColumns(cityCols), table.WithFocused(false), table.WithHeight(max(1, min(12, m.height-14))))
 
 	asnCols := []table.Column{
 		{Title: "#", Width: 4},
@@ -325,6 +328,12 @@ func (m Model) refreshTables() Model {
 		})
 	}
 	m.countryTable.SetRows(countryRows)
+	cities := analysis.TopN(s.CityCounts, 15)
+	var cityRows []table.Row
+	for i, c := range cities {
+		cityRows = append(cityRows, table.Row{fmt.Sprintf("%d", i+1), truncate(c.Key, 24), fmt.Sprintf("%d", c.Count)})
+	}
+	m.cityTable.SetRows(cityRows)
 
 	asns := analysis.TopN(s.ASNCounts, 15)
 	var asnRows []table.Row
@@ -505,12 +514,12 @@ func (m Model) renderUA(b *strings.Builder) {
 }
 
 func (m Model) renderGeo(b *strings.Builder) {
-	if m.geoip != nil && m.geoip.Loading() && (m.stats == nil || (len(m.stats.CountryCounts) == 0 && len(m.stats.ASNCounts) == 0)) {
+	if m.geoip != nil && m.geoip.Loading() && (m.stats == nil || (len(m.stats.CountryCounts) == 0 && len(m.stats.CityCounts) == 0 && len(m.stats.ASNCounts) == 0)) {
 		fmt.Fprintf(b, "  %s\n", styleWarn.Render("GeoIP database downloading in background..."))
 		fmt.Fprintf(b, "  Country/ASN stats will populate once the download completes.\n")
 		return
 	}
-	if m.geoip == nil && (m.stats == nil || (len(m.stats.CountryCounts) == 0 && len(m.stats.ASNCounts) == 0)) {
+	if m.geoip == nil && (m.stats == nil || (len(m.stats.CountryCounts) == 0 && len(m.stats.CityCounts) == 0 && len(m.stats.ASNCounts) == 0)) {
 		fmt.Fprintf(b, "  %s\n", styleWarn.Render("GeoIP enrichment disabled"))
 		fmt.Fprintf(b, "  Pass --geoip-db (or let auto-download run) to populate country/ASN stats.\n")
 		return
@@ -522,6 +531,8 @@ func (m Model) renderGeo(b *strings.Builder) {
 
 	fmt.Fprintf(b, "  %s\n\n", styleLabel.Render("Top Countries"))
 	b.WriteString(m.countryTable.View())
+	fmt.Fprintf(b, "\n\n  %s\n\n", styleLabel.Render("Top Cities"))
+	b.WriteString(m.cityTable.View())
 	fmt.Fprintf(b, "\n\n  %s\n\n", styleLabel.Render("Top ASN"))
 	b.WriteString(m.asnTable.View())
 }

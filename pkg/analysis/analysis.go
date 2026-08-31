@@ -144,6 +144,10 @@ func (e *Engine) Process(entry *types.LogEntry) {
 			s.CountryNames[entry.Geo.CountryCode] = entry.Geo.CountryName
 		}
 	}
+	if entry.Geo.City != "" {
+		s.IncStrCount(s.CityCounts, entry.Geo.City)
+		s.CityLocations[entry.Geo.City] = types.GeoLocation{Latitude: entry.Geo.Latitude, Longitude: entry.Geo.Longitude, Timezone: entry.Geo.Timezone}
+	}
 	if entry.Geo.ASN > 0 {
 		s.IncStrCount(s.ASNCounts, fmt.Sprintf("AS%d", entry.Geo.ASN))
 	}
@@ -214,7 +218,10 @@ func TopN(m map[string]int64, n int) []types.CountItem {
 		items = append(items, types.CountItem{Key: k, Count: v})
 	}
 	sort.Slice(items, func(i, j int) bool {
-		return items[i].Count > items[j].Count
+		if items[i].Count != items[j].Count {
+			return items[i].Count > items[j].Count
+		}
+		return items[i].Key < items[j].Key
 	})
 	if n > 0 && len(items) > n {
 		items = items[:n]
@@ -228,7 +235,10 @@ func TopNInt(m map[int]int64, n int) []types.CountIntItem {
 		items = append(items, types.CountIntItem{Key: k, Count: v})
 	}
 	sort.Slice(items, func(i, j int) bool {
-		return items[i].Count > items[j].Count
+		if items[i].Count != items[j].Count {
+			return items[i].Count > items[j].Count
+		}
+		return items[i].Key < items[j].Key
 	})
 	if n > 0 && len(items) > n {
 		items = items[:n]

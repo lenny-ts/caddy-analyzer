@@ -7,6 +7,24 @@ import (
 	"github.com/lenny-ts/caddy-analyzer/pkg/types"
 )
 
+func TestEngineAggregatesCityWithoutSchemaKnowledge(t *testing.T) {
+	engine := New(types.Filters{})
+	engine.Process(&types.LogEntry{Geo: types.GeoInfo{City: "Rome", Latitude: 41.9, Longitude: 12.5, Timezone: "Europe/Rome"}})
+	engine.Process(&types.LogEntry{Geo: types.GeoInfo{City: "Rome", Latitude: 41.9, Longitude: 12.5, Timezone: "Europe/Rome"}})
+	engine.Process(&types.LogEntry{Geo: types.GeoInfo{City: "Berlin", Latitude: 52.5, Longitude: 13.4}})
+
+	stats := engine.Stats()
+	if stats.CityCounts["Rome"] != 2 || stats.CityCounts["Berlin"] != 1 {
+		t.Fatalf("city counts = %#v", stats.CityCounts)
+	}
+	if got := TopN(stats.CityCounts, 1); len(got) != 1 || got[0].Key != "Rome" {
+		t.Fatalf("top city = %#v", got)
+	}
+	if got := stats.CityLocations["Rome"]; got.Latitude != 41.9 || got.Timezone != "Europe/Rome" {
+		t.Fatalf("Rome location = %#v", got)
+	}
+}
+
 func TestEngineProcessing(t *testing.T) {
 	engine := New(types.Filters{})
 

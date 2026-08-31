@@ -4,6 +4,17 @@
 <p>Il formato si basa su <a href="https://keepachangelog.com/en/1.0.0/">Keep a Changelog</a> e questo progetto aderisce al <a href="https://semver.org/spec/v2.0.0.html">Semantic Versioning</a>.</p>
 
 <h2 id="unreleased">Non rilasciato</h2>
+<h3>Corretto</h3>
+<ul>
+<li><strong>Ricerca della release con <code>update --version</code></strong>: mantiene il prefisso <code>v</code> quando interroga GitHub per il tag di una release specifica.</li>
+</ul>
+<h3>Aggiunto</h3>
+<ul>
+<li><strong>Worker paralleli per l'analisi (#75)</strong>: <code>--workers N</code> parallelizza il parsing dei log mantenendo l'ordine per rilevamento e aggregazione; <code>0</code> usa il numero di CPU disponibili.</li>
+<li><strong>Enrichment GeoIP per città e heatmap (#71)</strong>: i database City locali forniscono città e coordinate, con <code>top city</code>, sezioni nei report e heatmap geografica SVG inline.</li>
+<li><strong>Rilevamento dei bot moderni (#67)</strong>: GPTBot, ChatGPT-User, ClaudeBot, anthropic-ai, Bytespider, CCBot, Amazonbot, Applebot-Extended, PerplexityBot, meta-externalagent e DataForSeoBot vengono classificati come bot.</li>
+</ul>
+
 <h2 id="0-6-3">0.6.3 — 2026-08-31</h2>
 <h3>Corretto</h3>
 <ul>

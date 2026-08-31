@@ -13,13 +13,14 @@ func (r *Report) printHTML() error {
 	s := r.engine.Stats()
 	total := s.TotalRequests
 
-	var topPaths, topIPs, topUAs, topMethods, topCountries, topASNs []types.CountItem
+	var topPaths, topIPs, topUAs, topMethods, topCountries, topCities, topASNs []types.CountItem
 	if r.top > 0 {
 		topPaths = analysis.TopN(s.PathCounts, r.top)
 		topIPs = analysis.TopN(s.RemoteIPCounts, r.top)
 		topUAs = analysis.TopN(s.UserAgentCounts, r.top)
 		topMethods = analysis.TopN(s.MethodCounts, r.top)
 		topCountries = analysis.TopN(s.CountryCounts, r.top)
+		topCities = analysis.TopN(s.CityCounts, r.top)
 		topASNs = analysis.TopN(s.ASNCounts, r.top)
 	}
 	topProtos := analysis.TopN(s.ProtoCounts, 5)
@@ -30,7 +31,7 @@ func (r *Report) printHTML() error {
 	suspicious := analysis.TopN(s.SuspiciousIPs, 20)
 
 	out := generateHTMLReport(s, total, r.engine.RPS(), r.engine.AvgDuration(),
-		topPaths, topIPs, topUAs, topMethods, topCountries, topASNs, topProtos, topTLS, topBots, topReferers, topPathBytes, suspicious, r.detect, r.activeFilters(), s.SuspiciousDetails)
+		topPaths, topIPs, topUAs, topMethods, topCountries, topCities, topASNs, topProtos, topTLS, topBots, topReferers, topPathBytes, suspicious, r.detect, r.activeFilters(), s.SuspiciousDetails)
 
 	// Inject operational events card before </body> if present
 	if r.opStats != nil && r.opStats.TotalEvents > 0 {
@@ -47,7 +48,7 @@ func generateHTMLReport(
 	total int64,
 	rps float64,
 	avgDur float64,
-	topPaths, topIPs, _, _, topCountries, topASNs, topProtos, topTLS, _, _, _, suspicious []types.CountItem,
+	topPaths, topIPs, _, _, topCountries, topCities, topASNs, topProtos, topTLS, _, _, _, suspicious []types.CountItem,
 	detect bool,
 	activeFilters []string,
 	suspiciousDetails map[string][]string,
@@ -280,7 +281,13 @@ func generateHTMLReport(
         <!-- Top Countries -->
         %s
 
+        <!-- Top Cities -->
+        %s
+
         <!-- Top ASNs -->
+        %s
+
+        <!-- Geographic Heatmap -->
         %s
 
         <!-- Status Codes -->
@@ -318,7 +325,9 @@ func generateHTMLReport(
 		renderTableRows(topPaths, total),
 		renderTableRows(topIPs, total),
 		renderGeoCard("Top Client Countries", topCountries, total),
+		renderGeoCard("Top Client Cities", topCities, total),
 		renderGeoCard("Top Autonomous Systems", topASNs, total),
+		renderGeoHeatmap(s.CityCounts, s.CityLocations),
 		s.Status2xx, Pct(s.Status2xx, total),
 		s.Status3xx, Pct(s.Status3xx, total),
 		s.Status4xx, Pct(s.Status4xx, total),
@@ -326,6 +335,54 @@ func generateHTMLReport(
 		renderMixedRows(topProtos, topTLS),
 		renderSecurityAlertsHTML(suspicious, suspiciousDetails, detect),
 	)
+}
+
+func renderGeoHeatmap(counts map[string]int64, locations map[string]types.GeoLocation) string {
+	if len(counts) == 0 || len(locations) == 0 {
+		return ""
+	}
+
+	const (
+		width  = 720.0
+		height = 320.0
+	)
+	maxCount := int64(0)
+	points := make([]struct {
+		name      string
+		count     int64
+		latitude  float64
+		longitude float64
+	}, 0, len(counts))
+	for name, count := range counts {
+		location, ok := locations[name]
+		if !ok || location.Latitude < -90 || location.Latitude > 90 || location.Longitude < -180 || location.Longitude > 180 {
+			continue
+		}
+		if count > maxCount {
+			maxCount = count
+		}
+		points = append(points, struct {
+			name      string
+			count     int64
+			latitude  float64
+			longitude float64
+		}{name, count, location.Latitude, location.Longitude})
+	}
+	if len(points) == 0 || maxCount == 0 {
+		return ""
+	}
+
+	var b strings.Builder
+	fmt.Fprintf(&b, `<div class="card"><h2>Geographic Attack Heatmap</h2><svg class="geo-heatmap" viewBox="0 0 %.0f %.0f" role="img" aria-label="Client request concentration by city">`, width, height)
+	b.WriteString(`<rect width="100%" height="100%" fill="#101820" rx="4"/><path d="M0 80H720 M0 160H720 M0 240H720 M180 0V320 M360 0V320 M540 0V320" stroke="#263746" stroke-width="1"/>`)
+	for _, point := range points {
+		x := (point.longitude + 180) / 360 * width
+		y := (90 - point.latitude) / 180 * height
+		radius := 4 + 10*float64(point.count)/float64(maxCount)
+		fmt.Fprintf(&b, `<circle cx="%.2f" cy="%.2f" r="%.2f" fill="#f85149" fill-opacity=".72"><title>%s: %d requests</title></circle>`, x, y, radius, escapeHTML(point.name), point.count)
+	}
+	b.WriteString(`</svg></div>`)
+	return b.String()
 }
 
 func cardClass(errPct float64) string {

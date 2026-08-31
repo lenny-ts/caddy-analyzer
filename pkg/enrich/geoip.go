@@ -51,6 +51,7 @@ var autoDownload = true
 type GeoIP struct {
 	countryDB *maxminddb.Reader
 	asnDB     *maxminddb.Reader
+	cityDB    *maxminddb.Reader
 	mu        sync.RWMutex
 	cacheMu   sync.Mutex
 	cache     map[string]geoCacheEntry
@@ -75,6 +76,14 @@ type countryRecord struct {
 		ISOCode string            `maxminddb:"iso_code"`
 		Names   map[string]string `maxminddb:"names"`
 	} `maxminddb:"country"`
+	City struct {
+		Names map[string]string `maxminddb:"names"`
+	} `maxminddb:"city"`
+	Location struct {
+		Latitude  float64 `maxminddb:"latitude"`
+		Longitude float64 `maxminddb:"longitude"`
+		Timezone  string  `maxminddb:"time_zone"`
+	} `maxminddb:"location"`
 }
 
 // asnRecordMaxMind matches the MaxMind GeoLite2-ASN schema.
@@ -94,6 +103,7 @@ type asnRecordDBIP struct {
 var geoIPSearchPaths = []string{
 	"GeoIP.mmdb",
 	"GeoLite2-Country.mmdb",
+	"GeoLite2-City.mmdb",
 	"dbip-country-lite.mmdb",
 	"dbip-city-lite.mmdb",
 	filepath.Join(userHomeDir(), ".config", "caddy-analyzer", "GeoIP.mmdb"),
@@ -114,6 +124,16 @@ var geoIPASNSearchPaths = []string{
 	filepath.Join(userHomeDir(), ".config", "caddy-analyzer", "dbip-asn-lite.mmdb"),
 	"/var/lib/caddy-analyzer/GeoLite2-ASN.mmdb",
 	"/usr/share/GeoIP/GeoLite2-ASN.mmdb",
+}
+
+var geoIPCitySearchPaths = []string{
+	"GeoLite2-City.mmdb", "dbip-city-lite.mmdb",
+	filepath.Join(userHomeDir(), ".config", "caddy-analyzer", "GeoLite2-City.mmdb"),
+	filepath.Join(userHomeDir(), ".config", "caddy-analyzer", "dbip-city-lite.mmdb"),
+	"/var/lib/caddy-analyzer/GeoLite2-City.mmdb",
+	"/var/lib/caddy-analyzer/dbip-city-lite.mmdb",
+	"/usr/share/GeoIP/GeoLite2-City.mmdb",
+	"/usr/share/GeoIP/dbip-city-lite.mmdb",
 }
 
 // SetAutoDownload enables or disables automatic download of the DB-IP
@@ -227,13 +247,19 @@ func FindDB(path string) string {
 	return ""
 }
 
+// FindCityDB resolves a local city database without downloading anything.
+func FindCityDB() string {
+	p, _ := findFirst(geoIPCitySearchPaths)
+	return p
+}
+
 // NewGeoIP opens the mmdb file at path. If path is empty, auto-discovers
 // the first matching file in geoIPSearchPaths. If no file is found and
 // auto-download is enabled, downloads the DB-IP lite mmdb to
 // ~/.config/caddy-analyzer/ and opens it.
 func NewGeoIP(path string) (*GeoIP, error) {
 	if path != "" {
-		return openGeoIP(path, "")
+		return openGeoIP(path, "", cityDBFor(path))
 	}
 
 	countryPath, ok := findFirst(geoIPSearchPaths)
@@ -243,15 +269,23 @@ func NewGeoIP(path string) (*GeoIP, error) {
 			if err != nil {
 				return nil, err
 			}
-			return openGeoIP(cp, ap)
+			return openGeoIP(cp, ap, cityDBFor(cp))
 		}
 		return nil, fmt.Errorf("no GeoIP mmdb file found; pass --geoip-db or place a file in one of: %v", geoIPSearchPaths)
 	}
 	asnPath, _ := findFirst(geoIPASNSearchPaths)
-	return openGeoIP(countryPath, asnPath)
+	return openGeoIP(countryPath, asnPath, cityDBFor(countryPath))
 }
 
-func openGeoIP(countryPath, asnPath string) (*GeoIP, error) {
+func cityDBFor(countryPath string) string {
+	if strings.Contains(strings.ToLower(filepath.Base(countryPath)), "city") {
+		return countryPath
+	}
+	p, _ := findFirst(geoIPCitySearchPaths)
+	return p
+}
+
+func openGeoIP(countryPath, asnPath, cityPath string) (*GeoIP, error) {
 	cdb, err := maxminddb.Open(countryPath)
 	if err != nil {
 		return nil, fmt.Errorf("open geoip db %s: %w", countryPath, err)
@@ -267,6 +301,13 @@ func openGeoIP(countryPath, asnPath string) (*GeoIP, error) {
 			g.asnDB = adb
 		}
 	}
+	if cityPath == countryPath {
+		g.cityDB = cdb
+	} else if cityPath != "" {
+		if db, e := maxminddb.Open(cityPath); e == nil {
+			g.cityDB = db
+		}
+	}
 	return g, nil
 }
 
@@ -278,12 +319,12 @@ func openGeoIP(countryPath, asnPath string) (*GeoIP, error) {
 // data. This keeps interactive modes (notably --watch) responsive.
 func NewGeoIPAsync(path string) (*GeoIP, error) {
 	if path != "" {
-		return openGeoIP(path, "")
+		return openGeoIP(path, "", cityDBFor(path))
 	}
 	countryPath, ok := findFirst(geoIPSearchPaths)
 	if ok {
 		asnPath, _ := findFirst(geoIPASNSearchPaths)
-		return openGeoIP(countryPath, asnPath)
+		return openGeoIP(countryPath, asnPath, cityDBFor(countryPath))
 	}
 	if !autoDownload {
 		return nil, fmt.Errorf("no GeoIP mmdb file found; pass --geoip-db or place a file in one of: %v", geoIPSearchPaths)
@@ -310,7 +351,7 @@ func (g *GeoIP) backgroundLoad() {
 		g.mu.Unlock()
 		return
 	}
-	real, err := openGeoIP(cp, ap)
+	real, err := openGeoIP(cp, ap, cityDBFor(cp))
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "warning: geoip open failed: %v\n", err)
 		g.mu.Lock()
@@ -328,10 +369,14 @@ func (g *GeoIP) backgroundLoad() {
 		if real.asnDB != nil {
 			_ = real.asnDB.Close()
 		}
+		if real.cityDB != nil && real.cityDB != real.countryDB {
+			_ = real.cityDB.Close()
+		}
 		return
 	}
 	g.countryDB = real.countryDB
 	g.asnDB = real.asnDB
+	g.cityDB = real.cityDB
 	g.path = real.path
 }
 
@@ -370,6 +415,11 @@ func (g *GeoIP) Close() error {
 	}
 	if g.asnDB != nil {
 		if e := g.asnDB.Close(); e != nil {
+			err = e
+		}
+	}
+	if g.cityDB != nil && g.cityDB != g.countryDB {
+		if e := g.cityDB.Close(); e != nil {
 			err = e
 		}
 	}
@@ -441,6 +491,13 @@ func (g *GeoIP) lookupUncached(ip net.IP) (types.GeoInfo, error) {
 				info.ASN = asnDBIP.ASN
 				info.ASNOrg = asnDBIP.Org
 			}
+		}
+	}
+	if g.cityDB != nil {
+		var rec countryRecord
+		if err := g.cityDB.Lookup(ip, &rec); err == nil {
+			info.City = rec.City.Names["en"]
+			info.Latitude, info.Longitude, info.Timezone = rec.Location.Latitude, rec.Location.Longitude, rec.Location.Timezone
 		}
 	}
 
