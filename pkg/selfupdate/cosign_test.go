@@ -44,6 +44,25 @@ func TestVerifyCosignChecksumMatch(t *testing.T) {
 	}
 }
 
+func TestVerifyCosignChecksumSelectsExactAsset(t *testing.T) {
+	dir := t.TempDir()
+	binPath := filepath.Join(dir, "cosign-linux-amd64")
+	if err := os.WriteFile(binPath, []byte("fake-cosign-binary"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	want := sha256Hex(t, binPath)
+	checksumPath := filepath.Join(dir, "cosign-checksums.txt")
+	content := "wrong-hash  cosign-3.1.3-1.aarch64.rpm\n" + want + "  cosign-linux-amd64\n"
+	if err := os.WriteFile(checksumPath, []byte(content), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := verifyCosignChecksum(binPath, checksumPath); err != nil {
+		t.Fatalf("expected exact asset checksum to match, got: %v", err)
+	}
+}
+
 func TestVerifyCosignChecksumMismatch(t *testing.T) {
 	dir := t.TempDir()
 	binPath := filepath.Join(dir, "cosign")
