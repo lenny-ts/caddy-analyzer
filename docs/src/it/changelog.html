@@ -3,6 +3,17 @@
 <p>Tutte le modifiche rilevanti a <code>caddy-analyzer</code> saranno documentate in questo file.</p>
 <p>Il formato si basa su <a href="https://keepachangelog.com/en/1.0.0/">Keep a Changelog</a> e questo progetto aderisce al <a href="https://semver.org/spec/v2.0.0.html">Semantic Versioning</a>.</p>
 
+<h2 id="0-6-2">0.6.2 — 2026-08-31</h2>
+<h3>Corretto</h3>
+<ul>
+<li><strong>Defanging selettivo (#63)</strong>: gli indirizzi IPv4 vengono ora validati prima del defanging, evitando di modificare numeri di versione e sequenze numeriche puntate non valide. PR #85 — @TLNing260310</li>
+<li><strong><code>--trust-forwarded</code> ignorato in <code>top</code> e <code>tail</code></strong>: gli IP client inoltrati vengono ora applicati prima dei filtri e dell'enrichment GeoIP in entrambi i sottocomandi. Chiude l'issue #64.</li>
+</ul>
+<h3>Modificato</h3>
+<ul>
+<li><strong>Refactor della documentazione (#86)</strong>: il sito della documentazione è stato ricostruito con una struttura a template, pagine in inglese e italiano, navigazione condivisa e riferimenti aggiornati. PR #86 — @lenny-ts</li>
+</ul>
+
 <h2 id="0-6-1">0.6.1 — 2026-08-31</h2>
 <h3>Aggiunto</h3>
 <ul>

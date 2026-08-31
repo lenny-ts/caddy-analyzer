@@ -125,6 +125,7 @@ func runTail(cmd *cobra.Command, args []string) error {
 			if filters.OpsOnly {
 				continue
 			}
+			applyForwarded(e, filters)
 			enrichGeoIP(e, geoip)
 			if !analysis.MatchEntry(e, filters) {
 				continue
