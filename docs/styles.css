@@ -84,8 +84,8 @@ h4{font-size:0.95rem;margin:1.25rem 0 0.4rem}
 .theme-toggle{width:32px;height:32px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text-sec);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:14px;transition:border-color .15s,color .15s,background .15s}
 .theme-toggle:hover{border-color:var(--border-strong);color:var(--text);background:var(--surface-hover)}
 
-/* Three column layout */
-.docs-layout{display:grid;grid-template-columns:var(--sidebar-w) minmax(0,1fr) var(--toc-w);max-width:calc(var(--sidebar-w) + var(--content-max) + var(--toc-w) + 64px);margin:0 auto;min-height:calc(100vh - var(--header-h))}
+/* Three column layout — sidebar flush left, content centered between sidebar and TOC */
+.docs-layout{display:grid;grid-template-columns:var(--sidebar-w) minmax(0,1fr) var(--toc-w);width:100%;max-width:none;margin:0;min-height:calc(100vh - var(--header-h))}
 
 /* Sidebar */
 .doc-sidebar{position:sticky;top:var(--header-h);height:calc(100vh - var(--header-h));overflow-y:auto;padding:20px 12px 20px 20px;border-right:1px solid var(--border);font-size:0.875rem;background:var(--bg)}
@@ -96,8 +96,8 @@ h4{font-size:0.95rem;margin:1.25rem 0 0.4rem}
 .sidebar-link.sub{padding-left:22px;font-size:0.84rem}
 .sidebar-sep{height:1px;background:var(--border);margin:10px 4px}
 
-/* Content */
-.doc-content{padding:28px 32px;max-width:var(--content-max);min-width:0}
+/* Content — centered within middle column */
+.doc-content{padding:28px 32px;max-width:var(--content-max);min-width:0;width:100%;margin:0 auto}
 .doc-content > :first-child{margin-top:0}
 
 /* TOC */
