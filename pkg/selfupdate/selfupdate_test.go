@@ -7,6 +7,8 @@ import (
 	"compress/gzip"
 	"context"
 	"errors"
+	"io"
+	"net/http"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -14,6 +16,35 @@ import (
 	"strings"
 	"testing"
 )
+
+type roundTripFunc func(*http.Request) (*http.Response, error)
+
+func (f roundTripFunc) RoundTrip(r *http.Request) (*http.Response, error) {
+	return f(r)
+}
+
+func TestFetchReleasePreservesVersionTagPrefix(t *testing.T) {
+	client := &http.Client{Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
+		wantPath := "/repos/lenny-ts/caddy-analyzer/releases/tags/v0.6.3"
+		if req.URL.Path != wantPath {
+			t.Fatalf("request path = %q, want %q", req.URL.Path, wantPath)
+		}
+		return &http.Response{
+			StatusCode: http.StatusOK,
+			Status:     "200 OK",
+			Body:       io.NopCloser(strings.NewReader(`{"tag_name":"v0.6.3","assets":[]}`)),
+			Header:     make(http.Header),
+		}, nil
+	})}
+
+	rel, err := FetchRelease(context.Background(), client, "lenny-ts/caddy-analyzer", "v0.6.3")
+	if err != nil {
+		t.Fatalf("FetchRelease returned error: %v", err)
+	}
+	if rel.Tag != "v0.6.3" {
+		t.Fatalf("release tag = %q, want v0.6.3", rel.Tag)
+	}
+}
 
 func TestSelectAsset(t *testing.T) {
 	rel := &Release{Tag: "v0.5.0", Assets: []Asset{

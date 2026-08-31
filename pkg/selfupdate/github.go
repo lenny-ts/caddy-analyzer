@@ -51,7 +51,9 @@ func FetchRelease(ctx context.Context, client *http.Client, repo, version string
 	}
 	endpoint := fmt.Sprintf("https://api.github.com/repos/%s/releases/latest", repo)
 	if version != "" {
-		endpoint = fmt.Sprintf("https://api.github.com/repos/%s/releases/tags/%s", repo, strings.TrimPrefix(version, "v"))
+		// GitHub release tags include the leading "v". Do not strip it from
+		// pinned versions or the API returns 404 for tags such as v0.6.3.
+		endpoint = fmt.Sprintf("https://api.github.com/repos/%s/releases/tags/%s", repo, version)
 	}
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
