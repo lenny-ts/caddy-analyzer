@@ -9,6 +9,11 @@ const ROOT = path.resolve(__dirname, '..');
 const SRC = path.join(ROOT, 'docs', 'src');
 const OUT = path.join(ROOT, 'docs');
 const SITE = 'https://lenny-ts.github.io/caddy-analyzer';
+// Add a language here and create its index page to make it available in the UI.
+const LANGUAGES = [
+  { code: 'en', label: 'EN', root: '' },
+  { code: 'it', label: 'IT', root: 'it' },
+];
 
 function read(p) { return fs.readFileSync(p, 'utf8'); }
 function exists(p) { try { fs.accessSync(p); return true; } catch { return false; } }
@@ -113,22 +118,25 @@ function hreflangTags(outRel, lang) {
 }
 
 function langSwitcher(outRel, lang) {
-  // outRel as above, lang = 'en' | 'it'
-  const isIt = lang === 'it';
-  // counterpart
-  const counterpartRel = isIt ? outRel.slice(3) : 'it/' + outRel;
-  const counterpartExists = exists(path.join(SRC, counterpartRel)) || exists(path.join(OUT, counterpartRel));
+  const current = LANGUAGES.find((item) => item.code === lang) || LANGUAGES[0];
   const currentDir = path.posix.dirname(outRel);
-  const counterpartHref = path.posix.relative(currentDir, counterpartRel) || path.posix.basename(counterpartRel);
-  const enHref = path.posix.relative(currentDir, isIt ? counterpartRel : outRel) || path.posix.basename(outRel);
-  const active = (label) => `<span class="lang-option active" aria-current="page">${label}</span>`;
-  const link = (label, href, code) => `<a class="lang-option" href="${href}" hreflang="${code}" lang="${code}">${label}</a>`;
-  const unavailable = `<span class="lang-option disabled" title="Italian translation coming soon" aria-disabled="true">IT</span>`;
-  if (counterpartExists) {
-    return `<div class="language-switch" role="group" aria-label="Language">${isIt ? link('EN', enHref, 'en') : active('EN')}${link('IT', counterpartHref, 'it')}</div>`;
-  }
-  // Keep unavailable translations visibly disabled instead of creating a 404 link.
-  return `<div class="language-switch" role="group" aria-label="Language">${isIt ? link('EN', enHref, 'en') : active('EN')}${unavailable}</div>`;
+  const localizedPath = (language, page) => language.root ? `${language.root}/${page}` : page;
+  const hrefFor = (target) => path.posix.relative(currentDir, target) || path.posix.basename(target);
+  const options = LANGUAGES.map((target) => {
+    if (target.code === current.code) {
+      return `<span class="lang-option active" aria-current="page">${target.label}</span>`;
+    }
+    const exact = localizedPath(target, current.root ? outRel.slice(current.root.length + 1) : outRel);
+    const targetPath = exists(path.join(SRC, exact)) || exists(path.join(OUT, exact))
+      ? exact
+      : localizedPath(target, 'index.html');
+    const available = exists(path.join(SRC, targetPath)) || exists(path.join(OUT, targetPath));
+    if (!available) return `<span class="lang-option disabled" title="${target.label} translation coming soon" aria-disabled="true">${target.label}</span>`;
+    const fallback = targetPath !== exact;
+    const title = fallback ? ` title="${target.label} translation in progress"` : '';
+    return `<a class="lang-option" href="${hrefFor(targetPath)}" hreflang="${target.code}" lang="${target.code}"${title}>${target.label}</a>`;
+  }).join('');
+  return `<div class="language-switch" role="group" aria-label="Language">${options}</div>`;
 }
 
 function buildPage(srcPath, partials) {
