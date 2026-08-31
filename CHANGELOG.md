@@ -5,7 +5,7 @@ All notable changes to `caddy-analyzer` will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.6.2] - 2026-08-31
 
 ### Fixed
 - **Selective defanging (#63)**: IPv4 addresses are now validated before defanging, preventing version numbers and invalid dotted numeric sequences from being altered. PR #85 — @TLNing260310
