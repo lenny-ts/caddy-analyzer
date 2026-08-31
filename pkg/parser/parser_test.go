@@ -66,6 +66,37 @@ func TestParseBotClassifier(t *testing.T) {
 	}
 }
 
+func TestClassifyModernBots(t *testing.T) {
+	tests := []struct {
+		ua, wantName string
+	}{
+		{"Mozilla/5.0 GPTBot/1.0", "GPTBot"},
+		{"ChatGPT-User/1.0", "ChatGPT-User"},
+		{"ClaudeBot/1.0", "ClaudeBot"},
+		{"anthropic-ai/1.0", "anthropic-ai"},
+		{"Bytespider", "Bytespider"},
+		{"CCBot/2.0", "CCBot"},
+		{"Amazonbot/0.1", "Amazonbot"},
+		{"Applebot-Extended/1.0", "Applebot-Extended"},
+		{"PerplexityBot/1.0", "PerplexityBot"},
+		{"meta-externalagent/1.1", "meta-externalagent"},
+		{"DataForSeoBot/1.0", "DataForSeoBot"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.wantName, func(t *testing.T) {
+			entry := &types.LogEntry{UserAgent: tt.ua}
+			classifyUserAgent(entry)
+			if !entry.IsBot {
+				t.Fatal("expected bot classification")
+			}
+			if entry.BotName != tt.wantName {
+				t.Fatalf("BotName = %q, want %q", entry.BotName, tt.wantName)
+			}
+		})
+	}
+}
+
 func TestParseMalformedJSON(t *testing.T) {
 	line := `D"],"Sec-Fetch-Mode":["no-cors"]}`
 	entry, err := Parse(line)
