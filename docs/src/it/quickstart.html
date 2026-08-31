@@ -1,0 +1,72 @@
+<!-- fm: title=Avvio rapido — caddy-analyzer | description=Installazione → primo comando → primo report in 60 secondi. Passaggi da copiare e incollare. | breadcrumb=Panoramica > Avvio rapido -->
+<h1>Avvio rapido</h1>
+<p class="subtitle" style="color:var(--text-sec);margin-top:-6px;">Installazione → primo comando → primo report. Ogni blocco è da copiare e incollare.</p>
+
+<h2 id="1-install">1 · Installa</h2>
+<p>Scegli il tuo sistema operativo. Nessuna dipendenza aggiuntiva.</p>
+
+<div class="tabs" data-tabs="install">
+  <div class="tab-list" role="tablist">
+    <button class="tab-btn active" data-tab="linux" role="tab" aria-selected="true">Linux / macOS</button>
+    <button class="tab-btn" data-tab="windows" role="tab">Windows</button>
+    <button class="tab-btn" data-tab="go" role="tab">Go</button>
+    <button class="tab-btn" data-tab="docker" role="tab">Docker</button>
+  </div>
+  <div class="tab-panel active" data-panel="linux">
+<pre><code>curl -sSfL https://raw.githubusercontent.com/lenny-ts/caddy-analyzer/main/install.sh | bash
+# verify
+caddy-analyze --version
+# expected: caddy-analyze v0.6.1 (or newer)</code></pre>
+  </div>
+  <div class="tab-panel" data-panel="windows">
+<pre><code>iwr -useb https://raw.githubusercontent.com/lenny-ts/caddy-analyzer/main/install.ps1 | iex
+# verify (new PowerShell)
+caddy-analyze --version</code></pre>
+  </div>
+  <div class="tab-panel" data-panel="go">
+<pre><code>go install github.com/lenny-ts/caddy-analyzer/cmd/caddy-analyze@latest
+# verify (ensure $GOPATH/bin or $HOME/go/bin is in PATH)
+caddy-analyze --version</code></pre>
+  </div>
+  <div class="tab-panel" data-panel="docker">
+<pre><code>docker pull ghcr.io/lenny-ts/caddy-analyzer:latest
+# verify
+docker run --rm ghcr.io/lenny-ts/caddy-analyzer --version</code></pre>
+  </div>
+</div>
+<div class="callout callout-info"><div class="callout-label">Nessun passaggio implicito</div>Tutti i comandi usano l'URL della release pubblica. Se <code>curl</code> non riesce, consulta la <a href="installation.html">risoluzione dei problemi di installazione</a>.</div>
+
+<h2 id="2-first-log">2 · Ottieni un file di log</h2>
+<p>Non hai ancora un server Caddy? Usa i fixture del repository: JSON Caddy reali, IP TEST-NET RFC 5737, nessun host reale.</p>
+<pre><code>git clone https://github.com/lenny-ts/caddy-analyzer.git && cd caddy-analyzer
+ls testdata/sample.log testdata/large.log
+# 68 lines curated (one per category) · 50K lines realistic (95% benign)</code></pre>
+<p>Hai già Caddy? Usa <code>/var/log/caddy/access.log</code> o <code>docker://caddy</code>: passa a <a href="sources.html">Sorgenti log</a>.</p>
+
+<h2 id="3-first-command">3 · Primo comando — report senza rilevamento</h2>
+<pre><code>caddy-analyze testdata/sample.log</code></pre>
+<p>Previsto: tabella con <code>Period</code>, <code>RPS</code>, barre di stato, <code>Top IPs/Paths</code>. Codice di uscita 0. Se vedi <code>permission denied</code>, esegui con <code>sudo</code> (consulta <a href="sources.html#permissions">Sorgenti → permessi</a>).</p>
+
+<h2 id="4-first-detect">4 · Primo rilevamento</h2>
+<pre><code>caddy-analyze --detect testdata/sample.log</code></pre>
+<p>Previsto: lo stesso report con una sezione <code>Suspicious</code> aggiuntiva raggruppata per IP:</p>
+<pre><code>Suspicious (26-category detect)
+  198.51.100.7  4 malicious
+    [sql_injection] GET /search?id=1' OR '1'='1
+    [xss] GET /q=&lt;script&gt;alert(1)&lt;/script&gt;
+    ...</code></pre>
+
+<h2 id="5-first-report">5 · Primo report HTML</h2>
+<pre><code>caddy-analyze --detect -f html -o report.html testdata/sample.log
+# open report.html in your browser (single file, no server)
+xdg-open report.html  # Linux
+open report.html      # macOS
+start report.html     # Windows</code></pre>
+<p>Previsto: HTML standalone scuro con le stesse statistiche e dettagli sospetti. Condivisibile, senza risorse esterne.</p>
+
+<h2 id="next">Prossimi passi</h2>
+<ul>
+  <li>Tutte le sorgenti: <a href="sources.html">Sorgenti log</a> — file, stdin, docker://, k8s://, journalctl://</li>
+  <li>Tutti i flag e i sottocomandi: <a href="reference/cli.html">Riferimento CLI</a></li>
+  <li>Cosa coprono le 26 categorie: <a href="reference/security-categories.html">Categorie di minacce</a></li>
+</ul>

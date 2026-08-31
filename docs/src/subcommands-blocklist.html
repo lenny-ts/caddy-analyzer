@@ -1,6 +1,6 @@
-<!-- fm: title=blocklist — caddy-analyzer | description=Manage 8 threat-intel feeds: refresh, list, config, init — all read-only. | breadcrumb=Reference > blocklist -->
+<!-- fm: title=blocklist — caddy-analyzer | description=Manage 8 threat-intel feeds: refresh, list, config, init. | breadcrumb=Reference > blocklist -->
 <h1>blocklist</h1>
-<p>Manage 8 threat-intel feeds behind guard. <span class="pill pill-readonly">read-only</span> — never touches firewall rules. Writes only cache under <code>~/.cache/caddy-analyzer/blocklists/</code>.</p>
+<p>Manage 8 threat-intel feeds behind guard. It never changes firewall rules; <code>refresh</code> writes its cache and <code>init</code> writes blocklist configuration.</p>
 
 <h2 id="synopsis">Synopsis</h2>
 <pre><code>caddy-analyze blocklist &lt;action&gt; [flags]
@@ -37,10 +37,9 @@
 caddy-analyze blocklist list</code></pre>
 
 <h2 id="advanced">Advanced example</h2>
-<p><span class="pill pill-readonly">read-only</span> — custom feeds + JSON output, persist to config.</p>
+<p>Custom feeds + JSON output; <code>init</code> persists settings to configuration.</p>
 <pre><code>caddy-analyze blocklist config -f json | jq
 # add custom + remove one default
 caddy-analyze blocklist --blocklist-config my.json --blocklist-remove tor-exit-nodes list
 # persist so guard picks it up without CLI flags (see Configuration)
-caddy-analyze blocklist --no-default-blocklists --blocklist-config my.json init
-caddy-analyze blocklist --blocklist-config my.json init --global</code></pre>
+caddy-analyze blocklist --no-default-blocklists --blocklist-config my.json init</code></pre>

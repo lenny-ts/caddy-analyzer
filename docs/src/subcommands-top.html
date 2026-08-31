@@ -43,4 +43,4 @@ caddy-analyze top country testdata/sample.log</code></pre>
 <p><span class="pill pill-readonly">read-only</span> — filtered, formatted, file output.</p>
 <pre><code>caddy-analyze top path --5xx -t 20 -f csv -o top-5xx.csv testdata/sample.log
 caddy-analyze top ip --from 1h --country IT -t 15 -f json testdata/large.log | jq
-caddy-analyze top asn --no-bots --from 7d /var/log/caddy/access.log -f html -o top-asn.html</code></pre>
+caddy-analyze top asn --no-bots --from 7d /var/log/caddy/access.log -f csv -o top-asn.csv</code></pre>

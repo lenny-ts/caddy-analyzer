@@ -15,7 +15,7 @@ function collectPages() {
       const p = path.join(dir, e.name);
       const r = rel ? rel + "/" + e.name : e.name;
       if (e.isDirectory()) {
-        if (e.name === "it" || e.name === "src") continue; // src is source, it is fase 2
+        if (e.name === "src") continue;
         walk(p, r);
       } else if (e.name.endsWith(".html")) {
         if (e.name === "404.html" || e.name.startsWith("_")) continue;
@@ -29,7 +29,9 @@ function collectPages() {
   return pages.sort();
 }
 
-const pageTitle = (rel) => {
+const pageTitle = (rel, raw) => {
+  const htmlTitle = raw.match(/<title>([^<]+)<\/title>/i);
+  if (htmlTitle) return htmlTitle[1].replace(/\s+[—-]\s+caddy-analyzer$/, "");
   const map = {
     "index.html": "Overview",
     "quickstart.html": "Quickstart",
@@ -70,7 +72,7 @@ const entries = [];
 
 for (const file of PAGES) {
   const raw = fs.readFileSync(path.join(docsDir, file), "utf8");
-  const title = pageTitle(file);
+  const title = pageTitle(file, raw);
   entries.push({ page: title, href: file, title, kind: "Page", body: "" });
 
   const mainMatch = raw.match(/<main[^>]*>([\s\S]*?)<\/main>/i);

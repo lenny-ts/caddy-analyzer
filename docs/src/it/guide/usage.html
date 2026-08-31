@@ -1,0 +1,58 @@
+<!-- fm: title=Utilizzo — caddy-analyzer | description=Filtri, formati di output, watch/follow/interval — dal semplice all'avanzato. | breadcrumb=Guida > Utilizzo -->
+<h1>Utilizzo</h1>
+<p>Da “mostra tutto” a “mostra solo ciò che conta”. Tutti gli esempi sono da copiare e incollare con <code>testdata/sample.log</code>: sostituiscilo con la tua sorgente (consulta <a href="../sources.html">Sorgenti log</a>).</p>
+
+<h2 id="no-filter">Nessun filtro — report aggregato</h2>
+<pre><code>caddy-analyze testdata/sample.log</code></pre>
+<p>Mostra periodo, RPS, barre 2xx/3xx/4xx/5xx, byte, P50/P95/P99, umano/bot, percorsi/IP/UA/metodi/host principali, paesi/ASN (con GeoIP) e conteggi operativi.</p>
+
+<h2 id="entry-filters">Filtri per voce → modalità elenco</h2>
+<p>Quando è attivo un filtro a livello di voce e il formato è <code>table</code> senza <code>-o</code>, lo strumento passa a un <em>elenco</em> colorato (non aggregato). Forza il report con <code>-f json/csv/html</code> o <code>-o</code>.</p>
+<div class="table-wrap"><table>
+<thead><tr><th>Filtro</th><th>Esempio</th></tr></thead>
+<tbody>
+<tr><td>Tempo</td><td><code>--from 1h</code> <code>--from 2026-08-31T00:00:00Z --to 2026-08-31T01:00:00Z</code></td></tr>
+<tr><td>Stato</td><td><code>-s 404,500</code> <code>--5xx --4xx</code></td></tr>
+<tr><td>Rete</td><td><code>--ip 198.51.100.0/24</code> <code>--exclude-ip 10.0.0.0/8</code></td></tr>
+<tr><td>Geo</td><td><code>--country IT,US --exclude-country CN</code> <code>--asn 12345</code></td></tr>
+<tr><td>HTTP</td><td><code>-m POST -p /api/*</code> <code>--host example.com</code> <code>--grep "admin"</code></td></tr>
+<tr><td>Prestazioni</td><td><code>--slow 500ms --max-latency 100ms --min-size 1mb</code></td></tr>
+<tr><td>Bot</td><td><code>--no-bots --bots-only</code></td></tr>
+<tr><td>Operativo</td><td><code>--level error,warn --ops-only</code></td></tr>
+</tbody>
+</table></div>
+<pre><code>caddy-analyze --5xx testdata/sample.log
+caddy-analyze --country IT -t 25 testdata/sample.log
+caddy-analyze --grep "wp-" --no-bots testdata/sample.log</code></pre>
+
+<h2 id="formats">Formati di output</h2>
+<pre><code>caddy-analyze -f table testdata/sample.log              # default
+caddy-analyze -f json -o report.json --detect testdata/sample.log
+caddy-analyze -f csv -o report.csv testdata/sample.log
+caddy-analyze -f html -o report.html --detect testdata/sample.log && open report.html
+caddy-analyze --defang -f json testdata/sample.log      # 203.0.113.1 → 203[.]0[.]113[.]1</code></pre>
+<p><code>--defang</code> riscrive IP/URL per una condivisione sicura (anche <code>hxxp</code>).</p>
+
+<h2 id="top">Top — ispettore classificato</h2>
+<pre><code>caddy-analyze top ip testdata/sample.log
+caddy-analyze top path -t 20 --5xx testdata/sample.log
+caddy-analyze top country --country IT testdata/sample.log
+caddy-analyze top asn testdata/sample.log
+caddy-analyze top -b bandwidth -f csv -o top.csv testdata/sample.log</code></pre>
+<p>Dimensioni: <code>path, ip, ua, status, method, host, bandwidth, country, asn</code>. Paese/asn richiedono GeoIP (consulta <a href="configuration.html#tuning">Configurazione → ottimizzazione</a>).</p>
+
+<h2 id="diff">Diff — confronta due log</h2>
+<pre><code>caddy-analyze diff testdata/sample.log testdata/large.log
+caddy-analyze diff old.log new.log -f json -o diff.json</code></pre>
+<p>Mostra delta RPS, picco di 5xx, regressione della latenza, nuovi percorsi di errore (primi 10).</p>
+
+<h2 id="live">Live — follow / interval / watch</h2>
+<pre><code>caddy-analyze --follow /var/log/caddy/access.log        # stream
+caddy-analyze --interval 10s /var/log/caddy/access.log  # report every 10s
+caddy-analyze --watch /var/log/caddy/access.log         # 8-tab TUI (see TUI & Reports)
+caddy-analyze tail docker://caddy --detect              # tail with inline detect</code></pre>
+
+<h2 id="detect">Rilevamento</h2>
+<pre><code>caddy-analyze --detect testdata/sample.log -f table
+caddy-analyze --detect -f html -o sec.html testdata/sample.log</code></pre>
+<p>26 categorie, doppio passaggio (raw + senza escape), tag MITRE. Consulta <a href="../reference/security-categories.html">Categorie</a> e <a href="../reference/security-detection.html">Dettagli sul rilevamento</a>.</p>

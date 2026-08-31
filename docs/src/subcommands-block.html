@@ -1,6 +1,6 @@
-<!-- fm: title=block / unban — caddy-analyzer | description=Manual firewall: block and unban IPs. Modifies iptables/nftables. | breadcrumb=Reference > block / unban -->
+<!-- fm: title=block / unban — caddy-analyzer | description=Manual iptables firewall: block and unban IPs. | breadcrumb=Reference > block / unban -->
 <h1>block / unban</h1>
-<p>Manual firewall. <span class="pill pill-danger">modifies firewall</span> — adds/removes <code>iptables</code>/<code>nftables</code> rules. Syncs with guard state and audit log.</p>
+<p>Manual firewall. <span class="pill pill-danger">modifies firewall</span> — adds/removes legacy <code>iptables</code> rules. Syncs with guard state and audit log.</p>
 
 <div class="callout callout-danger"><div class="callout-label">Requires root</div>Both need <code>sudo</code>. Use <code>--list</code> first to audit before changing state.</div>
 
@@ -35,7 +35,7 @@ cat /var/log/caddy-analyzer-audit.jsonl | tail</code></pre>
 <h2 id="advanced">Advanced example</h2>
 <p><span class="pill pill-danger">modifies firewall</span> — bulk + full reset. Read-only check first on remote hosts.</p>
 <pre><code># audit before bulk
-sudo caddy-analyze unban --list -f json | jq
+sudo caddy-analyze unban --list
 
 # block multiple (non-zero exit if any IP fails)
 sudo caddy-analyze block 203.0.113.5 198.51.100.23 203.0.113.18

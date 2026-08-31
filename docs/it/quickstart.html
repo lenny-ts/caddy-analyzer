@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Avvio rapido — caddy-analyzer</title>
+  <meta name="description" content="Installazione → primo comando → primo report in 60 secondi. Passaggi da copiare e incollare.">
+  <meta name="theme-color" content="#09090B">
+  <link rel="icon" href="../caddy-analyzer-logo.png" type="image/png">
+  <link rel="canonical" href="https://lenny-ts.github.io/caddy-analyzer/it/quickstart.html">
+  <link rel="alternate" hreflang="x-default" href="https://lenny-ts.github.io/caddy-analyzer/quickstart.html">
+  <link rel="alternate" hreflang="en" href="https://lenny-ts.github.io/caddy-analyzer/quickstart.html">
+  <link rel="alternate" hreflang="it" href="https://lenny-ts.github.io/caddy-analyzer/it/quickstart.html">
+  <script>try{var t=localStorage.getItem('caddy-docs-theme');if(t==='light')document.documentElement.setAttribute('data-theme','light');}catch(e){}</script>
+  <meta name="color-scheme" content="dark light">
+  <link rel="stylesheet" href="../styles.min.css?v=36">
+</head>
+<body>
+<header class="site-header">
+  <a href="../it/index.html" class="logo">
+    <img src="../caddy-analyzer-logo.png" alt="" class="site-logo">
+    <span>caddy-analyzer</span>
+  </a>
+  <nav aria-label="Navigazione principale">
+    <a href="../it/installation.html" data-nav="installation.html">Installazione</a>
+    <a href="../it/sources.html" data-nav="sources.html">Sorgenti log</a>
+    <a href="../it/reference/cli.html" data-nav="cli.html">Riferimento CLI</a>
+    <a href="../it/security.html" data-nav="security.html">Motore minacce</a>
+    <a href="../it/tui-html.html" data-nav="tui-html.html">Report TUI e HTML</a>
+  </nav>
+  <div class="header-actions">
+    <a href="https://github.com/lenny-ts/caddy-analyzer" style="color:var(--text-sec);font-size:0.85rem;" rel="noopener">GitHub</a>
+    <div class="language-switch" role="group" aria-label="Lingua"><a class="lang-option" href="../quickstart.html" hreflang="en" lang="en">EN</a><span class="lang-option active" aria-current="page">IT</span></div>
+    <button class="theme-toggle" type="button" aria-label="Switch to light theme">
+      <span class="theme-icon theme-sun" aria-hidden="true">☀</span>
+      <span class="theme-icon theme-moon" aria-hidden="true">☾</span>
+    </button>
+  </div>
+</header>
+<div class="scroll-progress" aria-hidden="true"></div>
+
+<div class="docs-layout">
+   <aside class="doc-sidebar" aria-label="Navigazione della pagina">
+  <div class="sidebar-label">Documentazione</div>
+  <a href="../it/index.html" class="sidebar-link" data-page="index.html">Panoramica</a>
+  <a href="../it/quickstart.html" class="sidebar-link active" data-page="quickstart.html">Avvio rapido</a>
+  <a href="../it/installation.html" class="sidebar-link" data-page="installation.html">Installazione</a>
+  <a href="../it/sources.html" class="sidebar-link" data-page="sources.html">Sorgenti log</a>
+  <div class="sidebar-sep"></div>
+  <div class="sidebar-label">Guida</div>
+  <a href="../it/guide/configuration.html" class="sidebar-link" data-page="configuration.html">Configurazione</a>
+  <a href="../it/guide/usage.html" class="sidebar-link" data-page="usage.html">Utilizzo</a>
+  <a href="../it/guide/examples.html" class="sidebar-link" data-page="examples.html">Esempi</a>
+  <a href="../it/guide/troubleshooting.html" class="sidebar-link" data-page="troubleshooting.html">Risoluzione problemi</a>
+  <div class="sidebar-sep"></div>
+  <div class="sidebar-label">Riferimento</div>
+  <a href="../it/reference/cli.html" class="sidebar-link" data-page="cli.html">Riferimento CLI</a>
+  <a href="../it/reference/security-categories.html" class="sidebar-link sub" data-page="security-categories.html">— Categorie</a>
+  <a href="../it/reference/security-detection.html" class="sidebar-link sub" data-page="security-detection.html">— Rilevamento</a>
+  <a href="../it/subcommands-guard.html" class="sidebar-link sub" data-page="subcommands-guard.html">— Guard</a>
+  <a href="../it/subcommands-blocklist.html" class="sidebar-link sub" data-page="subcommands-blocklist.html">— Blocklist</a>
+  <a href="../it/subcommands-block.html" class="sidebar-link sub" data-page="subcommands-block.html">— Block / Unban</a>
+  <a href="../it/subcommands-top.html" class="sidebar-link sub" data-page="subcommands-top.html">— Top</a>
+  <a href="../it/reference/api.html" class="sidebar-link" data-page="api.html">API / Pacchetti</a>
+  <div class="sidebar-sep"></div>
+  <a href="../it/security.html" class="sidebar-link" data-page="security.html">Motore minacce</a>
+  <a href="../it/architecture.html" class="sidebar-link" data-page="architecture.html">Architettura</a>
+  <a href="../it/tui-html.html" class="sidebar-link" data-page="tui-html.html">Report TUI e HTML</a>
+  <a href="../it/contributing.html" class="sidebar-link" data-page="contributing.html">Contribuire</a>
+  <a href="../it/faq.html" class="sidebar-link" data-page="faq.html">FAQ</a>
+  <a href="../it/changelog.html" class="sidebar-link" data-page="changelog.html">Registro modifiche</a>
+</aside>
+
+  <main class="wrap" id="main">
+    <div class="doc-content">
+      <nav class="breadcrumb" aria-label="Breadcrumb"><a href="../it/index.html">Panoramica</a><span class="sep">/</span><span>Avvio rapido</span></nav>
+      <div class="page-meta"><a href="https://github.com/lenny-ts/caddy-analyzer/releases">v0.6.1</a> · aggiornata <time datetime="2026-08-31">2026-08-31</time> · <a href="https://github.com/lenny-ts/caddy-analyzer">GitHub</a></div>
+      <h1>Avvio rapido</h1>
+<p class="subtitle" style="color:var(--text-sec);margin-top:-6px;">Installazione → primo comando → primo report. Ogni blocco è da copiare e incollare.</p>
+
+<h2 id="1-install">1 · Installa</h2>
+<p>Scegli il tuo sistema operativo. Nessuna dipendenza aggiuntiva.</p>
+
+<div class="tabs" data-tabs="install">
+  <div class="tab-list" role="tablist">
+    <button class="tab-btn active" data-tab="linux" role="tab" aria-selected="true">Linux / macOS</button>
+    <button class="tab-btn" data-tab="windows" role="tab">Windows</button>
+    <button class="tab-btn" data-tab="go" role="tab">Go</button>
+    <button class="tab-btn" data-tab="docker" role="tab">Docker</button>
+  </div>
+  <div class="tab-panel active" data-panel="linux">
+<pre><code>curl -sSfL https://raw.githubusercontent.com/lenny-ts/caddy-analyzer/main/install.sh | bash
+# verify
+caddy-analyze --version
+# expected: caddy-analyze v0.6.1 (or newer)</code></pre>
+  </div>
+  <div class="tab-panel" data-panel="windows">
+<pre><code>iwr -useb https://raw.githubusercontent.com/lenny-ts/caddy-analyzer/main/install.ps1 | iex
+# verify (new PowerShell)
+caddy-analyze --version</code></pre>
+  </div>
+  <div class="tab-panel" data-panel="go">
+<pre><code>go install github.com/lenny-ts/caddy-analyzer/cmd/caddy-analyze@latest
+# verify (ensure $GOPATH/bin or $HOME/go/bin is in PATH)
+caddy-analyze --version</code></pre>
+  </div>
+  <div class="tab-panel" data-panel="docker">
+<pre><code>docker pull ghcr.io/lenny-ts/caddy-analyzer:latest
+# verify
+docker run --rm ghcr.io/lenny-ts/caddy-analyzer --version</code></pre>
+  </div>
+</div>
+<div class="callout callout-info"><div class="callout-label">Nessun passaggio implicito</div>Tutti i comandi usano l'URL della release pubblica. Se <code>curl</code> non riesce, consulta la <a href="installation.html">risoluzione dei problemi di installazione</a>.</div>
+
+<h2 id="2-first-log">2 · Ottieni un file di log</h2>
+<p>Non hai ancora un server Caddy? Usa i fixture del repository: JSON Caddy reali, IP TEST-NET RFC 5737, nessun host reale.</p>
+<pre><code>git clone https://github.com/lenny-ts/caddy-analyzer.git && cd caddy-analyzer
+ls testdata/sample.log testdata/large.log
+# 68 lines curated (one per category) · 50K lines realistic (95% benign)</code></pre>
+<p>Hai già Caddy? Usa <code>/var/log/caddy/access.log</code> o <code>docker://caddy</code>: passa a <a href="sources.html">Sorgenti log</a>.</p>
+
+<h2 id="3-first-command">3 · Primo comando — report senza rilevamento</h2>
+<pre><code>caddy-analyze testdata/sample.log</code></pre>
+<p>Previsto: tabella con <code>Period</code>, <code>RPS</code>, barre di stato, <code>Top IPs/Paths</code>. Codice di uscita 0. Se vedi <code>permission denied</code>, esegui con <code>sudo</code> (consulta <a href="sources.html#permissions">Sorgenti → permessi</a>).</p>
+
+<h2 id="4-first-detect">4 · Primo rilevamento</h2>
+<pre><code>caddy-analyze --detect testdata/sample.log</code></pre>
+<p>Previsto: lo stesso report con una sezione <code>Suspicious</code> aggiuntiva raggruppata per IP:</p>
+<pre><code>Suspicious (26-category detect)
+  198.51.100.7  4 malicious
+    [sql_injection] GET /search?id=1' OR '1'='1
+    [xss] GET /q=&lt;script&gt;alert(1)&lt;/script&gt;
+    ...</code></pre>
+
+<h2 id="5-first-report">5 · Primo report HTML</h2>
+<pre><code>caddy-analyze --detect -f html -o report.html testdata/sample.log
+# open report.html in your browser (single file, no server)
+xdg-open report.html  # Linux
+open report.html      # macOS
+start report.html     # Windows</code></pre>
+<p>Previsto: HTML standalone scuro con le stesse statistiche e dettagli sospetti. Condivisibile, senza risorse esterne.</p>
+
+<h2 id="next">Prossimi passi</h2>
+<ul>
+  <li>Tutte le sorgenti: <a href="sources.html">Sorgenti log</a> — file, stdin, docker://, k8s://, journalctl://</li>
+  <li>Tutti i flag e i sottocomandi: <a href="reference/cli.html">Riferimento CLI</a></li>
+  <li>Cosa coprono le 26 categorie: <a href="reference/security-categories.html">Categorie di minacce</a></li>
+</ul>
+      <footer class="footer">
+  <p>caddy-analyzer è open-source sotto licenza <a href="https://github.com/lenny-ts/caddy-analyzer/blob/main/LICENSE">MIT</a> · <a href="https://github.com/lenny-ts/caddy-analyzer">GitHub</a> · <a href="../it/changelog.html">Registro modifiche</a></p>
+</footer>
+<button class="back-to-top" aria-label="Back to top">↑</button>
+
+    </div>
+  </main>
+  <nav class="doc-toc" aria-label="In questa pagina"><div class="toc-label">In questa pagina</div><a href="#1-install" class="toc-link">1 · Installa</a><a href="#2-first-log" class="toc-link">2 · Ottieni un file di log</a><a href="#3-first-command" class="toc-link">3 · Primo comando — report senza rilevamento</a><a href="#4-first-detect" class="toc-link">4 · Primo rilevamento</a><a href="#5-first-report" class="toc-link">5 · Primo report HTML</a><a href="#next" class="toc-link">Prossimi passi</a></nav>
+</div>
+<script src="../docs.min.js?v=36"></script>
+</body>
+</html>

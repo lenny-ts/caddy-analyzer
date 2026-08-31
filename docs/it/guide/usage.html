@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Utilizzo — caddy-analyzer</title>
+  <meta name="description" content="Filtri, formati di output, watch/follow/interval — dal semplice all'avanzato.">
+  <meta name="theme-color" content="#09090B">
+  <link rel="icon" href="../../caddy-analyzer-logo.png" type="image/png">
+  <link rel="canonical" href="https://lenny-ts.github.io/caddy-analyzer/it/guide/usage.html">
+  <link rel="alternate" hreflang="x-default" href="https://lenny-ts.github.io/caddy-analyzer/guide/usage.html">
+  <link rel="alternate" hreflang="en" href="https://lenny-ts.github.io/caddy-analyzer/guide/usage.html">
+  <link rel="alternate" hreflang="it" href="https://lenny-ts.github.io/caddy-analyzer/it/guide/usage.html">
+  <script>try{var t=localStorage.getItem('caddy-docs-theme');if(t==='light')document.documentElement.setAttribute('data-theme','light');}catch(e){}</script>
+  <meta name="color-scheme" content="dark light">
+  <link rel="stylesheet" href="../../styles.min.css?v=36">
+</head>
+<body>
+<header class="site-header">
+  <a href="../../it/index.html" class="logo">
+    <img src="../../caddy-analyzer-logo.png" alt="" class="site-logo">
+    <span>caddy-analyzer</span>
+  </a>
+  <nav aria-label="Navigazione principale">
+    <a href="../../it/installation.html" data-nav="installation.html">Installazione</a>
+    <a href="../../it/sources.html" data-nav="sources.html">Sorgenti log</a>
+    <a href="../../it/reference/cli.html" data-nav="cli.html">Riferimento CLI</a>
+    <a href="../../it/security.html" data-nav="security.html">Motore minacce</a>
+    <a href="../../it/tui-html.html" data-nav="tui-html.html">Report TUI e HTML</a>
+  </nav>
+  <div class="header-actions">
+    <a href="https://github.com/lenny-ts/caddy-analyzer" style="color:var(--text-sec);font-size:0.85rem;" rel="noopener">GitHub</a>
+    <div class="language-switch" role="group" aria-label="Lingua"><a class="lang-option" href="../../guide/usage.html" hreflang="en" lang="en">EN</a><span class="lang-option active" aria-current="page">IT</span></div>
+    <button class="theme-toggle" type="button" aria-label="Switch to light theme">
+      <span class="theme-icon theme-sun" aria-hidden="true">☀</span>
+      <span class="theme-icon theme-moon" aria-hidden="true">☾</span>
+    </button>
+  </div>
+</header>
+<div class="scroll-progress" aria-hidden="true"></div>
+
+<div class="docs-layout">
+   <aside class="doc-sidebar" aria-label="Navigazione della pagina">
+  <div class="sidebar-label">Documentazione</div>
+  <a href="../../it/index.html" class="sidebar-link" data-page="index.html">Panoramica</a>
+  <a href="../../it/quickstart.html" class="sidebar-link" data-page="quickstart.html">Avvio rapido</a>
+  <a href="../../it/installation.html" class="sidebar-link" data-page="installation.html">Installazione</a>
+  <a href="../../it/sources.html" class="sidebar-link" data-page="sources.html">Sorgenti log</a>
+  <div class="sidebar-sep"></div>
+  <div class="sidebar-label">Guida</div>
+  <a href="../../it/guide/configuration.html" class="sidebar-link" data-page="configuration.html">Configurazione</a>
+  <a href="../../it/guide/usage.html" class="sidebar-link active" data-page="usage.html">Utilizzo</a>
+  <a href="../../it/guide/examples.html" class="sidebar-link" data-page="examples.html">Esempi</a>
+  <a href="../../it/guide/troubleshooting.html" class="sidebar-link" data-page="troubleshooting.html">Risoluzione problemi</a>
+  <div class="sidebar-sep"></div>
+  <div class="sidebar-label">Riferimento</div>
+  <a href="../../it/reference/cli.html" class="sidebar-link" data-page="cli.html">Riferimento CLI</a>
+  <a href="../../it/reference/security-categories.html" class="sidebar-link sub" data-page="security-categories.html">— Categorie</a>
+  <a href="../../it/reference/security-detection.html" class="sidebar-link sub" data-page="security-detection.html">— Rilevamento</a>
+  <a href="../../it/subcommands-guard.html" class="sidebar-link sub" data-page="subcommands-guard.html">— Guard</a>
+  <a href="../../it/subcommands-blocklist.html" class="sidebar-link sub" data-page="subcommands-blocklist.html">— Blocklist</a>
+  <a href="../../it/subcommands-block.html" class="sidebar-link sub" data-page="subcommands-block.html">— Block / Unban</a>
+  <a href="../../it/subcommands-top.html" class="sidebar-link sub" data-page="subcommands-top.html">— Top</a>
+  <a href="../../it/reference/api.html" class="sidebar-link" data-page="api.html">API / Pacchetti</a>
+  <div class="sidebar-sep"></div>
+  <a href="../../it/security.html" class="sidebar-link" data-page="security.html">Motore minacce</a>
+  <a href="../../it/architecture.html" class="sidebar-link" data-page="architecture.html">Architettura</a>
+  <a href="../../it/tui-html.html" class="sidebar-link" data-page="tui-html.html">Report TUI e HTML</a>
+  <a href="../../it/contributing.html" class="sidebar-link" data-page="contributing.html">Contribuire</a>
+  <a href="../../it/faq.html" class="sidebar-link" data-page="faq.html">FAQ</a>
+  <a href="../../it/changelog.html" class="sidebar-link" data-page="changelog.html">Registro modifiche</a>
+</aside>
+
+  <main class="wrap" id="main">
+    <div class="doc-content">
+      <nav class="breadcrumb" aria-label="Breadcrumb"><a href="../../it/guide/configuration.html">Guida</a><span class="sep">/</span><span>Utilizzo</span></nav>
+      <div class="page-meta"><a href="https://github.com/lenny-ts/caddy-analyzer/releases">v0.6.1</a> · aggiornata <time datetime="2026-08-31">2026-08-31</time> · <a href="https://github.com/lenny-ts/caddy-analyzer">GitHub</a></div>
+      <h1>Utilizzo</h1>
+<p>Da “mostra tutto” a “mostra solo ciò che conta”. Tutti gli esempi sono da copiare e incollare con <code>testdata/sample.log</code>: sostituiscilo con la tua sorgente (consulta <a href="../sources.html">Sorgenti log</a>).</p>
+
+<h2 id="no-filter">Nessun filtro — report aggregato</h2>
+<pre><code>caddy-analyze testdata/sample.log</code></pre>
+<p>Mostra periodo, RPS, barre 2xx/3xx/4xx/5xx, byte, P50/P95/P99, umano/bot, percorsi/IP/UA/metodi/host principali, paesi/ASN (con GeoIP) e conteggi operativi.</p>
+
+<h2 id="entry-filters">Filtri per voce → modalità elenco</h2>
+<p>Quando è attivo un filtro a livello di voce e il formato è <code>table</code> senza <code>-o</code>, lo strumento passa a un <em>elenco</em> colorato (non aggregato). Forza il report con <code>-f json/csv/html</code> o <code>-o</code>.</p>
+<div class="table-wrap"><table>
+<thead><tr><th>Filtro</th><th>Esempio</th></tr></thead>
+<tbody>
+<tr><td>Tempo</td><td><code>--from 1h</code> <code>--from 2026-08-31T00:00:00Z --to 2026-08-31T01:00:00Z</code></td></tr>
+<tr><td>Stato</td><td><code>-s 404,500</code> <code>--5xx --4xx</code></td></tr>
+<tr><td>Rete</td><td><code>--ip 198.51.100.0/24</code> <code>--exclude-ip 10.0.0.0/8</code></td></tr>
+<tr><td>Geo</td><td><code>--country IT,US --exclude-country CN</code> <code>--asn 12345</code></td></tr>
+<tr><td>HTTP</td><td><code>-m POST -p /api/*</code> <code>--host example.com</code> <code>--grep "admin"</code></td></tr>
+<tr><td>Prestazioni</td><td><code>--slow 500ms --max-latency 100ms --min-size 1mb</code></td></tr>
+<tr><td>Bot</td><td><code>--no-bots --bots-only</code></td></tr>
+<tr><td>Operativo</td><td><code>--level error,warn --ops-only</code></td></tr>
+</tbody>
+</table></div>
+<pre><code>caddy-analyze --5xx testdata/sample.log
+caddy-analyze --country IT -t 25 testdata/sample.log
+caddy-analyze --grep "wp-" --no-bots testdata/sample.log</code></pre>
+
+<h2 id="formats">Formati di output</h2>
+<pre><code>caddy-analyze -f table testdata/sample.log              # default
+caddy-analyze -f json -o report.json --detect testdata/sample.log
+caddy-analyze -f csv -o report.csv testdata/sample.log
+caddy-analyze -f html -o report.html --detect testdata/sample.log && open report.html
+caddy-analyze --defang -f json testdata/sample.log      # 203.0.113.1 → 203[.]0[.]113[.]1</code></pre>
+<p><code>--defang</code> riscrive IP/URL per una condivisione sicura (anche <code>hxxp</code>).</p>
+
+<h2 id="top">Top — ispettore classificato</h2>
+<pre><code>caddy-analyze top ip testdata/sample.log
+caddy-analyze top path -t 20 --5xx testdata/sample.log
+caddy-analyze top country --country IT testdata/sample.log
+caddy-analyze top asn testdata/sample.log
+caddy-analyze top -b bandwidth -f csv -o top.csv testdata/sample.log</code></pre>
+<p>Dimensioni: <code>path, ip, ua, status, method, host, bandwidth, country, asn</code>. Paese/asn richiedono GeoIP (consulta <a href="configuration.html#tuning">Configurazione → ottimizzazione</a>).</p>
+
+<h2 id="diff">Diff — confronta due log</h2>
+<pre><code>caddy-analyze diff testdata/sample.log testdata/large.log
+caddy-analyze diff old.log new.log -f json -o diff.json</code></pre>
+<p>Mostra delta RPS, picco di 5xx, regressione della latenza, nuovi percorsi di errore (primi 10).</p>
+
+<h2 id="live">Live — follow / interval / watch</h2>
+<pre><code>caddy-analyze --follow /var/log/caddy/access.log        # stream
+caddy-analyze --interval 10s /var/log/caddy/access.log  # report every 10s
+caddy-analyze --watch /var/log/caddy/access.log         # 8-tab TUI (see TUI & Reports)
+caddy-analyze tail docker://caddy --detect              # tail with inline detect</code></pre>
+
+<h2 id="detect">Rilevamento</h2>
+<pre><code>caddy-analyze --detect testdata/sample.log -f table
+caddy-analyze --detect -f html -o sec.html testdata/sample.log</code></pre>
+<p>26 categorie, doppio passaggio (raw + senza escape), tag MITRE. Consulta <a href="../reference/security-categories.html">Categorie</a> e <a href="../reference/security-detection.html">Dettagli sul rilevamento</a>.</p>
+      <footer class="footer">
+  <p>caddy-analyzer è open-source sotto licenza <a href="https://github.com/lenny-ts/caddy-analyzer/blob/main/LICENSE">MIT</a> · <a href="https://github.com/lenny-ts/caddy-analyzer">GitHub</a> · <a href="../../it/changelog.html">Registro modifiche</a></p>
+</footer>
+<button class="back-to-top" aria-label="Back to top">↑</button>
+
+    </div>
+  </main>
+  <nav class="doc-toc" aria-label="In questa pagina"><div class="toc-label">In questa pagina</div><a href="#no-filter" class="toc-link">Nessun filtro — report aggregato</a><a href="#entry-filters" class="toc-link">Filtri per voce → modalità elenco</a><a href="#formats" class="toc-link">Formati di output</a><a href="#top" class="toc-link">Top — ispettore classificato</a><a href="#diff" class="toc-link">Diff — confronta due log</a><a href="#live" class="toc-link">Live — follow / interval / watch</a><a href="#detect" class="toc-link">Rilevamento</a></nav>
+</div>
+<script src="../../docs.min.js?v=36"></script>
+</body>
+</html>

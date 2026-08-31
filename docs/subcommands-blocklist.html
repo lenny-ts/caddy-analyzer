@@ -4,20 +4,22 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>blocklist — caddy-analyzer</title>
-  <meta name="description" content="Manage 8 threat-intel feeds: refresh, list, config, init — all read-only.">
+  <meta name="description" content="Manage 8 threat-intel feeds: refresh, list, config, init.">
   <meta name="theme-color" content="#09090B">
   <link rel="icon" href="caddy-analyzer-logo.png" type="image/png">
   <link rel="canonical" href="https://lenny-ts.github.io/caddy-analyzer/subcommands-blocklist.html">
   <link rel="alternate" hreflang="x-default" href="https://lenny-ts.github.io/caddy-analyzer/subcommands-blocklist.html">
   <link rel="alternate" hreflang="en" href="https://lenny-ts.github.io/caddy-analyzer/subcommands-blocklist.html">
+  <link rel="alternate" hreflang="it" href="https://lenny-ts.github.io/caddy-analyzer/it/subcommands-blocklist.html">
   <script>try{var t=localStorage.getItem('caddy-docs-theme');if(t==='light')document.documentElement.setAttribute('data-theme','light');}catch(e){}</script>
   <meta name="color-scheme" content="dark light">
   <link rel="stylesheet" href="styles.min.css?v=36">
 </head>
 <body>
 <header class="site-header">
-  <img src="caddy-analyzer-logo.png" alt="" class="site-logo">
-  <span>caddy-analyzer</span>
+  <a href="index.html" class="logo">
+    <img src="caddy-analyzer-logo.png" alt="" class="site-logo">
+    <span>caddy-analyzer</span>
   </a>
   <nav aria-label="Primary">
     <a href="installation.html" data-nav="installation.html">Installation</a>
@@ -28,7 +30,7 @@
   </nav>
   <div class="header-actions">
     <a href="https://github.com/lenny-ts/caddy-analyzer" style="color:var(--text-sec);font-size:0.85rem;" rel="noopener">GitHub</a>
-    <div class="language-switch" role="group" aria-label="Language"><span class="lang-option active" aria-current="page">EN</span><a class="lang-option" href="it/index.html" hreflang="it" lang="it" title="IT translation in progress">IT</a></div>
+    <div class="language-switch" role="group" aria-label="Language"><span class="lang-option active" aria-current="page">EN</span><a class="lang-option" href="it/subcommands-blocklist.html" hreflang="it" lang="it">IT</a></div>
     <button class="theme-toggle" type="button" aria-label="Switch to light theme">
       <span class="theme-icon theme-sun" aria-hidden="true">☀</span>
       <span class="theme-icon theme-moon" aria-hidden="true">☾</span>
@@ -74,7 +76,7 @@
       <nav class="breadcrumb" aria-label="Breadcrumb"><a href="reference/cli.html">Reference</a><span class="sep">/</span><span>blocklist</span></nav>
       <div class="page-meta"><a href="https://github.com/lenny-ts/caddy-analyzer/releases">v0.6.1</a> · updated <time datetime="2026-08-31">2026-08-31</time> · <a href="https://github.com/lenny-ts/caddy-analyzer">GitHub</a></div>
       <h1>blocklist</h1>
-<p>Manage 8 threat-intel feeds behind guard. <span class="pill pill-readonly">read-only</span> — never touches firewall rules. Writes only cache under <code>~/.cache/caddy-analyzer/blocklists/</code>.</p>
+<p>Manage 8 threat-intel feeds behind guard. It never changes firewall rules; <code>refresh</code> writes its cache and <code>init</code> writes blocklist configuration.</p>
 
 <h2 id="synopsis">Synopsis</h2>
 <pre><code>caddy-analyze blocklist &lt;action&gt; [flags]
@@ -111,13 +113,12 @@
 caddy-analyze blocklist list</code></pre>
 
 <h2 id="advanced">Advanced example</h2>
-<p><span class="pill pill-readonly">read-only</span> — custom feeds + JSON output, persist to config.</p>
+<p>Custom feeds + JSON output; <code>init</code> persists settings to configuration.</p>
 <pre><code>caddy-analyze blocklist config -f json | jq
 # add custom + remove one default
 caddy-analyze blocklist --blocklist-config my.json --blocklist-remove tor-exit-nodes list
 # persist so guard picks it up without CLI flags (see Configuration)
-caddy-analyze blocklist --no-default-blocklists --blocklist-config my.json init
-caddy-analyze blocklist --blocklist-config my.json init --global</code></pre>
+caddy-analyze blocklist --no-default-blocklists --blocklist-config my.json init</code></pre>
       <footer class="footer">
   <p>caddy-analyzer is open-source under <a href="https://github.com/lenny-ts/caddy-analyzer/blob/main/LICENSE">MIT</a> · <a href="https://github.com/lenny-ts/caddy-analyzer">GitHub</a> · <a href="changelog.html">Changelog</a></p>
 </footer>

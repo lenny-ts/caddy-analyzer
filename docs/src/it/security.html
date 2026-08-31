@@ -1,0 +1,39 @@
+<!-- fm: title=Motore delle minacce — caddy-analyzer | description=Cosa il motore a 26 categorie puo e non puo fare: limiti, falsi positivi e dove approfondire. | breadcrumb=Panoramica > Motore delle minacce -->
+<h1>Motore delle minacce</h1>
+<p>26 categorie, resistenza all'evasione a doppio passaggio, tag MITRE. Questa pagina offre una panoramica sincera: cosa viene rilevato, cosa no e dove leggere i dettagli.</p>
+
+<h2 id="limits">Cosa NON fa: limiti e falsi positivi</h2>
+<p>La credibilita deriva dal dichiarare i limiti. Leggi questa sezione prima di fidarti di un report.</p>
+<div class="table-wrap"><table>
+<thead><tr><th>Limite</th><th>Perche</th><th>Cosa fare</th></tr></thead>
+<tbody>
+<tr><td>Basato su pattern, non semantico</td><td>Cerca sottostringhe di payload note, non esegue codice</td><td>Esamina gli IP raggruppati: non bloccare automaticamente con confidenza bassa</td></tr>
+<tr><td>Filtro di confidenza</td><td>Il valore predefinito di guard è <code>--detect-confidence 8</code>; alcuni hit sono 5–6</td><td>Aumenta a 9 per app più rumorose; 0 disabilita solo i blocchi da pattern, non guard</td></tr>
+<tr><td>I percorsi legittimi possono sembrare dannosi</td><td><code>?url=https://…</code>, <code>?code={{var}}</code>, <code>__proto__</code> nella documentazione</td><td>Usa <code>--never-block</code> / <code>whitelist</code> e controlla <code>-f html</code> prima di bloccare</td></tr>
+<tr><td>Le euristiche comportamentali richiedono stato</td><td><code>ua_rotation</code>, <code>object_enumeration</code>, <code>beaconing</code> richiedono ≥10 campioni per IP/percorso</td><td>Esegui su ≥1h di traffico; i log con una singola richiesta non le attivano</td></tr>
+<tr><td>Non e un WAF</td><td>Rilevamento offline/al momento del log, non blocco inline delle richieste</td><td>Usa <code>guard</code> per bloccare dopo il rilevamento; non aspettarti un deny prima della richiesta</td></tr>
+<tr><td>GeoIP/blocklist sono best-effort</td><td>DB-IP lite + 8 feed, cache 7g, rete necessaria per l'aggiornamento</td><td>Fissa <code>--geoip-db</code> e controlla l'eta di <code>blocklist list</code></td></tr>
+</tbody>
+</table></div>
+<div class="callout callout-warning"><div class="callout-label">Non bloccarti fuori</div>Ogni esempio di <code>guard</code> che modifica il firewall e contrassegnato con <span class="pill pill-danger">modifica il firewall</span>. Su un host remoto, usa sempre <code>--never-block YOUR_IP</code>. In caso di dubbi, usa prima i comandi in sola lettura (<code>blocklist list</code>, <code>--detect -f html</code>).</div>
+
+<h2 id="what">Cosa fa</h2>
+<ul>
+  <li><strong>Motore a doppio passaggio</strong> — ogni URI viene controllato sia grezzo sia dopo URL-unescape (split <code>?</code> + <code>PathUnescape</code>/<code>QueryUnescape</code> + fallback manuale <code>%</code>) per rilevare bypass <code>%2e%2e</code> e doppia codifica. Guard esegue lo stesso <code>Detector</code> per finestra.</li>
+  <li><strong>26 categorie</strong> — da <code>sql_injection</code> a <code>beaconing</code>, ognuna etichettata con ID MITRE ATT&amp;CK verificati.</li>
+  <li><strong>Raggruppato per IP</strong> — il report dei sospetti mostra gli IP principali con confidenza, URI e tecniche.</li>
+  <li><strong>Esportabile</strong> — 23 categorie basate su pattern come regole Sigma; le 3 comportamentali (<code>ua_rotation</code>, <code>object_enumeration</code>, <code>beaconing</code>) sono stateful e non vengono esportate.</li>
+</ul>
+
+<h2 id="where">Dove proseguire</h2>
+<div class="doc-grid">
+  <a class="doc-card" href="reference/security-categories.html"><strong>26 categorie</strong><span>Confidenza, descrizione e un esempio reale di fixture per categoria: una tripla coerente in ogni riga.</span></a>
+  <a class="doc-card" href="reference/security-detection.html"><strong>MITRE, Sigma ed evasione</strong><span>ID ATT&amp;CK verificati, 23 regole Sigma e come doppio passaggio/marker/literal resistono ai bypass.</span></a>
+  <a class="doc-card" href="subcommands-guard.html"><strong>Guard</strong><span>Quando il rilevamento diventa un blocco: soglie, backend, audit e stato.</span></a>
+</div>
+
+<h2 id="quick-check">Verifica rapida</h2>
+<pre><code>caddy-analyze --detect testdata/sample.log
+# should list 26 categories firing (68 lines, all TEST-NET)
+caddy-analyze --detect -f html -o report.html testdata/large.log && open report.html
+caddy-analyze tail docker://caddy --detect  # live, severity-colored</code></pre>

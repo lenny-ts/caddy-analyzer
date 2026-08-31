@@ -8,7 +8,7 @@ caddy-analyze /var/log/caddy/*.log
 caddy-analyze /var/log/caddy/access.log.1 /var/log/caddy/access.log.2.gz
 # no args → tries ./access.log, ./caddy.log, ./caddy-access.log, /var/log/caddy/access.log, /var/log/caddy/caddy.log
 caddy-analyze</code></pre>
-<h3>Permissions for files</h3>
+<h3 id="permissions">Permissions for files</h3>
 <p>Caddy often writes as <code>caddy:caddy 0600</code>. You need read on the file and execute on the directory.</p>
 <pre><code>sudo caddy-analyze /var/log/caddy/access.log
 # persistent — add yourself to the group then re-login:
@@ -27,7 +27,7 @@ ssh app@prod "cat /var/log/caddy/access.log" | caddy-analyze - -t 25</code></pre
 caddy-analyze docker://a3f9c1e2d4b5
 caddy-analyze tail docker://caddy          # live
 caddy-analyze --follow docker://caddy      # same via root flag</code></pre>
-<p>Reads via <code>docker logs -f --tail=all &lt;container&gt;</code> and merges stdout+stderr (fixes truncated logs).</p>
+<p>Streams with <code>docker logs -f &lt;container&gt;</code> in an interactive terminal; non-interactive reads add <code>--tail=all</code>. Both merge stdout and stderr.</p>
 <h3>Permissions for Docker</h3>
 <pre><code># docker.sock is root:docker 0660 by default
 sudo usermod -aG docker $USER  # re-login

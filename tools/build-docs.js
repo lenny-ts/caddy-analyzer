@@ -138,6 +138,15 @@ function langSwitcher(outRel, lang) {
   return `<div class="language-switch" role="group" aria-label="${current.ui.language}">${options}</div>`;
 }
 
+function localizeSharedLinks(html, lang) {
+  if (lang !== 'it') return html;
+  return html.replace(/href="\{\{base\}\}([^"]+\.html)"/g, (match, target) => {
+    return exists(path.join(SRC, 'it', target))
+      ? `href="{{base}}it/${target}"`
+      : match;
+  });
+}
+
 function buildPage(srcPath, partials) {
   const srcRel = path.relative(SRC, srcPath); // e.g. index.html or guide/configuration.html or it/index.html
   const isIt = srcRel.startsWith('it' + path.sep) || srcRel.startsWith('it/');
@@ -188,8 +197,14 @@ function buildPage(srcPath, partials) {
   if (fm.breadcrumb && fm.breadcrumb.length) {
     const crumbs = fm.breadcrumb.map((label, i) => {
       if (i === fm.breadcrumb.length - 1) return { label };
-      // link crumbs to their pages — map well-known labels
-      const map = { 'Home': base + 'index.html', 'Overview': base + 'index.html', 'Guide': base + 'guide/configuration.html', 'Reference': base + 'reference/cli.html' };
+      // Link breadcrumbs to the matching language namespace.
+      const docsBase = lang === 'it' ? base + 'it/' : base;
+      const map = {
+        'Home': docsBase + 'index.html', 'Overview': docsBase + 'index.html',
+        'Guide': docsBase + 'guide/configuration.html', 'Reference': docsBase + 'reference/cli.html',
+        'Panoramica': docsBase + 'index.html', 'Guida': docsBase + 'guide/configuration.html',
+        'Riferimento': docsBase + 'reference/cli.html',
+      };
       return { label, href: map[label] || '#' };
     });
     breadcrumb = breadcrumbHtml(crumbs);
@@ -198,7 +213,7 @@ function buildPage(srcPath, partials) {
   const pageMeta = pageMetaHtml(fm.date, ui);
 
   // header: inject base + switcher
-  let header = partials.header.replaceAll('{{base}}', base).replace('{{lang-switcher}}', switcher);
+  let header = localizeSharedLinks(partials.header, lang).replaceAll('{{base}}', base).replace('{{lang-switcher}}', switcher);
   // mark active nav
   const navActive = outRel.replace(/^it\//, '');
   header = header.replaceAll('data-nav="', 'data-nav="'); // keep
@@ -211,7 +226,7 @@ function buildPage(srcPath, partials) {
   for (const [key, value] of Object.entries(ui)) header = header.replaceAll(`{{${key}}}`, value);
 
   // sidebar: inject base + active (active class on current page)
-  let sidebar = partials.sidebar.replaceAll('{{base}}', base);
+  let sidebar = localizeSharedLinks(partials.sidebar, lang).replaceAll('{{base}}', base);
   for (const [key, value] of Object.entries(ui)) sidebar = sidebar.replaceAll(`{{${key}}}`, value);
   const pageName = path.basename(outRel);
   // need to handle both plain and sub links; do sub first
@@ -219,7 +234,7 @@ function buildPage(srcPath, partials) {
   sidebar = sidebar.split(`class="sidebar-link" data-page="${pageName}"`).join(`class="sidebar-link active" data-page="${pageName}"`);
 
   // footer
-  let footer = partials.footer.replaceAll('{{base}}', base);
+  let footer = localizeSharedLinks(partials.footer, lang).replaceAll('{{base}}', base);
   for (const [key, value] of Object.entries(ui)) footer = footer.replaceAll(`{{${key}}}`, value);
 
   let html = partials.layout;

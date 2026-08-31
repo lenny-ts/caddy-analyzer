@@ -10,14 +10,16 @@
   <link rel="canonical" href="https://lenny-ts.github.io/caddy-analyzer/installation.html">
   <link rel="alternate" hreflang="x-default" href="https://lenny-ts.github.io/caddy-analyzer/installation.html">
   <link rel="alternate" hreflang="en" href="https://lenny-ts.github.io/caddy-analyzer/installation.html">
+  <link rel="alternate" hreflang="it" href="https://lenny-ts.github.io/caddy-analyzer/it/installation.html">
   <script>try{var t=localStorage.getItem('caddy-docs-theme');if(t==='light')document.documentElement.setAttribute('data-theme','light');}catch(e){}</script>
   <meta name="color-scheme" content="dark light">
   <link rel="stylesheet" href="styles.min.css?v=36">
 </head>
 <body>
 <header class="site-header">
-  <img src="caddy-analyzer-logo.png" alt="" class="site-logo">
-  <span>caddy-analyzer</span>
+  <a href="index.html" class="logo">
+    <img src="caddy-analyzer-logo.png" alt="" class="site-logo">
+    <span>caddy-analyzer</span>
   </a>
   <nav aria-label="Primary">
     <a href="installation.html" data-nav="installation.html" class="active">Installation</a>
@@ -28,7 +30,7 @@
   </nav>
   <div class="header-actions">
     <a href="https://github.com/lenny-ts/caddy-analyzer" style="color:var(--text-sec);font-size:0.85rem;" rel="noopener">GitHub</a>
-    <div class="language-switch" role="group" aria-label="Language"><span class="lang-option active" aria-current="page">EN</span><a class="lang-option" href="it/index.html" hreflang="it" lang="it" title="IT translation in progress">IT</a></div>
+    <div class="language-switch" role="group" aria-label="Language"><span class="lang-option active" aria-current="page">EN</span><a class="lang-option" href="it/installation.html" hreflang="it" lang="it">IT</a></div>
     <button class="theme-toggle" type="button" aria-label="Switch to light theme">
       <span class="theme-icon theme-sun" aria-hidden="true">☀</span>
       <span class="theme-icon theme-moon" aria-hidden="true">☾</span>
@@ -85,7 +87,7 @@
 <pre><code>caddy-analyze --version
 which caddy-analyze
 # expected: /usr/local/bin/caddy-analyze  and  v0.6.1</code></pre>
-<p>If <code>/usr/local/bin</code> is not writable, the script uses <code>sudo mv</code>. Alternative: <code>DEST_DIR=$HOME/.local/bin bash install.sh</code>.</p>
+<p>If <code>/usr/local/bin</code> is not writable, the script uses <code>sudo mv</code>. The installer currently installs to <code>/usr/local/bin</code>; use the release archive or <code>go install</code> when you need a user-local location.</p>
 
 <h2 id="windows">Windows — install.ps1</h2>
 <pre><code>iwr -useb https://raw.githubusercontent.com/lenny-ts/caddy-analyzer/main/install.ps1 | iex</code></pre>

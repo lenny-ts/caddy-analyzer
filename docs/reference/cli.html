@@ -10,14 +10,16 @@
   <link rel="canonical" href="https://lenny-ts.github.io/caddy-analyzer/reference/cli.html">
   <link rel="alternate" hreflang="x-default" href="https://lenny-ts.github.io/caddy-analyzer/reference/cli.html">
   <link rel="alternate" hreflang="en" href="https://lenny-ts.github.io/caddy-analyzer/reference/cli.html">
+  <link rel="alternate" hreflang="it" href="https://lenny-ts.github.io/caddy-analyzer/it/reference/cli.html">
   <script>try{var t=localStorage.getItem('caddy-docs-theme');if(t==='light')document.documentElement.setAttribute('data-theme','light');}catch(e){}</script>
   <meta name="color-scheme" content="dark light">
   <link rel="stylesheet" href="../styles.min.css?v=36">
 </head>
 <body>
 <header class="site-header">
-  <img src="../caddy-analyzer-logo.png" alt="" class="site-logo">
-  <span>caddy-analyzer</span>
+  <a href="../index.html" class="logo">
+    <img src="../caddy-analyzer-logo.png" alt="" class="site-logo">
+    <span>caddy-analyzer</span>
   </a>
   <nav aria-label="Primary">
     <a href="../installation.html" data-nav="installation.html">Installation</a>
@@ -28,7 +30,7 @@
   </nav>
   <div class="header-actions">
     <a href="https://github.com/lenny-ts/caddy-analyzer" style="color:var(--text-sec);font-size:0.85rem;" rel="noopener">GitHub</a>
-    <div class="language-switch" role="group" aria-label="Language"><span class="lang-option active" aria-current="page">EN</span><a class="lang-option" href="../it/index.html" hreflang="it" lang="it" title="IT translation in progress">IT</a></div>
+    <div class="language-switch" role="group" aria-label="Language"><span class="lang-option active" aria-current="page">EN</span><a class="lang-option" href="../it/reference/cli.html" hreflang="it" lang="it">IT</a></div>
     <button class="theme-toggle" type="button" aria-label="Switch to light theme">
       <span class="theme-icon theme-sun" aria-hidden="true">☀</span>
       <span class="theme-icon theme-moon" aria-hidden="true">☾</span>
@@ -105,7 +107,7 @@
 <tr><td><code>--level</code></td><td></td><td></td><td><span class="pill pill-all">all</span></td><td>Operational level (<code>error,warn,info,debug</code>)</td></tr>
 <tr><td><code>--ops-only</code></td><td></td><td>false</td><td><span class="pill pill-all">all</span></td><td>Non-HTTP events only</td></tr>
 <tr><td><code>--top</code></td><td><code>-t</code></td><td>10</td><td><span class="pill pill-all">all</span></td><td>Top N (0 disables)</td></tr>
-<tr><td><code>--format</code></td><td><code>-f</code></td><td>table</td><td><span class="pill pill-all">all</span></td><td><code>table|json|csv|html</code></td></tr>
+<tr><td><code>--format</code></td><td><code>-f</code></td><td>table</td><td><span class="pill pill-all">all</span></td><td>Root reports: <code>table|json|csv|html</code>; <code>top</code>/<code>diff</code>: <code>table|json|csv</code></td></tr>
 <tr><td><code>--output</code></td><td><code>-o</code></td><td></td><td><span class="pill pill-all">all</span></td><td>Write to file</td></tr>
 <tr><td><code>--compact</code></td><td><code>-c</code></td><td>false</td><td><span class="pill pill-all">all</span></td><td>Compact table</td></tr>
 <tr><td><code>--defang</code></td><td></td><td>false</td><td><span class="pill pill-all">all</span></td><td><code>.</code>→<code>[.]</code> for IOC sharing</td></tr>
@@ -143,11 +145,11 @@
 <tr><td><code>diff</code></td><td><span class="pill pill-readonly">read-only</span></td><td>Compare two logs</td></tr>
 <tr><td><code>guard</code></td><td><span class="pill pill-danger">modifies firewall</span></td><td>Auto-block via iptables/nftables/Docker</td></tr>
 <tr><td><code>block</code> / <code>unban</code></td><td><span class="pill pill-danger">modifies firewall</span></td><td>Manual firewall</td></tr>
-<tr><td><code>blocklist</code></td><td><span class="pill pill-readonly">read-only</span></td><td>8 feeds, refresh/list/config/init</td></tr>
-<tr><td><code>config</code></td><td><span class="pill pill-readonly">read-only</span></td><td>Persist default source</td></tr>
-<tr><td><code>export-sigma</code></td><td><span class="pill pill-readonly">read-only</span></td><td>23 Sigma rules</td></tr>
-<tr><td><code>update</code></td><td><span class="pill pill-readonly">read-only</span></td><td>Self-update (cosign + SHA256)</td></tr>
-<tr><td><code>whitelist</code></td><td><span class="pill pill-readonly">read-only</span></td><td>Never-block CIDRs</td></tr>
+<tr><td><code>blocklist</code></td><td>writes cache/config</td><td>8 feeds, refresh/list/config/init</td></tr>
+<tr><td><code>config</code></td><td>writes config</td><td>Persist default source</td></tr>
+<tr><td><code>export-sigma</code></td><td>writes file/stdout</td><td>23 Sigma rules</td></tr>
+<tr><td><code>update</code></td><td>replaces binary</td><td>Self-update (cosign + SHA256)</td></tr>
+<tr><td><code>whitelist</code></td><td>writes allowlist</td><td>Never-block CIDRs</td></tr>
 </tbody>
 </table></div>
 <p>Details per subcommand: see sidebar <em>Guard</em>, <em>Blocklist</em>, <em>Block / Unban</em>, <em>Top</em>.</p>

@@ -10,14 +10,16 @@
   <link rel="canonical" href="https://lenny-ts.github.io/caddy-analyzer/reference/security-detection.html">
   <link rel="alternate" hreflang="x-default" href="https://lenny-ts.github.io/caddy-analyzer/reference/security-detection.html">
   <link rel="alternate" hreflang="en" href="https://lenny-ts.github.io/caddy-analyzer/reference/security-detection.html">
+  <link rel="alternate" hreflang="it" href="https://lenny-ts.github.io/caddy-analyzer/it/reference/security-detection.html">
   <script>try{var t=localStorage.getItem('caddy-docs-theme');if(t==='light')document.documentElement.setAttribute('data-theme','light');}catch(e){}</script>
   <meta name="color-scheme" content="dark light">
   <link rel="stylesheet" href="../styles.min.css?v=36">
 </head>
 <body>
 <header class="site-header">
-  <img src="../caddy-analyzer-logo.png" alt="" class="site-logo">
-  <span>caddy-analyzer</span>
+  <a href="../index.html" class="logo">
+    <img src="../caddy-analyzer-logo.png" alt="" class="site-logo">
+    <span>caddy-analyzer</span>
   </a>
   <nav aria-label="Primary">
     <a href="../installation.html" data-nav="installation.html">Installation</a>
@@ -28,7 +30,7 @@
   </nav>
   <div class="header-actions">
     <a href="https://github.com/lenny-ts/caddy-analyzer" style="color:var(--text-sec);font-size:0.85rem;" rel="noopener">GitHub</a>
-    <div class="language-switch" role="group" aria-label="Language"><span class="lang-option active" aria-current="page">EN</span><a class="lang-option" href="../it/index.html" hreflang="it" lang="it" title="IT translation in progress">IT</a></div>
+    <div class="language-switch" role="group" aria-label="Language"><span class="lang-option active" aria-current="page">EN</span><a class="lang-option" href="../it/reference/security-detection.html" hreflang="it" lang="it">IT</a></div>
     <button class="theme-toggle" type="button" aria-label="Switch to light theme">
       <span class="theme-icon theme-sun" aria-hidden="true">☀</span>
       <span class="theme-icon theme-moon" aria-hidden="true">☾</span>
@@ -77,7 +79,7 @@
 <p>How detections are tagged, exported, and why simple encodings do not bypass them. For the 26 rows with confidence/description/example, see <a href="security-categories.html">Categories</a>.</p>
 
 <h2 id="mitre">MITRE ATT&amp;CK mapping — verified IDs</h2>
-<p>IDs from <code>pkg/analysis/detectionTechniques</code>, verified against ATT&amp;CK. Every detection carries its <code>techniques</code> array in JSON/HTML output.</p>
+<p>IDs from <code>pkg/analysis/detectionTechniques</code>, verified against ATT&amp;CK. The mapping is used for Sigma export; current JSON and HTML report records do not include a <code>techniques</code> array.</p>
 <div class="table-wrap"><table>
 <thead><tr><th>Category</th><th>Technique ID</th><th>Name</th></tr></thead>
 <tbody>

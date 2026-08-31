@@ -1,0 +1,84 @@
+<!-- fm: title=Configurazione — caddy-analyzer | description=Configura caddy-analyzer.json, ottimizzazione, variabili d'ambiente e percorsi XDG. | breadcrumb=Guida > Configurazione -->
+<h1>Configurazione</h1>
+<p>Come viene configurato lo strumento stesso. Per sapere come <em>connetterti</em> a ogni sorgente di log, consulta <a href="../sources.html">Sorgenti log</a>.</p>
+
+<h2 id="config-file">File di configurazione — dove si trova</h2>
+<p>Due posizioni, vince la prima trovata:</p>
+<div class="table-wrap"><table>
+<thead><tr><th>Percorso</th><th>Ambito</th></tr></thead>
+<tbody>
+<tr><td><code>./caddy-analyzer.json</code></td><td>Locale (progetto)</td></tr>
+<tr><td><code>~/.config/caddy-analyzer/config.json</code></td><td>Globale (XDG)</td></tr>
+</tbody>
+</table></div>
+<p><code>~/.config</code> segue <code>XDG_CONFIG_HOME</code> se impostato, altrimenti <code>os.UserConfigDir()</code>. Le directory vengono create con <code>0750</code>, i file con <code>0600</code>.</p>
+
+<h2 id="schema">Schema</h2>
+<pre><code>{
+  "source": "docker://caddy",
+  "namespace": "production",
+  "blocklist": {
+    "no_defaults": false,
+    "custom_sources": [{ "name": "My List", "url": "https://example.com/list.txt" }],
+    "remove_sources": ["tor-exit-nodes"]
+  },
+  "tuning": {
+    "geo_cache_ttl": "24h",
+    "geo_cache_size": 50000,
+    "iptables_timeout": "10s"
+  }
+}</code></pre>
+
+<h2 id="manage">Gestiscilo</h2>
+<pre><code>caddy-analyze config                    # show active file + source
+caddy-analyze config /var/log/caddy/access.log          # set local
+caddy-analyze config docker://caddy --global            # set global
+caddy-analyze config k8s://caddy-xxx -n production     # with namespace
+caddy-analyze config reset              # remove local
+caddy-analyze config reset --global     # remove global
+caddy-analyze blocklist init            # persist blocklist flags to config
+caddy-analyze whitelist --init          # persist never-block to /etc/caddy-analyzer/whitelist.txt</code></pre>
+<p><code>blocklist init</code> scrive gli attuali valori di <code>--no-default-blocklists / --blocklist-config / --blocklist-remove</code> nello stesso file, così <code>guard</code> li applica senza flag CLI.</p>
+
+<h2 id="tuning">Ottimizzazione — precedenza</h2>
+<p>I valori del file di configurazione sono predefiniti; i flag CLI li sostituiscono quando impostati esplicitamente. Le tre opzioni:</p>
+<div class="table-wrap"><table>
+<thead><tr><th>Chiave</th><th>Campo di configurazione</th><th>Flag CLI</th><th>Predefinito</th></tr></thead>
+<tbody>
+<tr><td>TTL cache GeoIP</td><td><code>tuning.geo_cache_ttl</code></td><td><code>--geo-cache-ttl 24h</code></td><td>24h (0 = disattivato, lento)</td></tr>
+<tr><td>Dimensione cache GeoIP</td><td><code>tuning.geo_cache_size</code></td><td><code>--geo-cache-size 50000</code></td><td>50000</td></tr>
+<tr><td>Timeout iptables</td><td><code>tuning.iptables_timeout</code></td><td><code>--iptables-timeout 10s</code></td><td>10s</td></tr>
+</tbody>
+</table></div>
+<pre><code># example: keep GeoIP results longer on a busy host
+caddy-analyze --geo-cache-ttl 48h --geo-cache-size 100000 /var/log/caddy/access.log</code></pre>
+
+<h2 id="env">Ambiente e XDG</h2>
+<div class="table-wrap"><table>
+<thead><tr><th>Variabile</th><th>Influisce su</th></tr></thead>
+<tbody>
+<tr><td><code>XDG_CONFIG_HOME</code></td><td>Directory di configurazione globale (<code>~/.config/caddy-analyzer</code>)</td></tr>
+<tr><td><code>HOME</code></td><td>Fallback per configurazione/cache</td></tr>
+<tr><td><code>https_proxy / http_proxy</code></td><td>Recupero delle blocklist e download automatico GeoIP</td></tr>
+</tbody>
+</table></div>
+
+<h2 id="caches">Cache e stato (non configurazione)</h2>
+<div class="table-wrap"><table>
+<thead><tr><th>Percorso</th><th>Contenuto</th></tr></thead>
+<tbody>
+<tr><td><code>~/.cache/caddy-analyzer/blocklists/</code></td><td>CIDR delle blocklist (TTL 7g)</td></tr>
+<tr><td><code>~/.config/caddy-analyzer/GeoLite2-*.mmdb</code></td><td>GeoIP (download automatico dal mirror P3TERX)</td></tr>
+<tr><td><code>/var/lib/caddy-analyzer/blocked.json</code></td><td>IP bloccati da Guard (persistono al riavvio)</td></tr>
+<tr><td><code>/var/log/caddy-analyzer-audit.jsonl</code></td><td>Log di audit (0600, righe JSON)</td></tr>
+<tr><td><code>/etc/caddy-analyzer/whitelist.txt</code></td><td>Elenco da non bloccare mai (CIDR, commenti #)</td></tr>
+</tbody>
+</table></div>
+<p>Sostituisci con i flag: <code>--cache-dir</code>, <code>--geoip-db</code>, <code>--state-file</code>, <code>--audit-log</code>, <code>--never-block-file</code>.</p>
+
+<h2 id="precedence">Ordine di risoluzione (nessun argomento sorgente)</h2>
+<ol>
+  <li><code>./caddy-analyzer.json</code> → <code>~/.config/…/config.json</code></li>
+  <li>pipe stdin se i dati sono passati tramite pipe</li>
+  <li>5 candidati: <code>./access.log</code>, <code>./caddy.log</code>, <code>./caddy-access.log</code>, <code>/var/log/caddy/access.log</code>, <code>/var/log/caddy/caddy.log</code></li>
+</ol>

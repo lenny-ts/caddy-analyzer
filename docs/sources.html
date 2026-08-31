@@ -10,14 +10,16 @@
   <link rel="canonical" href="https://lenny-ts.github.io/caddy-analyzer/sources.html">
   <link rel="alternate" hreflang="x-default" href="https://lenny-ts.github.io/caddy-analyzer/sources.html">
   <link rel="alternate" hreflang="en" href="https://lenny-ts.github.io/caddy-analyzer/sources.html">
+  <link rel="alternate" hreflang="it" href="https://lenny-ts.github.io/caddy-analyzer/it/sources.html">
   <script>try{var t=localStorage.getItem('caddy-docs-theme');if(t==='light')document.documentElement.setAttribute('data-theme','light');}catch(e){}</script>
   <meta name="color-scheme" content="dark light">
   <link rel="stylesheet" href="styles.min.css?v=36">
 </head>
 <body>
 <header class="site-header">
-  <img src="caddy-analyzer-logo.png" alt="" class="site-logo">
-  <span>caddy-analyzer</span>
+  <a href="index.html" class="logo">
+    <img src="caddy-analyzer-logo.png" alt="" class="site-logo">
+    <span>caddy-analyzer</span>
   </a>
   <nav aria-label="Primary">
     <a href="installation.html" data-nav="installation.html">Installation</a>
@@ -28,7 +30,7 @@
   </nav>
   <div class="header-actions">
     <a href="https://github.com/lenny-ts/caddy-analyzer" style="color:var(--text-sec);font-size:0.85rem;" rel="noopener">GitHub</a>
-    <div class="language-switch" role="group" aria-label="Language"><span class="lang-option active" aria-current="page">EN</span><a class="lang-option" href="it/index.html" hreflang="it" lang="it" title="IT translation in progress">IT</a></div>
+    <div class="language-switch" role="group" aria-label="Language"><span class="lang-option active" aria-current="page">EN</span><a class="lang-option" href="it/sources.html" hreflang="it" lang="it">IT</a></div>
     <button class="theme-toggle" type="button" aria-label="Switch to light theme">
       <span class="theme-icon theme-sun" aria-hidden="true">☀</span>
       <span class="theme-icon theme-moon" aria-hidden="true">☾</span>
@@ -82,7 +84,7 @@ caddy-analyze /var/log/caddy/*.log
 caddy-analyze /var/log/caddy/access.log.1 /var/log/caddy/access.log.2.gz
 # no args → tries ./access.log, ./caddy.log, ./caddy-access.log, /var/log/caddy/access.log, /var/log/caddy/caddy.log
 caddy-analyze</code></pre>
-<h3>Permissions for files</h3>
+<h3 id="permissions">Permissions for files</h3>
 <p>Caddy often writes as <code>caddy:caddy 0600</code>. You need read on the file and execute on the directory.</p>
 <pre><code>sudo caddy-analyze /var/log/caddy/access.log
 # persistent — add yourself to the group then re-login:
@@ -101,7 +103,7 @@ ssh app@prod "cat /var/log/caddy/access.log" | caddy-analyze - -t 25</code></pre
 caddy-analyze docker://a3f9c1e2d4b5
 caddy-analyze tail docker://caddy          # live
 caddy-analyze --follow docker://caddy      # same via root flag</code></pre>
-<p>Reads via <code>docker logs -f --tail=all &lt;container&gt;</code> and merges stdout+stderr (fixes truncated logs).</p>
+<p>Streams with <code>docker logs -f &lt;container&gt;</code> in an interactive terminal; non-interactive reads add <code>--tail=all</code>. Both merge stdout and stderr.</p>
 <h3>Permissions for Docker</h3>
 <pre><code># docker.sock is root:docker 0660 by default
 sudo usermod -aG docker $USER  # re-login
@@ -162,7 +164,7 @@ caddy-analyze diff testdata/sample.log testdata/large.log</code></pre>
 
     </div>
   </main>
-  <nav class="doc-toc" aria-label="On this page"><div class="toc-label">On this page</div><a href="#file" class="toc-link">File &amp;amp; glob</a><a href="#stdin" class="toc-link">Stdin — -</a><a href="#docker" class="toc-link">Docker — docker://&amp;lt;name|id&amp;gt;</a><a href="#k8s" class="toc-link">Kubernetes — k8s://&amp;lt;pod&amp;gt;</a><a href="#journalctl" class="toc-link">journalctl — journalctl://&amp;lt;unit&amp;gt;</a><a href="#auto-discovery" class="toc-link">Auto-discovery (no source arg)</a><a href="#fixtures" class="toc-link">Fixtures — try without a server</a><a href="#permissions-for-files" class="toc-link h3">Permissions for files</a><a href="#permissions-for-stdin" class="toc-link h3">Permissions for stdin</a><a href="#permissions-for-docker" class="toc-link h3">Permissions for Docker</a><a href="#permissions-for-kubernetes" class="toc-link h3">Permissions for Kubernetes</a><a href="#permissions-for-journalctl" class="toc-link h3">Permissions for journalctl</a></nav>
+  <nav class="doc-toc" aria-label="On this page"><div class="toc-label">On this page</div><a href="#file" class="toc-link">File &amp;amp; glob</a><a href="#permissions" class="toc-link h3">Permissions for files</a><a href="#stdin" class="toc-link">Stdin — -</a><a href="#docker" class="toc-link">Docker — docker://&amp;lt;name|id&amp;gt;</a><a href="#k8s" class="toc-link">Kubernetes — k8s://&amp;lt;pod&amp;gt;</a><a href="#journalctl" class="toc-link">journalctl — journalctl://&amp;lt;unit&amp;gt;</a><a href="#auto-discovery" class="toc-link">Auto-discovery (no source arg)</a><a href="#fixtures" class="toc-link">Fixtures — try without a server</a><a href="#permissions-for-stdin" class="toc-link h3">Permissions for stdin</a><a href="#permissions-for-docker" class="toc-link h3">Permissions for Docker</a><a href="#permissions-for-kubernetes" class="toc-link h3">Permissions for Kubernetes</a><a href="#permissions-for-journalctl" class="toc-link h3">Permissions for journalctl</a></nav>
 </div>
 <script src="docs.min.js?v=36"></script>
 </body>

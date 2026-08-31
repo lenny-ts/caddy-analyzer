@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MITRE, Sigma ed evasione — caddy-analyzer</title>
+  <meta name="description" content="ID ATT&amp;CK verificati, 23 regole Sigma e come il motore resiste ai bypass.">
+  <meta name="theme-color" content="#09090B">
+  <link rel="icon" href="../../caddy-analyzer-logo.png" type="image/png">
+  <link rel="canonical" href="https://lenny-ts.github.io/caddy-analyzer/it/reference/security-detection.html">
+  <link rel="alternate" hreflang="x-default" href="https://lenny-ts.github.io/caddy-analyzer/reference/security-detection.html">
+  <link rel="alternate" hreflang="en" href="https://lenny-ts.github.io/caddy-analyzer/reference/security-detection.html">
+  <link rel="alternate" hreflang="it" href="https://lenny-ts.github.io/caddy-analyzer/it/reference/security-detection.html">
+  <script>try{var t=localStorage.getItem('caddy-docs-theme');if(t==='light')document.documentElement.setAttribute('data-theme','light');}catch(e){}</script>
+  <meta name="color-scheme" content="dark light">
+  <link rel="stylesheet" href="../../styles.min.css?v=36">
+</head>
+<body>
+<header class="site-header">
+  <a href="../../it/index.html" class="logo">
+    <img src="../../caddy-analyzer-logo.png" alt="" class="site-logo">
+    <span>caddy-analyzer</span>
+  </a>
+  <nav aria-label="Navigazione principale">
+    <a href="../../it/installation.html" data-nav="installation.html">Installazione</a>
+    <a href="../../it/sources.html" data-nav="sources.html">Sorgenti log</a>
+    <a href="../../it/reference/cli.html" data-nav="cli.html">Riferimento CLI</a>
+    <a href="../../it/security.html" data-nav="security.html">Motore minacce</a>
+    <a href="../../it/tui-html.html" data-nav="tui-html.html">Report TUI e HTML</a>
+  </nav>
+  <div class="header-actions">
+    <a href="https://github.com/lenny-ts/caddy-analyzer" style="color:var(--text-sec);font-size:0.85rem;" rel="noopener">GitHub</a>
+    <div class="language-switch" role="group" aria-label="Lingua"><a class="lang-option" href="../../reference/security-detection.html" hreflang="en" lang="en">EN</a><span class="lang-option active" aria-current="page">IT</span></div>
+    <button class="theme-toggle" type="button" aria-label="Switch to light theme">
+      <span class="theme-icon theme-sun" aria-hidden="true">☀</span>
+      <span class="theme-icon theme-moon" aria-hidden="true">☾</span>
+    </button>
+  </div>
+</header>
+<div class="scroll-progress" aria-hidden="true"></div>
+
+<div class="docs-layout">
+   <aside class="doc-sidebar" aria-label="Navigazione della pagina">
+  <div class="sidebar-label">Documentazione</div>
+  <a href="../../it/index.html" class="sidebar-link" data-page="index.html">Panoramica</a>
+  <a href="../../it/quickstart.html" class="sidebar-link" data-page="quickstart.html">Avvio rapido</a>
+  <a href="../../it/installation.html" class="sidebar-link" data-page="installation.html">Installazione</a>
+  <a href="../../it/sources.html" class="sidebar-link" data-page="sources.html">Sorgenti log</a>
+  <div class="sidebar-sep"></div>
+  <div class="sidebar-label">Guida</div>
+  <a href="../../it/guide/configuration.html" class="sidebar-link" data-page="configuration.html">Configurazione</a>
+  <a href="../../it/guide/usage.html" class="sidebar-link" data-page="usage.html">Utilizzo</a>
+  <a href="../../it/guide/examples.html" class="sidebar-link" data-page="examples.html">Esempi</a>
+  <a href="../../it/guide/troubleshooting.html" class="sidebar-link" data-page="troubleshooting.html">Risoluzione problemi</a>
+  <div class="sidebar-sep"></div>
+  <div class="sidebar-label">Riferimento</div>
+  <a href="../../it/reference/cli.html" class="sidebar-link" data-page="cli.html">Riferimento CLI</a>
+  <a href="../../it/reference/security-categories.html" class="sidebar-link sub" data-page="security-categories.html">— Categorie</a>
+  <a href="../../it/reference/security-detection.html" class="sidebar-link sub active" data-page="security-detection.html">— Rilevamento</a>
+  <a href="../../it/subcommands-guard.html" class="sidebar-link sub" data-page="subcommands-guard.html">— Guard</a>
+  <a href="../../it/subcommands-blocklist.html" class="sidebar-link sub" data-page="subcommands-blocklist.html">— Blocklist</a>
+  <a href="../../it/subcommands-block.html" class="sidebar-link sub" data-page="subcommands-block.html">— Block / Unban</a>
+  <a href="../../it/subcommands-top.html" class="sidebar-link sub" data-page="subcommands-top.html">— Top</a>
+  <a href="../../it/reference/api.html" class="sidebar-link" data-page="api.html">API / Pacchetti</a>
+  <div class="sidebar-sep"></div>
+  <a href="../../it/security.html" class="sidebar-link" data-page="security.html">Motore minacce</a>
+  <a href="../../it/architecture.html" class="sidebar-link" data-page="architecture.html">Architettura</a>
+  <a href="../../it/tui-html.html" class="sidebar-link" data-page="tui-html.html">Report TUI e HTML</a>
+  <a href="../../it/contributing.html" class="sidebar-link" data-page="contributing.html">Contribuire</a>
+  <a href="../../it/faq.html" class="sidebar-link" data-page="faq.html">FAQ</a>
+  <a href="../../it/changelog.html" class="sidebar-link" data-page="changelog.html">Registro modifiche</a>
+</aside>
+
+  <main class="wrap" id="main">
+    <div class="doc-content">
+      <nav class="breadcrumb" aria-label="Breadcrumb"><a href="../../it/reference/cli.html">Riferimento</a><span class="sep">/</span><span>Rilevamento</span></nav>
+      <div class="page-meta"><a href="https://github.com/lenny-ts/caddy-analyzer/releases">v0.6.1</a> · aggiornata <time datetime="2026-08-31">2026-08-31</time> · <a href="https://github.com/lenny-ts/caddy-analyzer">GitHub</a></div>
+      <h1>MITRE, Sigma ed evasione</h1>
+<p>Come i rilevamenti vengono etichettati, esportati e perché le semplici codifiche non li aggirano. Per le 26 righe con confidenza/descrizione/esempio, consulta <a href="security-categories.html">Categorie</a>.</p>
+
+<h2 id="mitre">Mappatura MITRE ATT&amp;CK — ID verificati</h2>
+<p>ID da <code>pkg/analysis/detectionTechniques</code>, verificati rispetto ad ATT&amp;CK. La mappatura è usata per l'export Sigma; i record attuali dei report JSON e HTML non includono un array <code>techniques</code>.</p>
+<div class="table-wrap"><table>
+<thead><tr><th>Categoria</th><th>ID tecnica</th><th>Nome</th></tr></thead>
+<tbody>
+<tr><td><code>sql_injection</code></td><td>T1190</td><td>Sfruttamento di applicazione esposta pubblicamente</td></tr>
+<tr><td><code>nosql_injection</code></td><td>T1190</td><td>Sfruttamento di applicazione esposta pubblicamente</td></tr>
+<tr><td><code>xss</code></td><td>T1059.007</td><td>Interprete di comandi e scripting: JavaScript</td></tr>
+<tr><td></td><td>T1189</td><td>Compromissione drive-by</td></tr>
+<tr><td><code>ssti</code></td><td>T1190</td><td>Sfruttamento di applicazione esposta pubblicamente</td></tr>
+<tr><td><code>ssrf</code></td><td>T1190</td><td>Sfruttamento di applicazione esposta pubblicamente</td></tr>
+<tr><td><code>rce</code></td><td>T1059</td><td>Interprete di comandi e scripting</td></tr>
+<tr><td></td><td>T1190</td><td>Sfruttamento di applicazione esposta pubblicamente</td></tr>
+<tr><td><code>path_traversal</code></td><td>T1083</td><td>Scoperta di file e directory</td></tr>
+<tr><td><code>lfi_wrapper_abuse</code></td><td>T1083</td><td>Scoperta di file e directory</td></tr>
+<tr><td></td><td>T1190</td><td>Sfruttamento di applicazione esposta pubblicamente</td></tr>
+<tr><td><code>graphql_introspection</code></td><td>T1595.002</td><td>Scansione attiva: scansione delle vulnerabilità</td></tr>
+<tr><td><code>log4j_jndi</code></td><td>T1190</td><td>Sfruttamento di applicazione esposta pubblicamente</td></tr>
+<tr><td></td><td>T1059</td><td>Interprete di comandi e scripting</td></tr>
+<tr><td><code>sensitive_file_probe</code></td><td>T1083</td><td>Scoperta di file e directory</td></tr>
+<tr><td></td><td>T1552.001</td><td>Credenziali non protette: credenziali nei file</td></tr>
+<tr><td><code>admin_probe</code></td><td>T1595.002</td><td>Scansione attiva: scansione delle vulnerabilità</td></tr>
+<tr><td><code>wordpress_probe</code></td><td>T1595.002</td><td>Scansione attiva: scansione delle vulnerabilità</td></tr>
+<tr><td><code>cgi_probe</code></td><td>T1595.002</td><td>Scansione attiva: scansione delle vulnerabilità</td></tr>
+<tr><td><code>scanner</code></td><td>T1595</td><td>Scansione attiva</td></tr>
+<tr><td><code>xxe</code></td><td>T1190</td><td>Sfruttamento di applicazione esposta pubblicamente</td></tr>
+<tr><td><code>open_redirect</code></td><td>T1566.002</td><td>Phishing: collegamento spearphishing</td></tr>
+<tr><td><code>ldap_injection</code></td><td>T1190</td><td>Sfruttamento di applicazione esposta pubblicamente</td></tr>
+<tr><td><code>xpath_injection</code></td><td>T1190</td><td>Sfruttamento di applicazione esposta pubblicamente</td></tr>
+<tr><td><code>crlf_injection</code></td><td>T1190</td><td>Sfruttamento di applicazione esposta pubblicamente</td></tr>
+<tr><td></td><td>T1059</td><td>Interprete di comandi e scripting</td></tr>
+<tr><td><code>prototype_pollution</code></td><td>T1190</td><td>Sfruttamento di applicazione esposta pubblicamente</td></tr>
+<tr><td></td><td>T1059.007</td><td>Interprete di comandi e scripting: JavaScript</td></tr>
+<tr><td><code>ssi_injection</code></td><td>T1190</td><td>Sfruttamento di applicazione esposta pubblicamente</td></tr>
+<tr><td></td><td>T1059</td><td>Interprete di comandi e scripting</td></tr>
+<tr><td><code>ua_rotation</code></td><td>T1595.001</td><td>Scansione attiva: scansione di blocchi IP</td></tr>
+<tr><td><code>jwt_abuse</code></td><td>T1550.001</td><td>Uso di materiale di autenticazione alternativo: token di accesso all'applicazione</td></tr>
+<tr><td></td><td>T1190</td><td>Sfruttamento di applicazione esposta pubblicamente</td></tr>
+<tr><td><code>object_enumeration</code></td><td>T1595.002</td><td>Scansione attiva: scansione delle vulnerabilità</td></tr>
+<tr><td></td><td>T1190</td><td>Sfruttamento di applicazione esposta pubblicamente</td></tr>
+<tr><td><code>beaconing</code></td><td>T1071.001</td><td>Protocollo a livello applicazione: protocolli web</td></tr>
+<tr><td></td><td>T1573</td><td>Canale cifrato</td></tr>
+</tbody>
+</table></div>
+<p>Fonte di verità: <code>pkg/analysis/detect.go:64-91</code>. Se un ID sembra errato, apri una issue — gli ID non sono approssimati.</p>
+
+<h2 id="sigma">Esportazione Sigma — 23 su 26</h2>
+<p>Le categorie basate su pattern vengono esportate; 3 comportamentali no (richiedono stato, non una singola richiesta).</p>
+<div class="table-wrap"><table>
+<thead><tr><th>Esportato</th><th>Motivo</th></tr></thead>
+<tbody>
+<tr><td>23 categorie di pattern</td><td>Regex su singola richiesta + campi <code>uri|status|client_ip</code>, <code>uuidV5</code> deterministico (<code>uuidNamespaceDNS + "caddy-analyzer:sigma:"+title</code>)</td></tr>
+<tr><td>3 escluse: <code>ua_rotation</code>, <code>object_enumeration</code>, <code>beaconing</code></td><td>Richiedono ≥10 campioni per IP/percorso, controllo CV, ring buffer — non esprimibile come Sigma a evento singolo</td></tr>
+</tbody>
+</table></div>
+<pre><code>caddy-analyze export-sigma rules.yml
+caddy-analyze export-sigma - | sigma check --rules -  # validate
+# import into Splunk/Elastic — tags carry ATT&CK IDs above</code></pre>
+
+<h2 id="evasion">Resistenza all'evasione</h2>
+<p>Perché <code>%2e%2e</code>, doppia codifica e maiuscole/minuscole miste non aggirano il rilevamento.</p>
+<div class="table-wrap"><table>
+<thead><tr><th>Tecnica</th><th>Come</th><th>Codice</th></tr></thead>
+<tbody>
+<tr><td>Doppio passaggio</td><td>Ogni URI viene controllato come <code>decodeURI</code> (con gestione query <code>PathUnescape+QueryUnescape</code> + fallback manuale <code>%</code>) <em>e</em> raw</td><td><code>DetectAll</code> + <code>rawPatterns</code> in <code>init()</code></td></tr>
+<tr><td>Percorso rapido letterale</td><td>Alternative pure confrontate tramite <code>strings.Contains</code> in minuscolo (~100× più veloce)</td><td><code>extractPureLiterals / compileLowercase</code></td></tr>
+<tr><td>Gate</td><td>Il letterale richiesto più lungo deve essere presente (<code>strings.Contains</code>) prima di eseguire la regex</td><td><code>extractGate</code></td></tr>
+<tr><td>Marker / triage</td><td>Raccoglie tutti i letterali di ≥2 caratteri; se non è presente alcuno, salta tutti i pattern per quella sorgente</td><td><code>buildMarkers / matchMarkers / isMarkerCovered</code></td></tr>
+<tr><td>Eliminazione case-fold</td><td>Compila le regex in minuscolo, converte la sorgente una volta in minuscolo — nessun <code>FoldCase</code> per corrispondenza (~8% CPU risparmiata)</td><td><code>lowercaseFold</code></td></tr>
+<tr><td>Limiti LRU</td><td>IP 100k, GeoIP 50k, istogramma 1K bucket</td><td><code>DefaultIPCap, geoCache</code></td></tr>
+</tbody>
+</table></div>
+<p>Verifica che il bypass sia coperto: <code>rawPatterns</code> include <code>%2e%2e%2f</code>, <code>%252e</code>, <code>%c0%ae</code>, <code>0x7f000001</code> ecc. Consulta le fixture in <code>pkg/analysis/detect.go:778-801</code> e <code>testdata/generate.py</code>.</p>
+      <footer class="footer">
+  <p>caddy-analyzer è open-source sotto licenza <a href="https://github.com/lenny-ts/caddy-analyzer/blob/main/LICENSE">MIT</a> · <a href="https://github.com/lenny-ts/caddy-analyzer">GitHub</a> · <a href="../../it/changelog.html">Registro modifiche</a></p>
+</footer>
+<button class="back-to-top" aria-label="Back to top">↑</button>
+
+    </div>
+  </main>
+  <nav class="doc-toc" aria-label="In questa pagina"><div class="toc-label">In questa pagina</div><a href="#mitre" class="toc-link">Mappatura MITRE ATT&amp;amp;CK — ID verificati</a><a href="#sigma" class="toc-link">Esportazione Sigma — 23 su 26</a><a href="#evasion" class="toc-link">Resistenza all'evasione</a></nav>
+</div>
+<script src="../../docs.min.js?v=36"></script>
+</body>
+</html>

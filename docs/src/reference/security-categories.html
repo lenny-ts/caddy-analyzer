@@ -2,7 +2,7 @@
 <h1>26 Categories</h1>
 <p>Every row: <strong>confidence</strong> (the score of its fixture example), <strong>description</strong>, and a <strong>real example from <code>testdata/sample.log</code></strong> (not invented). All examples use TEST-NET IPs and are reproducible via <code>caddy-analyze --detect testdata/sample.log</code>. MITRE IDs verified in <a href="security-detection.html">MITRE &amp; Sigma</a>.</p>
 
-<div class="callout callout-info"><div class="callout-label">Confidence</div>Highest per-category patterns score 9–10 (e.g. <code>UNION SELECT</code>), heuristics score 6–7. Guard default <code>--detect-confidence 8</code> blocks only ≥8. Lower to 6 to see more, 0 to log-only. Behavioral categories (<code>ua_rotation</code>, <code>object_enumeration</code>, <code>beaconing</code>) need ≥10 samples.</div>
+<div class="callout callout-info"><div class="callout-label">Confidence</div>Highest per-category patterns score 9–10 (e.g. <code>UNION SELECT</code>), heuristics score 6–7. Guard default <code>--detect-confidence 8</code> blocks only ≥8. Lowering it to 6 allows more pattern-based blocks; 0 disables only pattern-based blocks, not other guard controls. Behavioral categories (<code>ua_rotation</code>, <code>object_enumeration</code>, <code>beaconing</code>) need ≥10 samples.</div>
 
 <div class="table-wrap"><table>
 <thead><tr><th>#</th><th>Category</th><th>Confidence</th><th>Description</th><th>Example (from fixture)</th><th>MITRE</th></tr></thead>
@@ -36,6 +36,6 @@
 </tbody>
 </table></div>
 
-<p>All examples are from <code>testdata/sample.log</code> via <code>testdata/generate.py</code> (deterministic, TEST-NET). Verify locally: <code>caddy-analyze --detect testdata/sample.log</code> should fire all 26. Confidence shown is for that exact fixture payload; the category has other patterns scoring 5–10 — see <a href="security-detection.html">evasion &amp; Sigma</a> for gate/markers.</p>
+<p>All examples are from <code>testdata/sample.log</code> via <code>testdata/generate.py</code> (deterministic, TEST-NET). Verify locally: <code>caddy-analyze --detect testdata/sample.log</code> should fire all 26. Confidence shown is for that exact fixture payload; individual patterns currently range from 2–10 — see <a href="security-detection.html">evasion &amp; Sigma</a> for gate/markers.</p>
 
 <div class="callout callout-info"><div class="callout-label">No invented examples</div>Every example above was read from <code>testdata/generate.py</code> lines 107–217. If a future category has no fixture, this page will say “no fixture example yet” instead of inventing one.</div>

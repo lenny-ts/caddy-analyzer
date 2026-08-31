@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>top — caddy-analyzer</title>
+  <meta name="description" content="Ispettore classificato: 9 dimensioni, inclusi country/asn con GeoIP.">
+  <meta name="theme-color" content="#09090B">
+  <link rel="icon" href="../caddy-analyzer-logo.png" type="image/png">
+  <link rel="canonical" href="https://lenny-ts.github.io/caddy-analyzer/it/subcommands-top.html">
+  <link rel="alternate" hreflang="x-default" href="https://lenny-ts.github.io/caddy-analyzer/subcommands-top.html">
+  <link rel="alternate" hreflang="en" href="https://lenny-ts.github.io/caddy-analyzer/subcommands-top.html">
+  <link rel="alternate" hreflang="it" href="https://lenny-ts.github.io/caddy-analyzer/it/subcommands-top.html">
+  <script>try{var t=localStorage.getItem('caddy-docs-theme');if(t==='light')document.documentElement.setAttribute('data-theme','light');}catch(e){}</script>
+  <meta name="color-scheme" content="dark light">
+  <link rel="stylesheet" href="../styles.min.css?v=36">
+</head>
+<body>
+<header class="site-header">
+  <a href="../it/index.html" class="logo">
+    <img src="../caddy-analyzer-logo.png" alt="" class="site-logo">
+    <span>caddy-analyzer</span>
+  </a>
+  <nav aria-label="Navigazione principale">
+    <a href="../it/installation.html" data-nav="installation.html">Installazione</a>
+    <a href="../it/sources.html" data-nav="sources.html">Sorgenti log</a>
+    <a href="../it/reference/cli.html" data-nav="cli.html">Riferimento CLI</a>
+    <a href="../it/security.html" data-nav="security.html">Motore minacce</a>
+    <a href="../it/tui-html.html" data-nav="tui-html.html">Report TUI e HTML</a>
+  </nav>
+  <div class="header-actions">
+    <a href="https://github.com/lenny-ts/caddy-analyzer" style="color:var(--text-sec);font-size:0.85rem;" rel="noopener">GitHub</a>
+    <div class="language-switch" role="group" aria-label="Lingua"><a class="lang-option" href="../subcommands-top.html" hreflang="en" lang="en">EN</a><span class="lang-option active" aria-current="page">IT</span></div>
+    <button class="theme-toggle" type="button" aria-label="Switch to light theme">
+      <span class="theme-icon theme-sun" aria-hidden="true">☀</span>
+      <span class="theme-icon theme-moon" aria-hidden="true">☾</span>
+    </button>
+  </div>
+</header>
+<div class="scroll-progress" aria-hidden="true"></div>
+
+<div class="docs-layout">
+   <aside class="doc-sidebar" aria-label="Navigazione della pagina">
+  <div class="sidebar-label">Documentazione</div>
+  <a href="../it/index.html" class="sidebar-link" data-page="index.html">Panoramica</a>
+  <a href="../it/quickstart.html" class="sidebar-link" data-page="quickstart.html">Avvio rapido</a>
+  <a href="../it/installation.html" class="sidebar-link" data-page="installation.html">Installazione</a>
+  <a href="../it/sources.html" class="sidebar-link" data-page="sources.html">Sorgenti log</a>
+  <div class="sidebar-sep"></div>
+  <div class="sidebar-label">Guida</div>
+  <a href="../it/guide/configuration.html" class="sidebar-link" data-page="configuration.html">Configurazione</a>
+  <a href="../it/guide/usage.html" class="sidebar-link" data-page="usage.html">Utilizzo</a>
+  <a href="../it/guide/examples.html" class="sidebar-link" data-page="examples.html">Esempi</a>
+  <a href="../it/guide/troubleshooting.html" class="sidebar-link" data-page="troubleshooting.html">Risoluzione problemi</a>
+  <div class="sidebar-sep"></div>
+  <div class="sidebar-label">Riferimento</div>
+  <a href="../it/reference/cli.html" class="sidebar-link" data-page="cli.html">Riferimento CLI</a>
+  <a href="../it/reference/security-categories.html" class="sidebar-link sub" data-page="security-categories.html">— Categorie</a>
+  <a href="../it/reference/security-detection.html" class="sidebar-link sub" data-page="security-detection.html">— Rilevamento</a>
+  <a href="../it/subcommands-guard.html" class="sidebar-link sub" data-page="subcommands-guard.html">— Guard</a>
+  <a href="../it/subcommands-blocklist.html" class="sidebar-link sub" data-page="subcommands-blocklist.html">— Blocklist</a>
+  <a href="../it/subcommands-block.html" class="sidebar-link sub" data-page="subcommands-block.html">— Block / Unban</a>
+  <a href="../it/subcommands-top.html" class="sidebar-link sub active" data-page="subcommands-top.html">— Top</a>
+  <a href="../it/reference/api.html" class="sidebar-link" data-page="api.html">API / Pacchetti</a>
+  <div class="sidebar-sep"></div>
+  <a href="../it/security.html" class="sidebar-link" data-page="security.html">Motore minacce</a>
+  <a href="../it/architecture.html" class="sidebar-link" data-page="architecture.html">Architettura</a>
+  <a href="../it/tui-html.html" class="sidebar-link" data-page="tui-html.html">Report TUI e HTML</a>
+  <a href="../it/contributing.html" class="sidebar-link" data-page="contributing.html">Contribuire</a>
+  <a href="../it/faq.html" class="sidebar-link" data-page="faq.html">FAQ</a>
+  <a href="../it/changelog.html" class="sidebar-link" data-page="changelog.html">Registro modifiche</a>
+</aside>
+
+  <main class="wrap" id="main">
+    <div class="doc-content">
+      <nav class="breadcrumb" aria-label="Breadcrumb"><a href="../it/reference/cli.html">Riferimento</a><span class="sep">/</span><span>top</span></nav>
+      <div class="page-meta"><a href="https://github.com/lenny-ts/caddy-analyzer/releases">v0.6.1</a> · aggiornata <time datetime="2026-08-31">2026-08-31</time> · <a href="https://github.com/lenny-ts/caddy-analyzer">GitHub</a></div>
+      <h1>top</h1>
+<p>Ispettore classificato. <span class="pill pill-readonly">sola lettura</span> — non modifica mai il sistema.</p>
+
+<h2 id="synopsis">Sintassi</h2>
+<pre><code>caddy-analyze top [dimension] [source...] [flags]
+caddy-analyze top -b &lt;dimension&gt; [source...]   # --by alias</code></pre>
+<p>La dimensione predefinita è <code>path</code> se omessa.</p>
+
+<h2 id="flags">Flag</h2>
+<div class="table-wrap"><table>
+<thead><tr><th>Flag</th><th>Breve</th><th>Predefinito</th><th>Descrizione</th></tr></thead>
+<tbody>
+<tr><td><code>--by</code></td><td><code>-b</code></td><td></td><td>Alias della dimensione per l'argomento posizionale</td></tr>
+<tr><td><code>--top</code></td><td><code>-t</code></td><td>10</td><td>Numero massimo di voci (anche <code>--top</code> globale)</td></tr>
+</tbody>
+</table></div>
+<p>Eredita tutti i flag globali (<code>--from</code>, <code>--country</code>, <code>--5xx</code>, <code>--format</code> ecc. — consulta <a href="reference/cli.html">Riferimento CLI</a>).</p>
+
+<h3>Dimensioni</h3>
+<div class="table-wrap"><table>
+<thead><tr><th>Dimensione</th><th>Richiede GeoIP</th><th>Descrizione</th></tr></thead>
+<tbody>
+<tr><td><code>path</code></td><td></td><td>Percorsi più richiesti</td></tr>
+<tr><td><code>ip</code></td><td></td><td>IP client principali</td></tr>
+<tr><td><code>ua</code></td><td></td><td>User agent principali</td></tr>
+<tr><td><code>status</code></td><td></td><td>Codici di stato principali</td></tr>
+<tr><td><code>method</code></td><td></td><td>Metodi HTTP principali</td></tr>
+<tr><td><code>host</code></td><td></td><td>Host principali</td></tr>
+<tr><td><code>bandwidth</code></td><td></td><td>Primi per dimensione della risposta</td></tr>
+<tr><td><code>country</code></td><td>sì</td><td>Paesi principali (nomi leggibili)</td></tr>
+<tr><td><code>asn</code></td><td>sì</td><td>ASN principali</td></tr>
+</tbody>
+</table></div>
+
+<h2 id="minimal">Esempio minimo</h2>
+<p><span class="pill pill-readonly">sola lettura</span></p>
+<pre><code>caddy-analyze top ip testdata/sample.log
+caddy-analyze top path -t 20 testdata/sample.log
+caddy-analyze top country testdata/sample.log</code></pre>
+
+<h2 id="advanced">Esempio avanzato</h2>
+<p><span class="pill pill-readonly">sola lettura</span> — filtrato, formattato, output su file.</p>
+<pre><code>caddy-analyze top path --5xx -t 20 -f csv -o top-5xx.csv testdata/sample.log
+caddy-analyze top ip --from 1h --country IT -t 15 -f json testdata/large.log | jq
+caddy-analyze top asn --no-bots --from 7d /var/log/caddy/access.log -f csv -o top-asn.csv</code></pre>
+      <footer class="footer">
+  <p>caddy-analyzer è open-source sotto licenza <a href="https://github.com/lenny-ts/caddy-analyzer/blob/main/LICENSE">MIT</a> · <a href="https://github.com/lenny-ts/caddy-analyzer">GitHub</a> · <a href="../it/changelog.html">Registro modifiche</a></p>
+</footer>
+<button class="back-to-top" aria-label="Back to top">↑</button>
+
+    </div>
+  </main>
+  <nav class="doc-toc" aria-label="In questa pagina"><div class="toc-label">In questa pagina</div><a href="#synopsis" class="toc-link">Sintassi</a><a href="#flags" class="toc-link">Flag</a><a href="#minimal" class="toc-link">Esempio minimo</a><a href="#advanced" class="toc-link">Esempio avanzato</a><a href="#dimensioni" class="toc-link h3">Dimensioni</a></nav>
+</div>
+<script src="../docs.min.js?v=36"></script>
+</body>
+</html>

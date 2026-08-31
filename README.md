@@ -246,7 +246,8 @@ Subcommands:
   config                       Manage default log source configuration
   block <ip...>                Manually block IP via iptables (--audit-log)
   unban <ip...>               Remove IP block from iptables (--all, --list, --audit-log)
-  whitelist                   Manage the never-block list (--add, --remove, --list, --init)
+   whitelist                   Manage the never-block list (--add, --remove, --list, --init)
+   update                      Download and install a verified release
 ```
 </details>
 

@@ -8,7 +8,7 @@
 <thead><tr><th>Limit</th><th>Why</th><th>What to do</th></tr></thead>
 <tbody>
 <tr><td>Pattern-based, not semantic</td><td>Looks for known payload substrings, does not execute code</td><td>Review grouped IPs — do not auto-block on low confidence</td></tr>
-<tr><td>Confidence filter</td><td>Default <code>--detect-confidence 8</code> in guard; some hits are 5–6</td><td>Raise to 9 for noisier apps, 0 to log-only</td></tr>
+<tr><td>Confidence filter</td><td>Default <code>--detect-confidence 8</code> in guard; some hits are 5–6</td><td>Raise to 9 for noisier apps; 0 disables only pattern-based blocks, not guard itself</td></tr>
 <tr><td>Legitimate paths can look malicious</td><td><code>?url=https://…</code>, <code>?code={{var}}</code>, <code>__proto__</code> in docs</td><td>Use <code>--never-block</code> / <code>whitelist</code> and check <code>-f html</code> before blocking</td></tr>
 <tr><td>Behavioral heuristics need state</td><td><code>ua_rotation</code>, <code>object_enumeration</code>, <code>beaconing</code> need ≥10 samples per IP/path</td><td>Run on ≥1h of traffic; single-request logs will not fire them</td></tr>
 <tr><td>Not a WAF</td><td>Offline/log-time detection, not inline request blocking</td><td>Use <code>guard</code> to block after detection; do not expect pre-request deny</td></tr>

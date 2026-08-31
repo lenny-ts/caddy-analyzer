@@ -11,7 +11,7 @@
 <pre><code>caddy-analyze --version
 which caddy-analyze
 # expected: /usr/local/bin/caddy-analyze  and  v0.6.1</code></pre>
-<p>If <code>/usr/local/bin</code> is not writable, the script uses <code>sudo mv</code>. Alternative: <code>DEST_DIR=$HOME/.local/bin bash install.sh</code>.</p>
+<p>If <code>/usr/local/bin</code> is not writable, the script uses <code>sudo mv</code>. The installer currently installs to <code>/usr/local/bin</code>; use the release archive or <code>go install</code> when you need a user-local location.</p>
 
 <h2 id="windows">Windows — install.ps1</h2>
 <pre><code>iwr -useb https://raw.githubusercontent.com/lenny-ts/caddy-analyzer/main/install.ps1 | iex</code></pre>

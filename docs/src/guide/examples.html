@@ -8,7 +8,7 @@ caddy-analyze top path --5xx -t 20 testdata/sample.log
 # only errors from last hour, host-filtered
 caddy-analyze --5xx --from 1h --host api.example.com testdata/sample.log
 # compare before/after
-caddy-analyze diff /var/log/caddy/before.log /var/log/caddy/after.log -f html -o diff.html</code></pre>
+caddy-analyze diff /var/log/caddy/before.log /var/log/caddy/after.log -f csv -o diff.csv</code></pre>
 
 <h2 id="hunt-bots">Hunt bots &amp; scanners</h2>
 <pre><code>caddy-analyze --bots-only -t 20 testdata/sample.log
