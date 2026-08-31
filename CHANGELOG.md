@@ -4,10 +4,14 @@ All notable changes to `caddy-analyzer` will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
-## [Unreleased]
+## [0.6.5] - 2026-09-01
 
 ### Fixed
 - **Cosign platform checksum selection**: select the exact downloaded cosign asset instead of the first `cosign` entry in the multi-platform checksum manifest.
+
+## [0.6.4] - 2026-08-31
+
+### Fixed
 - **`update --version` release lookup**: preserve the `v` prefix when querying GitHub for a pinned release tag.
 
 ### Added
