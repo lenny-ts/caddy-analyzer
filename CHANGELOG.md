@@ -7,6 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Fixed
+- **Cosign platform checksum selection**: select the exact downloaded cosign asset instead of the first `cosign` entry in the multi-platform checksum manifest.
 - **`update --version` release lookup**: preserve the `v` prefix when querying GitHub for a pinned release tag.
 
 ### Added

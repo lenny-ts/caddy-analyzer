@@ -130,7 +130,9 @@ func downloadCosign(ctx context.Context, client *http.Client, tag, dir string) (
 	}
 
 	// Download binary.
-	binPath := filepath.Join(dir, cosignBinary+ext)
+	// Keep the release asset name so checksum verification selects the
+	// checksum for the current platform instead of the first cosign entry.
+	binPath := filepath.Join(dir, binName)
 	if err := downloadFile(ctx, client, binURL, binPath); err != nil {
 		return "", "", fmt.Errorf("download cosign: %w", err)
 	}
@@ -201,7 +203,7 @@ func verifyCosignChecksum(binPath, checksumPath string) error {
 		}
 		expected := line[0]
 		name := filepath.Base(line[1])
-		if name == filepath.Base(binPath) || strings.HasPrefix(name, "cosign") {
+		if name == filepath.Base(binPath) {
 			if got == expected {
 				return nil
 			}
