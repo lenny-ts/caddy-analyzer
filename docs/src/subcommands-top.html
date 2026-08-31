@@ -1,0 +1,46 @@
+<!-- fm: title=top — caddy-analyzer | description=Ranked inspector: 9 dimensions including country/asn with GeoIP. | breadcrumb=Reference > top -->
+<h1>top</h1>
+<p>Ranked inspector. <span class="pill pill-readonly">read-only</span> — never modifies the system.</p>
+
+<h2 id="synopsis">Synopsis</h2>
+<pre><code>caddy-analyze top [dimension] [source...] [flags]
+caddy-analyze top -b &lt;dimension&gt; [source...]   # --by alias</code></pre>
+<p>Dimension defaults to <code>path</code> if omitted.</p>
+
+<h2 id="flags">Flags</h2>
+<div class="table-wrap"><table>
+<thead><tr><th>Flag</th><th>Short</th><th>Default</th><th>Description</th></tr></thead>
+<tbody>
+<tr><td><code>--by</code></td><td><code>-b</code></td><td></td><td>Dimension alias for positional arg</td></tr>
+<tr><td><code>--top</code></td><td><code>-t</code></td><td>10</td><td>Max entries (also global <code>--top</code>)</td></tr>
+</tbody>
+</table></div>
+<p>Inherits all global flags (<code>--from</code>, <code>--country</code>, <code>--5xx</code>, <code>--format</code>, etc. — see <a href="reference/cli.html">CLI Reference</a>).</p>
+
+<h3>Dimensions</h3>
+<div class="table-wrap"><table>
+<thead><tr><th>Dimension</th><th>Needs GeoIP</th><th>Description</th></tr></thead>
+<tbody>
+<tr><td><code>path</code></td><td></td><td>Top requested paths</td></tr>
+<tr><td><code>ip</code></td><td></td><td>Top client IPs</td></tr>
+<tr><td><code>ua</code></td><td></td><td>Top user agents</td></tr>
+<tr><td><code>status</code></td><td></td><td>Top status codes</td></tr>
+<tr><td><code>method</code></td><td></td><td>Top HTTP methods</td></tr>
+<tr><td><code>host</code></td><td></td><td>Top hosts</td></tr>
+<tr><td><code>bandwidth</code></td><td></td><td>Top by response size</td></tr>
+<tr><td><code>country</code></td><td>yes</td><td>Top countries (human-readable names)</td></tr>
+<tr><td><code>asn</code></td><td>yes</td><td>Top ASNs</td></tr>
+</tbody>
+</table></div>
+
+<h2 id="minimal">Minimal example</h2>
+<p><span class="pill pill-readonly">read-only</span></p>
+<pre><code>caddy-analyze top ip testdata/sample.log
+caddy-analyze top path -t 20 testdata/sample.log
+caddy-analyze top country testdata/sample.log</code></pre>
+
+<h2 id="advanced">Advanced example</h2>
+<p><span class="pill pill-readonly">read-only</span> — filtered, formatted, file output.</p>
+<pre><code>caddy-analyze top path --5xx -t 20 -f csv -o top-5xx.csv testdata/sample.log
+caddy-analyze top ip --from 1h --country IT -t 15 -f json testdata/large.log | jq
+caddy-analyze top asn --no-bots --from 7d /var/log/caddy/access.log -f html -o top-asn.html</code></pre>

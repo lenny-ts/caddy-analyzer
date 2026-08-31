@@ -1,26 +1,17 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
-    <defs>
-        <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0%" stop-color="#0a0a0c"/>
-            <stop offset="50%" stop-color="#131316"/>
-            <stop offset="100%" stop-color="#1b1b21"/>
-        </linearGradient>
-        <linearGradient id="grad" x1="0" y1="0" x2="1" y2="0">
-            <stop offset="0%" stop-color="#48d1cc"/>
-            <stop offset="50%" stop-color="#38bdf8"/>
-            <stop offset="100%" stop-color="#a78bfa"/>
-        </linearGradient>
-        <radialGradient id="glow" cx="50%" cy="50%" r="50%">
-            <stop offset="0%" stop-color="#48d1cc" stop-opacity="0.3"/>
-            <stop offset="100%" stop-color="#48d1cc" stop-opacity="0"/>
-        </radialGradient>
-    </defs>
-    <rect width="512" height="512" rx="96" fill="url(#bg)"/>
-    <circle cx="256" cy="256" r="200" fill="url(#glow)"/>
-    <g transform="translate(256,256)">
-        <path d="M0,-130 L37,-37 L130,0 L37,37 L0,130 L-37,37 L-130,0 L-37,-37 Z"
-              fill="none" stroke="url(#grad)" stroke-width="8" stroke-linejoin="round"/>
-        <circle r="34" fill="url(#grad)" opacity="0.9"/>
-        <circle r="15" fill="#0a0a0c"/>
-    </g>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" fill="none">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="128" y2="128" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#3b82f6"/>
+      <stop offset="100%" stop-color="#1d4ed8"/>
+    </linearGradient>
+  </defs>
+  <!-- Shield -->
+  <path d="M64 8L16 28v36c0 28.8 20.4 55.8 48 64 27.6-8.2 48-35.2 48-64V28L64 8z" fill="url(#g)"/>
+  <!-- Bar chart inside shield -->
+  <rect x="38" y="72" width="10" height="20" rx="2" fill="#fff" opacity="0.9"/>
+  <rect x="52" y="58" width="10" height="34" rx="2" fill="#fff" opacity="0.9"/>
+  <rect x="66" y="48" width="10" height="44" rx="2" fill="#fff" opacity="0.9"/>
+  <rect x="80" y="62" width="10" height="30" rx="2" fill="#fff" opacity="0.9"/>
+  <!-- Scan line -->
+  <line x1="34" y1="42" x2="94" y2="42" stroke="#fff" stroke-width="2.5" opacity="0.5" stroke-dasharray="4 3"/>
 </svg>

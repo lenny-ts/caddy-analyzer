@@ -3,13 +3,13 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>404 — Page not found</title>
-  <meta name="description" content="The page you were looking for could not be found.">
+  <title>Quickstart — caddy-analyzer</title>
+  <meta name="description" content="Install → first command → first report in 60 seconds. Copy-paste steps.">
   <meta name="theme-color" content="#09090B">
   <link rel="icon" href="icon.svg">
-  <link rel="canonical" href="https://lenny-ts.github.io/caddy-analyzer/404.html">
-  <link rel="alternate" hreflang="x-default" href="https://lenny-ts.github.io/caddy-analyzer/404.html">
-  <link rel="alternate" hreflang="en" href="https://lenny-ts.github.io/caddy-analyzer/404.html">
+  <link rel="canonical" href="https://lenny-ts.github.io/caddy-analyzer/quickstart.html">
+  <link rel="alternate" hreflang="x-default" href="https://lenny-ts.github.io/caddy-analyzer/quickstart.html">
+  <link rel="alternate" hreflang="en" href="https://lenny-ts.github.io/caddy-analyzer/quickstart.html">
   <script>try{var t=localStorage.getItem('caddy-docs-theme');if(t==='light')document.documentElement.setAttribute('data-theme','light');}catch(e){}</script>
   <meta name="color-scheme" content="dark light">
   <link rel="stylesheet" href="styles.min.css?v=36">
@@ -39,7 +39,7 @@
   <aside class="doc-sidebar" aria-label="Page navigation">
   <div class="sidebar-label">Documentation</div>
   <a href="index.html" class="sidebar-link" data-page="index.html">Overview</a>
-  <a href="quickstart.html" class="sidebar-link" data-page="quickstart.html">Quickstart</a>
+  <a href="quickstart.html" class="sidebar-link active" data-page="quickstart.html">Quickstart</a>
   <a href="installation.html" class="sidebar-link" data-page="installation.html">Installation</a>
   <a href="sources.html" class="sidebar-link" data-page="sources.html">Log Sources</a>
   <div class="sidebar-sep"></div>
@@ -69,14 +69,79 @@
 
   <main class="wrap" id="main">
     <div class="doc-content">
-      <nav class="breadcrumb" aria-label="Breadcrumb"><span>404</span></nav>
+      <nav class="breadcrumb" aria-label="Breadcrumb"><a href="index.html">Overview</a><span class="sep">/</span><span>Quickstart</span></nav>
       <div class="page-meta"><a href="https://github.com/lenny-ts/caddy-analyzer/releases">v0.6.1</a> · updated <time datetime="2026-08-31">2026-08-31</time> · <a href="https://github.com/lenny-ts/caddy-analyzer">GitHub</a></div>
-      <div style="text-align:center;padding:48px 0;">
-  <div style="font-size:4rem;font-weight:700;color:var(--accent);line-height:1;">404</div>
-  <p style="margin-top:12px;">Page not found.</p>
-  <p>The page you were looking for does not exist or has been moved.</p>
-  <a href="index.html" class="btn btn-primary" style="margin-top:16px;">Back to docs</a>
+      <h1>Quickstart</h1>
+<p class="subtitle" style="color:var(--text-sec);margin-top:-6px;">Install → first command → first report. Every block is copy-paste.</p>
+
+<h2 id="1-install">1 · Install</h2>
+<p>Pick your OS. No extra dependencies.</p>
+
+<div class="tabs" data-tabs="install">
+  <div class="tab-list" role="tablist">
+    <button class="tab-btn active" data-tab="linux" role="tab" aria-selected="true">Linux / macOS</button>
+    <button class="tab-btn" data-tab="windows" role="tab">Windows</button>
+    <button class="tab-btn" data-tab="go" role="tab">Go</button>
+    <button class="tab-btn" data-tab="docker" role="tab">Docker</button>
+  </div>
+  <div class="tab-panel active" data-panel="linux">
+<pre><code>curl -sSfL https://raw.githubusercontent.com/lenny-ts/caddy-analyzer/main/install.sh | bash
+# verify
+caddy-analyze --version
+# expected: caddy-analyze v0.6.1 (or newer)</code></pre>
+  </div>
+  <div class="tab-panel" data-panel="windows">
+<pre><code>iwr -useb https://raw.githubusercontent.com/lenny-ts/caddy-analyzer/main/install.ps1 | iex
+# verify (new PowerShell)
+caddy-analyze --version</code></pre>
+  </div>
+  <div class="tab-panel" data-panel="go">
+<pre><code>go install github.com/lenny-ts/caddy-analyzer/cmd/caddy-analyze@latest
+# verify (ensure $GOPATH/bin or $HOME/go/bin is in PATH)
+caddy-analyze --version</code></pre>
+  </div>
+  <div class="tab-panel" data-panel="docker">
+<pre><code>docker pull ghcr.io/lenny-ts/caddy-analyzer:latest
+# verify
+docker run --rm ghcr.io/lenny-ts/caddy-analyzer --version</code></pre>
+  </div>
 </div>
+<div class="callout callout-info"><div class="callout-label">No implicit step</div>All commands use the public release URL. If <code>curl</code> fails, check <a href="installation.html">Installation → troubleshooting</a>.</div>
+
+<h2 id="2-first-log">2 · Get a log file</h2>
+<p>No Caddy server yet? Use the repo's fixtures — real Caddy JSON, RFC 5737 TEST-NET IPs, no real hosts.</p>
+<pre><code>git clone https://github.com/lenny-ts/caddy-analyzer.git && cd caddy-analyzer
+ls testdata/sample.log testdata/large.log
+# 68 lines curated (one per category) · 50K lines realistic (95% benign)</code></pre>
+<p>If you already have Caddy: <code>/var/log/caddy/access.log</code> or <code>docker://caddy</code> — jump to <a href="sources.html">Log Sources</a>.</p>
+
+<h2 id="3-first-command">3 · First command — report without detection</h2>
+<pre><code>caddy-analyze testdata/sample.log</code></pre>
+<p>Expected: table with <code>Period</code>, <code>RPS</code>, status bars, <code>Top IPs/Paths</code>. Exit code 0. If you see <code>permission denied</code>, run with <code>sudo</code> (see <a href="sources.html#permissions">Sources → permissions</a>).</p>
+
+<h2 id="4-first-detect">4 · First detection</h2>
+<pre><code>caddy-analyze --detect testdata/sample.log</code></pre>
+<p>Expected: same report + <code>Suspicious</code> section grouped by IP:</p>
+<pre><code>Suspicious (26-category detect)
+  198.51.100.7  4 malicious
+    [sql_injection] GET /search?id=1' OR '1'='1
+    [xss] GET /q=&lt;script&gt;alert(1)&lt;/script&gt;
+    ...</code></pre>
+
+<h2 id="5-first-report">5 · First HTML report</h2>
+<pre><code>caddy-analyze --detect -f html -o report.html testdata/sample.log
+# open report.html in your browser (single file, no server)
+xdg-open report.html  # Linux
+open report.html      # macOS
+start report.html     # Windows</code></pre>
+<p>Expected: dark standalone HTML with the same stats + suspicious details. Shareable — no external assets.</p>
+
+<h2 id="next">Next</h2>
+<ul>
+  <li>All sources: <a href="sources.html">Log Sources</a> — file, stdin, docker://, k8s://, journalctl://</li>
+  <li>All flags &amp; subcommands: <a href="reference/cli.html">CLI Reference</a></li>
+  <li>What the 26 categories cover: <a href="reference/security-categories.html">Threat categories</a></li>
+</ul>
       <footer class="footer">
   <p>caddy-analyzer is open-source under <a href="https://github.com/lenny-ts/caddy-analyzer/blob/main/LICENSE">MIT</a> · <a href="https://github.com/lenny-ts/caddy-analyzer">GitHub</a> · <a href="changelog.html">Changelog</a></p>
 </footer>
@@ -84,7 +149,7 @@
 
     </div>
   </main>
-  
+  <nav class="doc-toc" aria-label="On this page"><div class="toc-label">On this page</div><a href="#1-install" class="toc-link">1 · Install</a><a href="#2-first-log" class="toc-link">2 · Get a log file</a><a href="#3-first-command" class="toc-link">3 · First command — report without detection</a><a href="#4-first-detect" class="toc-link">4 · First detection</a><a href="#5-first-report" class="toc-link">5 · First HTML report</a><a href="#next" class="toc-link">Next</a></nav>
 </div>
 <script src="docs.min.js?v=36"></script>
 </body>

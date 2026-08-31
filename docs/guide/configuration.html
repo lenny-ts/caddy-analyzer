@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Configuration — caddy-analyzer</title>
+  <meta name="description" content="Configure caddy-analyzer.json, tuning, env vars and XDG paths.">
+  <meta name="theme-color" content="#09090B">
+  <link rel="icon" href="../icon.svg">
+  <link rel="canonical" href="https://lenny-ts.github.io/caddy-analyzer/guide/configuration.html">
+  <link rel="alternate" hreflang="x-default" href="https://lenny-ts.github.io/caddy-analyzer/guide/configuration.html">
+  <link rel="alternate" hreflang="en" href="https://lenny-ts.github.io/caddy-analyzer/guide/configuration.html">
+  <script>try{var t=localStorage.getItem('caddy-docs-theme');if(t==='light')document.documentElement.setAttribute('data-theme','light');}catch(e){}</script>
+  <meta name="color-scheme" content="dark light">
+  <link rel="stylesheet" href="../styles.min.css?v=36">
+</head>
+<body>
+<header class="site-header">
+  <a href="../index.html" class="logo">
+    <svg width="22" height="22" viewBox="0 0 128 128" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><defs><linearGradient id="g" x1="0" y1="0" x2="128" y2="128" gradientUnits="userSpaceOnUse"><stop offset="0%" stop-color="#3b82f6"/><stop offset="100%" stop-color="#1d4ed8"/></linearGradient></defs><path d="M64 8L16 28v36c0 28.8 20.4 55.8 48 64 27.6-8.2 48-35.2 48-64V28L64 8z" fill="url(#g)"/><rect x="38" y="72" width="10" height="20" rx="2" fill="#fff" opacity=".9"/><rect x="52" y="58" width="10" height="34" rx="2" fill="#fff" opacity=".9"/><rect x="66" y="48" width="10" height="44" rx="2" fill="#fff" opacity=".9"/><rect x="80" y="62" width="10" height="30" rx="2" fill="#fff" opacity=".9"/><line x1="34" y1="42" x2="94" y2="42" stroke="#fff" stroke-width="2.5" opacity=".5" stroke-dasharray="4 3"/></svg>
+    caddy-analyzer
+  </a>
+  <nav aria-label="Primary">
+    <a href="../installation.html" data-nav="installation.html">Install</a>
+    <a href="../sources.html" data-nav="sources.html">Sources</a>
+    <a href="../reference/cli.html" data-nav="cli.html">CLI</a>
+    <a href="../security.html" data-nav="security.html">Security</a>
+    <a href="../tui-html.html" data-nav="tui-html.html">TUI</a>
+  </nav>
+  <div class="header-actions">
+    <a href="https://github.com/lenny-ts/caddy-analyzer" style="color:var(--text-sec);font-size:0.85rem;" rel="noopener">GitHub</a>
+    <span style="font-size:0.80rem;color:var(--text);font-weight:600;">EN</span><span style="color:var(--border)">|</span><span style="font-size:0.80rem;color:var(--text-muted);" title="Italian version coming soon">IT</span>
+    <button class="theme-toggle" aria-label="Toggle theme"></button>
+  </div>
+</header>
+<div class="scroll-progress" aria-hidden="true"></div>
+
+<div class="docs-layout">
+  <aside class="doc-sidebar" aria-label="Page navigation">
+  <div class="sidebar-label">Documentation</div>
+  <a href="../index.html" class="sidebar-link" data-page="index.html">Overview</a>
+  <a href="../quickstart.html" class="sidebar-link" data-page="quickstart.html">Quickstart</a>
+  <a href="../installation.html" class="sidebar-link" data-page="installation.html">Installation</a>
+  <a href="../sources.html" class="sidebar-link" data-page="sources.html">Log Sources</a>
+  <div class="sidebar-sep"></div>
+  <div class="sidebar-label">Guide</div>
+  <a href="../guide/configuration.html" class="sidebar-link active" data-page="configuration.html">Configuration</a>
+  <a href="../guide/usage.html" class="sidebar-link" data-page="usage.html">Usage</a>
+  <a href="../guide/examples.html" class="sidebar-link" data-page="examples.html">Examples</a>
+  <a href="../guide/troubleshooting.html" class="sidebar-link" data-page="troubleshooting.html">Troubleshooting</a>
+  <div class="sidebar-sep"></div>
+  <div class="sidebar-label">Reference</div>
+  <a href="../reference/cli.html" class="sidebar-link" data-page="cli.html">CLI Reference</a>
+  <a href="../reference/security-categories.html" class="sidebar-link sub" data-page="security-categories.html">— Categories</a>
+  <a href="../reference/security-detection.html" class="sidebar-link sub" data-page="security-detection.html">— Detection</a>
+  <a href="../subcommands-guard.html" class="sidebar-link sub" data-page="subcommands-guard.html">— Guard</a>
+  <a href="../subcommands-blocklist.html" class="sidebar-link sub" data-page="subcommands-blocklist.html">— Blocklist</a>
+  <a href="../subcommands-block.html" class="sidebar-link sub" data-page="subcommands-block.html">— Block / Unban</a>
+  <a href="../subcommands-top.html" class="sidebar-link sub" data-page="subcommands-top.html">— Top</a>
+  <a href="../reference/api.html" class="sidebar-link" data-page="api.html">API / Packages</a>
+  <div class="sidebar-sep"></div>
+  <a href="../security.html" class="sidebar-link" data-page="security.html">Threat Engine</a>
+  <a href="../architecture.html" class="sidebar-link" data-page="architecture.html">Architecture</a>
+  <a href="../tui-html.html" class="sidebar-link" data-page="tui-html.html">TUI &amp; HTML Reports</a>
+  <a href="../contributing.html" class="sidebar-link" data-page="contributing.html">Contributing</a>
+  <a href="../faq.html" class="sidebar-link" data-page="faq.html">FAQ</a>
+  <a href="../changelog.html" class="sidebar-link" data-page="changelog.html">Changelog</a>
+</aside>
+
+  <main class="wrap" id="main">
+    <div class="doc-content">
+      <nav class="breadcrumb" aria-label="Breadcrumb"><a href="../guide/configuration.html">Guide</a><span class="sep">/</span><span>Configuration</span></nav>
+      <div class="page-meta"><a href="https://github.com/lenny-ts/caddy-analyzer/releases">v0.6.1</a> · updated <time datetime="2026-08-31">2026-08-31</time> · <a href="https://github.com/lenny-ts/caddy-analyzer">GitHub</a></div>
+      <h1>Configuration</h1>
+<p>How the tool itself is configured. For how to <em>connect</em> to each log source, see <a href="../sources.html">Log Sources</a>.</p>
+
+<h2 id="config-file">Config file — where it lives</h2>
+<p>Two locations, first hit wins:</p>
+<div class="table-wrap"><table>
+<thead><tr><th>Path</th><th>Scope</th></tr></thead>
+<tbody>
+<tr><td><code>./caddy-analyzer.json</code></td><td>Local (project)</td></tr>
+<tr><td><code>~/.config/caddy-analyzer/config.json</code></td><td>Global (XDG)</td></tr>
+</tbody>
+</table></div>
+<p><code>~/.config</code> follows <code>XDG_CONFIG_HOME</code> if set, else <code>os.UserConfigDir()</code>. Dirs are created <code>0750</code>, files <code>0600</code>.</p>
+
+<h2 id="schema">Schema</h2>
+<pre><code>{
+  "source": "docker://caddy",
+  "namespace": "production",
+  "blocklist": {
+    "no_defaults": false,
+    "custom_sources": [{ "name": "My List", "url": "https://example.com/list.txt" }],
+    "remove_sources": ["tor-exit-nodes"]
+  },
+  "tuning": {
+    "geo_cache_ttl": "24h",
+    "geo_cache_size": 50000,
+    "iptables_timeout": "10s"
+  }
+}</code></pre>
+
+<h2 id="manage">Manage it</h2>
+<pre><code>caddy-analyze config                    # show active file + source
+caddy-analyze config /var/log/caddy/access.log          # set local
+caddy-analyze config docker://caddy --global            # set global
+caddy-analyze config k8s://caddy-xxx -n production     # with namespace
+caddy-analyze config reset              # remove local
+caddy-analyze config reset --global     # remove global
+caddy-analyze blocklist init            # persist blocklist flags to config
+caddy-analyze whitelist --init          # persist never-block to /etc/caddy-analyzer/whitelist.txt</code></pre>
+<p><code>blocklist init</code> writes current <code>--no-default-blocklists / --blocklist-config / --blocklist-remove</code> into the same file so <code>guard</code> picks them up without CLI flags.</p>
+
+<h2 id="tuning">Tuning — precedence</h2>
+<p>Config file values are defaults; CLI flags override when explicitly set. The three tunables:</p>
+<div class="table-wrap"><table>
+<thead><tr><th>Key</th><th>Config field</th><th>CLI flag</th><th>Default</th></tr></thead>
+<tbody>
+<tr><td>GeoIP cache TTL</td><td><code>tuning.geo_cache_ttl</code></td><td><code>--geo-cache-ttl 24h</code></td><td>24h (0 = off, slow)</td></tr>
+<tr><td>GeoIP cache size</td><td><code>tuning.geo_cache_size</code></td><td><code>--geo-cache-size 50000</code></td><td>50000</td></tr>
+<tr><td>iptables timeout</td><td><code>tuning.iptables_timeout</code></td><td><code>--iptables-timeout 10s</code></td><td>10s</td></tr>
+</tbody>
+</table></div>
+<pre><code># example: keep GeoIP results longer on a busy host
+caddy-analyze --geo-cache-ttl 48h --geo-cache-size 100000 /var/log/caddy/access.log</code></pre>
+
+<h2 id="env">Environment &amp; XDG</h2>
+<div class="table-wrap"><table>
+<thead><tr><th>Variable</th><th>Affects</th></tr></thead>
+<tbody>
+<tr><td><code>XDG_CONFIG_HOME</code></td><td>Global config dir (<code>~/.config/caddy-analyzer</code>)</td></tr>
+<tr><td><code>HOME</code></td><td>Fallback for config/cache</td></tr>
+<tr><td><code>https_proxy / http_proxy</code></td><td>Blocklist fetches and GeoIP auto-download</td></tr>
+</tbody>
+</table></div>
+
+<h2 id="caches">Caches &amp; state (not config)</h2>
+<div class="table-wrap"><table>
+<thead><tr><th>Path</th><th>What</th></tr></thead>
+<tbody>
+<tr><td><code>~/.cache/caddy-analyzer/blocklists/</code></td><td>Blocklist CIDRs (7d TTL)</td></tr>
+<tr><td><code>~/.config/caddy-analyzer/GeoLite2-*.mmdb</code></td><td>GeoIP (auto-download from P3TERX mirror)</td></tr>
+<tr><td><code>/var/lib/caddy-analyzer/blocked.json</code></td><td>Guard blocked IPs (survives restart)</td></tr>
+<tr><td><code>/var/log/caddy-analyzer-audit.jsonl</code></td><td>Audit log (0600, JSON lines)</td></tr>
+<tr><td><code>/etc/caddy-analyzer/whitelist.txt</code></td><td>Never-block list (CIDRs, # comments)</td></tr>
+</tbody>
+</table></div>
+<p>Override with flags: <code>--cache-dir</code>, <code>--geoip-db</code>, <code>--state-file</code>, <code>--audit-log</code>, <code>--never-block-file</code>.</p>
+
+<h2 id="precedence">Resolution order (no source arg)</h2>
+<ol>
+  <li><code>./caddy-analyzer.json</code> → <code>~/.config/…/config.json</code></li>
+  <li>Stdin pipe if data is piped</li>
+  <li>5 candidates: <code>./access.log</code>, <code>./caddy.log</code>, <code>./caddy-access.log</code>, <code>/var/log/caddy/access.log</code>, <code>/var/log/caddy/caddy.log</code></li>
+</ol>
+      <footer class="footer">
+  <p>caddy-analyzer is open-source under <a href="https://github.com/lenny-ts/caddy-analyzer/blob/main/LICENSE">MIT</a> · <a href="https://github.com/lenny-ts/caddy-analyzer">GitHub</a> · <a href="../changelog.html">Changelog</a></p>
+</footer>
+<button class="back-to-top" aria-label="Back to top">↑</button>
+
+    </div>
+  </main>
+  <nav class="doc-toc" aria-label="On this page"><div class="toc-label">On this page</div><a href="#config-file" class="toc-link">Config file — where it lives</a><a href="#schema" class="toc-link">Schema</a><a href="#manage" class="toc-link">Manage it</a><a href="#tuning" class="toc-link">Tuning — precedence</a><a href="#env" class="toc-link">Environment &amp;amp; XDG</a><a href="#caches" class="toc-link">Caches &amp;amp; state (not config)</a><a href="#precedence" class="toc-link">Resolution order (no source arg)</a></nav>
+</div>
+<script src="../docs.min.js?v=36"></script>
+</body>
+</html>

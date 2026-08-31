@@ -1,0 +1,30 @@
+<!-- fm: title=FAQ — caddy-analyzer | description=Common questions from issues and docs ambiguities — not filler. | breadcrumb=Overview > FAQ -->
+<h1>FAQ</h1>
+<p>From GitHub issues, PR discussions and questions that came up while writing the docs. Fewer good questions beat a round number of filler.</p>
+
+<h2 id="watch-vs-follow">What is the difference between <code>--watch</code>, <code>--follow</code> and <code>tail</code>?</h2>
+<p><code>--watch</code> is the 8-tab TUI dashboard (bubbles, alt-screen, <code>q</code> to quit). <code>--follow</code> is root-level streaming to stdout (like <code>tail -f</code>). <code>tail</code> is a subcommand that streams colorized log lines; <code>tail --detect</code> adds inline severity highlight. Use <code>--watch</code> to explore, <code>--follow</code> or <code>tail</code> to pipe/filter.</p>
+
+<h2 id="ip-filter-zero">Why does <code>--ip 10.0.0.1</code> return 0 results when the log clearly has that IP?</h2>
+<p>The filter matches <code>EffectiveClientIP</code>: last public <code>X-Forwarded-For</code> hop if <code>--trust-forwarded</code> is set, else <code>RemoteIP</code>. If Caddy is behind a CDN/proxy without <code>--trust-forwarded</code>, you are filtering the proxy IP, not the client. Also check CIDR vs single IP and whether GeoIP enrichment ran first (needed for <code>--country</code>/<code>--asn</code> but not for <code>--ip</code>).</p>
+
+<h2 id="country-zero">Why does <code>--country IT</code> return 0?</h2>
+<p>Requires a GeoIP mmdb. Auto-download fetches to <code>~/.config/caddy-analyzer/GeoLite2-*.mmdb</code> on first run; behind a proxy or with <code>--no-auto-download</code> it fails silently and all lookups are <code>unknown</code>. Check <code>ls ~/.config/caddy-analyzer/*.mmdb</code> and pass <code>--geoip-db /path.mmdb</code>. Private IPs (10/192.168/127) are always <code>unknown</code> and are dropped by allowlists, kept by denylists.</p>
+
+<h2 id="guard-not-blocking">Guard is running but not blocking — why?</h2>
+<p>Common: Caddy runs in Docker and guard uses <code>iptables</code> (INPUT) while traffic hits <code>DOCKER-USER</code>. Use <code>--firewall-backend hybrid</code> or <code>auto</code> (detects Docker). Check <code>--detect-confidence 8</code> — low-confidence hits are not blocked. Check <code>--never-block</code> — your IP may be allowlisted. See <a href="subcommands-guard.html">guard</a> and <a href="guide/troubleshooting.html#iptables">Troubleshooting → iptables</a>.</p>
+
+<h2 id="docker-no-logs">Why does <code>docker://caddy</code> show no logs?</h2>
+<p>Two fixes from <a href="changelog.html">0.5.1</a>: Caddy writes access logs to stderr, and the reader now merges stdout+stderr. If still empty: check <code>docker ps | grep caddy</code> for the name, and <code>docker logs caddy --tail 5</code> for raw output. Also check <code>docker.sock</code> permissions (<code>sudo usermod -aG docker $USER</code>).</p>
+
+<h2 id="detect-vs-guard">Does <code>--detect</code> block IPs?</h2>
+<p>No. <code>--detect</code> only reports (table/json/html, grouped by IP with confidence and MITRE tags). Only <code>guard</code> (and manual <code>block</code>) modify firewall rules. Use <code>--detect -f html</code> to review before enabling guard.</p>
+
+<h2 id="large-log-memory">Will a 1M-line log OOM?</h2>
+<p>No — counters are capped (<code>--max-cardinality 100k</code> per key, GeoIP LRU 50k, histogram 1k buckets). 1M lines ~138 MB and ~7K lines/sec with <code>--detect</code> (~70K parse-only). See <a href="architecture.html#memory">Architecture → memory bounds</a>.</p>
+
+<h2 id="update-cosign">Why does <code>update</code> require cosign?</h2>
+<p><code>update</code> is fail-closed: it verifies the cosign keyless signature on <code>checksums.txt</code> plus SHA256 of the archive. If <code>cosign</code> is missing it is auto-downloaded (0.6.1); any verification failure aborts with nothing installed. See <a href="installation.html#update">Installation → Update</a>.</p>
+
+<h2 id="country-block-fail">Why does <code>--country-block CN</code> error on start?</h2>
+<p>It fails fast if no mmdb is discoverable and auto-download is off (<code>--no-auto-download</code> or no network). Fix: allow auto-download or pass <code>--geoip-db</code>. Same for <code>top country/asn</code>.</p>

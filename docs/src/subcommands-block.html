@@ -1,0 +1,46 @@
+<!-- fm: title=block / unban — caddy-analyzer | description=Manual firewall: block and unban IPs. Modifies iptables/nftables. | breadcrumb=Reference > block / unban -->
+<h1>block / unban</h1>
+<p>Manual firewall. <span class="pill pill-danger">modifies firewall</span> — adds/removes <code>iptables</code>/<code>nftables</code> rules. Syncs with guard state and audit log.</p>
+
+<div class="callout callout-danger"><div class="callout-label">Requires root</div>Both need <code>sudo</code>. Use <code>--list</code> first to audit before changing state.</div>
+
+<h2 id="synopsis">Synopsis</h2>
+<pre><code>caddy-analyze block &lt;ip...&gt; [flags]
+caddy-analyze unban &lt;ip...&gt; [flags]
+caddy-analyze unban --all
+caddy-analyze unban --list        # audit — read-only</code></pre>
+
+<h2 id="flags">Flags</h2>
+<div class="table-wrap"><table>
+<thead><tr><th>Flag</th><th>Short</th><th>Default</th><th>Description</th></tr></thead>
+<tbody>
+<tr><td><code>--audit-log</code></td><td></td><td><code>/var/log/caddy-analyzer-audit.jsonl</code></td><td>Audit log path (empty disables)</td></tr>
+<tr><td><code>--state-file</code></td><td></td><td><code>/var/lib/caddy-analyzer/blocked.json</code></td><td>Guard state sync (empty disables)</td></tr>
+<tr><td><code>--all</code></td><td><code>-A</code></td><td>false</td><td>unban: all currently blocked IPs</td></tr>
+<tr><td><code>--list</code></td><td><code>-l</code></td><td>false</td><td>unban: list without removing (<span class="pill pill-readonly">read-only</span>)</td></tr>
+</tbody>
+</table></div>
+
+<h2 id="minimal">Minimal example</h2>
+<p><span class="pill pill-readonly">read-only</span> first, then <span class="pill pill-danger">modifies firewall</span>:</p>
+<pre><code># audit — who is blocked?
+sudo caddy-analyze unban --list
+# block one IP (idempotent — no duplicate rule if already blocked)
+sudo caddy-analyze block 203.0.113.5
+# unban it
+sudo caddy-analyze unban 203.0.113.5
+# check audit
+cat /var/log/caddy-analyzer-audit.jsonl | tail</code></pre>
+
+<h2 id="advanced">Advanced example</h2>
+<p><span class="pill pill-danger">modifies firewall</span> — bulk + full reset. Read-only check first on remote hosts.</p>
+<pre><code># audit before bulk
+sudo caddy-analyze unban --list -f json | jq
+
+# block multiple (non-zero exit if any IP fails)
+sudo caddy-analyze block 203.0.113.5 198.51.100.23 203.0.113.18
+
+# reset all (danger — verify you are not about to unblock an active attacker)
+sudo caddy-analyze unban --list
+sudo caddy-analyze unban --all
+</code></pre>

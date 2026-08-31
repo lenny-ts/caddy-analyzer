@@ -3,13 +3,13 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>404 — Page not found</title>
-  <meta name="description" content="The page you were looking for could not be found.">
+  <title>top — caddy-analyzer</title>
+  <meta name="description" content="Ranked inspector: 9 dimensions including country/asn with GeoIP.">
   <meta name="theme-color" content="#09090B">
   <link rel="icon" href="icon.svg">
-  <link rel="canonical" href="https://lenny-ts.github.io/caddy-analyzer/404.html">
-  <link rel="alternate" hreflang="x-default" href="https://lenny-ts.github.io/caddy-analyzer/404.html">
-  <link rel="alternate" hreflang="en" href="https://lenny-ts.github.io/caddy-analyzer/404.html">
+  <link rel="canonical" href="https://lenny-ts.github.io/caddy-analyzer/subcommands-top.html">
+  <link rel="alternate" hreflang="x-default" href="https://lenny-ts.github.io/caddy-analyzer/subcommands-top.html">
+  <link rel="alternate" hreflang="en" href="https://lenny-ts.github.io/caddy-analyzer/subcommands-top.html">
   <script>try{var t=localStorage.getItem('caddy-docs-theme');if(t==='light')document.documentElement.setAttribute('data-theme','light');}catch(e){}</script>
   <meta name="color-scheme" content="dark light">
   <link rel="stylesheet" href="styles.min.css?v=36">
@@ -56,7 +56,7 @@
   <a href="subcommands-guard.html" class="sidebar-link sub" data-page="subcommands-guard.html">— Guard</a>
   <a href="subcommands-blocklist.html" class="sidebar-link sub" data-page="subcommands-blocklist.html">— Blocklist</a>
   <a href="subcommands-block.html" class="sidebar-link sub" data-page="subcommands-block.html">— Block / Unban</a>
-  <a href="subcommands-top.html" class="sidebar-link sub" data-page="subcommands-top.html">— Top</a>
+  <a href="subcommands-top.html" class="sidebar-link sub active" data-page="subcommands-top.html">— Top</a>
   <a href="reference/api.html" class="sidebar-link" data-page="api.html">API / Packages</a>
   <div class="sidebar-sep"></div>
   <a href="security.html" class="sidebar-link" data-page="security.html">Threat Engine</a>
@@ -69,14 +69,53 @@
 
   <main class="wrap" id="main">
     <div class="doc-content">
-      <nav class="breadcrumb" aria-label="Breadcrumb"><span>404</span></nav>
+      <nav class="breadcrumb" aria-label="Breadcrumb"><a href="reference/cli.html">Reference</a><span class="sep">/</span><span>top</span></nav>
       <div class="page-meta"><a href="https://github.com/lenny-ts/caddy-analyzer/releases">v0.6.1</a> · updated <time datetime="2026-08-31">2026-08-31</time> · <a href="https://github.com/lenny-ts/caddy-analyzer">GitHub</a></div>
-      <div style="text-align:center;padding:48px 0;">
-  <div style="font-size:4rem;font-weight:700;color:var(--accent);line-height:1;">404</div>
-  <p style="margin-top:12px;">Page not found.</p>
-  <p>The page you were looking for does not exist or has been moved.</p>
-  <a href="index.html" class="btn btn-primary" style="margin-top:16px;">Back to docs</a>
-</div>
+      <h1>top</h1>
+<p>Ranked inspector. <span class="pill pill-readonly">read-only</span> — never modifies the system.</p>
+
+<h2 id="synopsis">Synopsis</h2>
+<pre><code>caddy-analyze top [dimension] [source...] [flags]
+caddy-analyze top -b &lt;dimension&gt; [source...]   # --by alias</code></pre>
+<p>Dimension defaults to <code>path</code> if omitted.</p>
+
+<h2 id="flags">Flags</h2>
+<div class="table-wrap"><table>
+<thead><tr><th>Flag</th><th>Short</th><th>Default</th><th>Description</th></tr></thead>
+<tbody>
+<tr><td><code>--by</code></td><td><code>-b</code></td><td></td><td>Dimension alias for positional arg</td></tr>
+<tr><td><code>--top</code></td><td><code>-t</code></td><td>10</td><td>Max entries (also global <code>--top</code>)</td></tr>
+</tbody>
+</table></div>
+<p>Inherits all global flags (<code>--from</code>, <code>--country</code>, <code>--5xx</code>, <code>--format</code>, etc. — see <a href="reference/cli.html">CLI Reference</a>).</p>
+
+<h3>Dimensions</h3>
+<div class="table-wrap"><table>
+<thead><tr><th>Dimension</th><th>Needs GeoIP</th><th>Description</th></tr></thead>
+<tbody>
+<tr><td><code>path</code></td><td></td><td>Top requested paths</td></tr>
+<tr><td><code>ip</code></td><td></td><td>Top client IPs</td></tr>
+<tr><td><code>ua</code></td><td></td><td>Top user agents</td></tr>
+<tr><td><code>status</code></td><td></td><td>Top status codes</td></tr>
+<tr><td><code>method</code></td><td></td><td>Top HTTP methods</td></tr>
+<tr><td><code>host</code></td><td></td><td>Top hosts</td></tr>
+<tr><td><code>bandwidth</code></td><td></td><td>Top by response size</td></tr>
+<tr><td><code>country</code></td><td>yes</td><td>Top countries (human-readable names)</td></tr>
+<tr><td><code>asn</code></td><td>yes</td><td>Top ASNs</td></tr>
+</tbody>
+</table></div>
+
+<h2 id="minimal">Minimal example</h2>
+<p><span class="pill pill-readonly">read-only</span></p>
+<pre><code>caddy-analyze top ip testdata/sample.log
+caddy-analyze top path -t 20 testdata/sample.log
+caddy-analyze top country testdata/sample.log</code></pre>
+
+<h2 id="advanced">Advanced example</h2>
+<p><span class="pill pill-readonly">read-only</span> — filtered, formatted, file output.</p>
+<pre><code>caddy-analyze top path --5xx -t 20 -f csv -o top-5xx.csv testdata/sample.log
+caddy-analyze top ip --from 1h --country IT -t 15 -f json testdata/large.log | jq
+caddy-analyze top asn --no-bots --from 7d /var/log/caddy/access.log -f html -o top-asn.html</code></pre>
       <footer class="footer">
   <p>caddy-analyzer is open-source under <a href="https://github.com/lenny-ts/caddy-analyzer/blob/main/LICENSE">MIT</a> · <a href="https://github.com/lenny-ts/caddy-analyzer">GitHub</a> · <a href="changelog.html">Changelog</a></p>
 </footer>
@@ -84,7 +123,7 @@
 
     </div>
   </main>
-  
+  <nav class="doc-toc" aria-label="On this page"><div class="toc-label">On this page</div><a href="#synopsis" class="toc-link">Synopsis</a><a href="#flags" class="toc-link">Flags</a><a href="#minimal" class="toc-link">Minimal example</a><a href="#advanced" class="toc-link">Advanced example</a><a href="#dimensions" class="toc-link h3">Dimensions</a></nav>
 </div>
 <script src="docs.min.js?v=36"></script>
 </body>

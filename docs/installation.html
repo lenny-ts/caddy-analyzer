@@ -1,164 +1,172 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="view-transition" content="same-origin">
-    <title>Installation Guide — caddy-analyzer</title>
-    <meta name="description" content="Install caddy-analyzer on Linux, macOS, Windows (PowerShell), via Go toolchain, Docker, systemd, or pre-built binaries. Complete setup guide.">
-    <meta name="theme-color" content="#0a0a0c">
-    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E🛡️%3C/text%3E%3C/svg%3E">
-    <meta property="og:title" content="Installation Guide — caddy-analyzer">
-    <meta property="og:description" content="Install on Linux, macOS, Windows, Docker, systemd, or from source. Complete setup guide.">
-    <meta property="og:type" content="website">
-    <meta property="og:url" content="https://lenny-ts.github.io/caddy-analyzer/installation.html">
-    <meta property="og:image" content="https://lenny-ts.github.io/caddy-analyzer/og-image.png">
-    <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:title" content="Installation Guide — caddy-analyzer">
-    <meta name="twitter:description" content="Install on Linux, macOS, Windows, Docker, systemd, or from source.">
-    <script>try{var t=localStorage.getItem('caddy-docs-theme');if(t==='light')document.documentElement.setAttribute('data-theme','light');}catch(e){}
-    document.documentElement.classList.add('decor-paused');</script>
-    <meta name="doc:modified" content="2026-08-26T15:18:43+02:00">
-    <meta name="color-scheme" content="dark light">
-    <link rel="manifest" href="manifest.json">
-    <link rel="apple-touch-icon" href="apple-touch-icon.png">
-    <link rel="canonical" href="https://lenny-ts.github.io/caddy-analyzer/installation.html">
-    <link rel="dns-prefetch" href="//github.com">
-    <link rel="dns-prefetch" href="//pkg.go.dev">
-    <link rel="preconnect" href="//github.com">
-    <link rel="prefetch" href="sources.html">
-    <link rel="stylesheet" href="styles.min.css?v=31">
-    <script type="speculationrules">{"prefetch":[{"where":{"href_matches":"/*.html"},"eagerness":"moderate"}]}</script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Installation — caddy-analyzer</title>
+  <meta name="description" content="5 ways to install caddy-analyzer with verify step for each.">
+  <meta name="theme-color" content="#09090B">
+  <link rel="icon" href="icon.svg">
+  <link rel="canonical" href="https://lenny-ts.github.io/caddy-analyzer/installation.html">
+  <link rel="alternate" hreflang="x-default" href="https://lenny-ts.github.io/caddy-analyzer/installation.html">
+  <link rel="alternate" hreflang="en" href="https://lenny-ts.github.io/caddy-analyzer/installation.html">
+  <script>try{var t=localStorage.getItem('caddy-docs-theme');if(t==='light')document.documentElement.setAttribute('data-theme','light');}catch(e){}</script>
+  <meta name="color-scheme" content="dark light">
+  <link rel="stylesheet" href="styles.min.css?v=36">
 </head>
 <body>
+<header class="site-header">
+  <a href="index.html" class="logo">
+    <svg width="22" height="22" viewBox="0 0 128 128" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><defs><linearGradient id="g" x1="0" y1="0" x2="128" y2="128" gradientUnits="userSpaceOnUse"><stop offset="0%" stop-color="#3b82f6"/><stop offset="100%" stop-color="#1d4ed8"/></linearGradient></defs><path d="M64 8L16 28v36c0 28.8 20.4 55.8 48 64 27.6-8.2 48-35.2 48-64V28L64 8z" fill="url(#g)"/><rect x="38" y="72" width="10" height="20" rx="2" fill="#fff" opacity=".9"/><rect x="52" y="58" width="10" height="34" rx="2" fill="#fff" opacity=".9"/><rect x="66" y="48" width="10" height="44" rx="2" fill="#fff" opacity=".9"/><rect x="80" y="62" width="10" height="30" rx="2" fill="#fff" opacity=".9"/><line x1="34" y1="42" x2="94" y2="42" stroke="#fff" stroke-width="2.5" opacity=".5" stroke-dasharray="4 3"/></svg>
+    caddy-analyzer
+  </a>
+  <nav aria-label="Primary">
+    <a href="installation.html" data-nav="installation.html" class="active">Install</a>
+    <a href="sources.html" data-nav="sources.html">Sources</a>
+    <a href="reference/cli.html" data-nav="cli.html">CLI</a>
+    <a href="security.html" data-nav="security.html">Security</a>
+    <a href="tui-html.html" data-nav="tui-html.html">TUI</a>
+  </nav>
+  <div class="header-actions">
+    <a href="https://github.com/lenny-ts/caddy-analyzer" style="color:var(--text-sec);font-size:0.85rem;" rel="noopener">GitHub</a>
+    <span style="font-size:0.80rem;color:var(--text);font-weight:600;">EN</span><span style="color:var(--border)">|</span><span style="font-size:0.80rem;color:var(--text-muted);" title="Italian version coming soon">IT</span>
+    <button class="theme-toggle" aria-label="Toggle theme"></button>
+  </div>
+</header>
+<div class="scroll-progress" aria-hidden="true"></div>
 
-    <a href="#main" class="skip-link">Skip to content</a>
-    <div class="scroll-progress"></div>
-    <div class="aurora" aria-hidden="true">
-        <i class="aurora-blob-3"></i>
-        <i class="aurora-beam"></i>
-        <i class="aurora-vignette"></i>
-    </div>
-    <div class="grid-overlay"></div>
+<div class="docs-layout">
+  <aside class="doc-sidebar" aria-label="Page navigation">
+  <div class="sidebar-label">Documentation</div>
+  <a href="index.html" class="sidebar-link" data-page="index.html">Overview</a>
+  <a href="quickstart.html" class="sidebar-link" data-page="quickstart.html">Quickstart</a>
+  <a href="installation.html" class="sidebar-link active" data-page="installation.html">Installation</a>
+  <a href="sources.html" class="sidebar-link" data-page="sources.html">Log Sources</a>
+  <div class="sidebar-sep"></div>
+  <div class="sidebar-label">Guide</div>
+  <a href="guide/configuration.html" class="sidebar-link" data-page="configuration.html">Configuration</a>
+  <a href="guide/usage.html" class="sidebar-link" data-page="usage.html">Usage</a>
+  <a href="guide/examples.html" class="sidebar-link" data-page="examples.html">Examples</a>
+  <a href="guide/troubleshooting.html" class="sidebar-link" data-page="troubleshooting.html">Troubleshooting</a>
+  <div class="sidebar-sep"></div>
+  <div class="sidebar-label">Reference</div>
+  <a href="reference/cli.html" class="sidebar-link" data-page="cli.html">CLI Reference</a>
+  <a href="reference/security-categories.html" class="sidebar-link sub" data-page="security-categories.html">— Categories</a>
+  <a href="reference/security-detection.html" class="sidebar-link sub" data-page="security-detection.html">— Detection</a>
+  <a href="subcommands-guard.html" class="sidebar-link sub" data-page="subcommands-guard.html">— Guard</a>
+  <a href="subcommands-blocklist.html" class="sidebar-link sub" data-page="subcommands-blocklist.html">— Blocklist</a>
+  <a href="subcommands-block.html" class="sidebar-link sub" data-page="subcommands-block.html">— Block / Unban</a>
+  <a href="subcommands-top.html" class="sidebar-link sub" data-page="subcommands-top.html">— Top</a>
+  <a href="reference/api.html" class="sidebar-link" data-page="api.html">API / Packages</a>
+  <div class="sidebar-sep"></div>
+  <a href="security.html" class="sidebar-link" data-page="security.html">Threat Engine</a>
+  <a href="architecture.html" class="sidebar-link" data-page="architecture.html">Architecture</a>
+  <a href="tui-html.html" class="sidebar-link" data-page="tui-html.html">TUI &amp; HTML Reports</a>
+  <a href="contributing.html" class="sidebar-link" data-page="contributing.html">Contributing</a>
+  <a href="faq.html" class="sidebar-link" data-page="faq.html">FAQ</a>
+  <a href="changelog.html" class="sidebar-link" data-page="changelog.html">Changelog</a>
+</aside>
 
-    <main class="wrap" id="main">
+  <main class="wrap" id="main">
+    <div class="doc-content">
+      <nav class="breadcrumb" aria-label="Breadcrumb"><a href="index.html">Overview</a><span class="sep">/</span><span>Installation</span></nav>
+      <div class="page-meta"><a href="https://github.com/lenny-ts/caddy-analyzer/releases">v0.6.1</a> · updated <time datetime="2026-08-31">2026-08-31</time> · <a href="https://github.com/lenny-ts/caddy-analyzer">GitHub</a></div>
+      <h1>Installation</h1>
+<p>Requirements: <strong>Go 1.25+</strong> only if building from source. All other methods ship a static binary (CGO_ENABLED=0) for Linux / macOS / Windows on amd64, arm64, arm. Verify each method right after install.</p>
 
-        <nav class="doc-nav reveal" aria-label="Documentation">
-            <a href="index.html">Overview</a>
-            <a href="installation.html" class="active" aria-current="page">Installation</a>
-            <a href="sources.html">Log Sources</a>
-            <a href="subcommands.html">Subcommands</a>
-            <a href="security.html">Threat Detector</a>
-            <a href="tui-html.html">TUI &amp; HTML Reports</a>
-        </nav>
+<div class="callout callout-info"><div class="callout-label">Quick verify (all methods)</div><code>caddy-analyze --version</code> should print <code>v0.6.1</code> (or newer). If you see <code>command not found</code>, check PATH or re-open the terminal.</div>
 
-        <div class="page-header reveal">
-            <nav class="breadcrumb" aria-label="Breadcrumb">
-                <ol>
-                    <li><a href="index.html">Overview</a></li>
-                    <li><a class="breadcrumb-current" aria-current="page" href="installation.html">Installation</a></li>
-                </ol>
-            </nav>
-            <p class="doc-meta"><a href="https://github.com/lenny-ts/caddy-analyzer/releases" rel="noopener">v0.4.1</a> &middot; updated <time datetime="2026-08-18">2026-08-18</time> &middot; <a href="https://github.com/lenny-ts/caddy-analyzer" rel="noopener">GitHub</a></p>
-            <h1>Installation Guide</h1>
-            <p class="subtitle">Complete cross-platform installation methods and system integration</p>
-        </div>
+<h2 id="linux-mac">Linux / macOS — install.sh</h2>
+<p>Detects OS/arch, downloads tar.gz + <code>checksums.txt</code>, verifies SHA256 and optional cosign.</p>
+<pre><code>curl -sSfL https://raw.githubusercontent.com/lenny-ts/caddy-analyzer/main/install.sh | bash</code></pre>
+<h3 id="verify-linux">Verify</h3>
+<pre><code>caddy-analyze --version
+which caddy-analyze
+# expected: /usr/local/bin/caddy-analyze  and  v0.6.1</code></pre>
+<p>If <code>/usr/local/bin</code> is not writable, the script uses <code>sudo mv</code>. Alternative: <code>DEST_DIR=$HOME/.local/bin bash install.sh</code>.</p>
 
-        <section class="reveal">
-            <h2>1. Linux &amp; macOS One-Line Installer</h2>
-            <p>The automated POSIX shell script detects your operating system (Linux or macOS) and processor architecture (AMD64, ARM64 Apple Silicon/Raspberry Pi, ARMv7, 386), downloads the latest compiled release binary, and installs it to <code>/usr/local/bin/caddy-analyze</code>:</p>
-<pre>curl -sSfL https://raw.githubusercontent.com/lenny-ts/caddy-analyzer/main/install.sh | bash</pre>
-        </section>
+<h2 id="windows">Windows — install.ps1</h2>
+<pre><code>iwr -useb https://raw.githubusercontent.com/lenny-ts/caddy-analyzer/main/install.ps1 | iex</code></pre>
+<h3 id="verify-windows">Verify</h3>
+<pre><code>caddy-analyze --version
+# close and re-open PowerShell if PATH was updated
+Get-Command caddy-analyze | Format-List
+# expected: Source  C:\Users\YOU\AppData\Local\caddy-analyze\caddy-analyze.exe</code></pre>
+<div class="callout callout-warning"><div class="callout-label">Note</div>Requires PowerShell 5.1+. The script prepends <code>%LOCALAPPDATA%\caddy-analyze</code> to your User PATH — reopen the terminal to pick it up.</div>
 
-        <section class="reveal">
-            <h2>2. Windows PowerShell One-Line Installer</h2>
-            <p>Downloads the compiled <code>caddy-analyze.exe</code> binary for Windows, extracts it into <code>%LOCALAPPDATA%\caddy-analyze</code>, and adds the folder to your User PATH variable automatically:</p>
-<pre>iwr -useb https://raw.githubusercontent.com/lenny-ts/caddy-analyzer/main/install.ps1 | iex</pre>
-        </section>
+<h2 id="go">Go toolchain</h2>
+<pre><code>go install github.com/lenny-ts/caddy-analyzer/cmd/caddy-analyze@latest</code></pre>
+<h3 id="verify-go">Verify</h3>
+<pre><code>caddy-analyze --version
+# if "command not found", add Go bin to PATH:
+export PATH="$HOME/go/bin:$PATH"
+go env GOPATH
+# expected: .../go/bin/caddy-analyze</code></pre>
 
-        <section class="reveal">
-            <h2>3. Go Toolchain Installation</h2>
-            <p>If you have Go 1.25+ installed, compile and install directly from source code using the Go toolchain:</p>
-            <div class="callout callout-info">
-                <p class="callout-label">ℹ Prerequisite</p>
-                Requires <strong>Go 1.25+</strong> installed on your system. Check with <code>go version</code>. Download from <a href="https://go.dev/dl/">go.dev/dl</a> if needed.
-            </div>
-<pre>go install github.com/lenny-ts/caddy-analyzer/cmd/caddy-analyze@latest</pre>
-        </section>
-
-        <section class="reveal">
-            <h2>4. Docker Container Setup</h2>
-            <p>You can run <code>caddy-analyzer</code> using Docker without installing Go or compiler toolchains on your host machine. Mount your host log directory into the container:</p>
-            <div class="callout callout-warning">
-                <p class="callout-label">⚠ Security</p>
-                Mounting <code>/var/run/docker.sock</code> gives the container <strong>root-equivalent access</strong> to the Docker daemon. Only do this in trusted environments — the container can start, stop, and inspect all other containers.
-            </div>
-<pre># Run static log file analysis
+<h2 id="docker">Docker</h2>
+<p>No Go needed. Image: <code>ghcr.io/lenny-ts/caddy-analyzer</code> (Alpine, non-root <code>caddy</code> user).</p>
+<pre><code>docker pull ghcr.io/lenny-ts/caddy-analyzer:latest
+# analyze a file
 docker run --rm -v /var/log/caddy:/logs ghcr.io/lenny-ts/caddy-analyzer /logs/access.log
+# stream from Docker
+docker run --rm -v /var/run/docker.sock:/var/run/docker.sock ghcr.io/lenny-ts/caddy-analyzer docker://caddy</code></pre>
+<h3 id="verify-docker">Verify</h3>
+<pre><code>docker run --rm ghcr.io/lenny-ts/caddy-analyzer --version
+docker images ghcr.io/lenny-ts/caddy-analyzer --format "{{.Tag}} {{.Size}}"</code></pre>
 
-# Stream from Docker daemon socket
-docker run --rm -v /var/run/docker.sock:/var/run/docker.sock ghcr.io/lenny-ts/caddy-analyzer docker://my-caddy</pre>
-        </section>
+<h2 id="binaries">Pre-built binaries</h2>
+<p>Download from <a href="https://github.com/lenny-ts/caddy-analyzer/releases">GitHub Releases</a>. Each <code>*.tar.gz</code> (or <code>.zip</code> on Windows) contains <code>caddy-analyze</code> + <code>checksums.txt</code> + cosign <code>.sig/.pem</code>.</p>
+<pre><code># example Linux amd64 — replace v0.6.1 with latest
+curl -sSfL https://github.com/lenny-ts/caddy-analyzer/releases/download/v0.6.1/caddy-analyzer_v0.6.1_linux_amd64.tar.gz -o /tmp/caddy.tgz
+curl -sSfL https://github.com/lenny-ts/caddy-analyzer/releases/download/v0.6.1/checksums.txt -o /tmp/checksums.txt
+grep caddy-analyzer_v0.6.1_linux_amd64.tar.gz /tmp/checksums.txt | (cd /tmp && sha256sum -c)
+tar -xzf /tmp/caddy.tgz -C /tmp && sudo mv /tmp/caddy-analyze /usr/local/bin/</code></pre>
+<h3 id="verify-binaries">Verify</h3>
+<pre><code>caddy-analyze --version
+ls -l /usr/local/bin/caddy-analyze
+# optional cosign: cosign verify-blob --certificate-identity ... --signature checksums.txt.sig checksums.txt</code></pre>
 
-        <section class="reveal">
-            <h2>5. Manual Binary Releases</h2>
-            <p>Pre-built, 100% statically linked binaries without dynamic libc dependencies are available on the <a href="https://github.com/lenny-ts/caddy-analyzer/releases">GitHub Releases page</a>:</p>
-            <ul>
-                <li><code>caddy-analyzer_0.1.0_linux_amd64.tar.gz</code> — Linux x86_64</li>
-                <li><code>caddy-analyzer_0.1.0_linux_arm64.tar.gz</code> — Linux ARM64 (Raspberry Pi 4/5, AWS Graviton)</li>
-                <li><code>caddy-analyzer_0.1.0_darwin_arm64.tar.gz</code> — macOS Apple Silicon (M1/M2/M3/M4)</li>
-                <li><code>caddy-analyzer_0.1.0_darwin_amd64.tar.gz</code> — macOS Intel</li>
-                <li><code>caddy-analyzer_0.1.0_windows_amd64.zip</code> — Windows 64-bit</li>
-            </ul>
-        </section>
-
-        <section class="reveal">
-            <h2>6. Systemd Service Guard Integration</h2>
-            <p>To run <code>caddy-analyze guard</code> as an automated background system service on Linux that automatically blocks attacking IPs via <code>iptables</code>, create <code>/etc/systemd/system/caddy-guard.service</code>:</p>
-            <div class="callout callout-warning">
-                <p class="callout-label">⚠ Root required</p>
-                The systemd service runs <code>guard</code> as root (required for <code>iptables</code>). Ensure the <code>ExecStart</code> path points to the installed binary (<code>/usr/local/bin/caddy-analyze</code>).
-            </div>
-<pre>[Unit]
+<h2 id="systemd">Systemd (guard daemon)</h2>
+<p>For <a href="subcommands-guard.html">guard</a> as a service. Requires root for iptables.</p>
+<pre><code>sudo tee /etc/systemd/system/caddy-guard.service >/dev/null &lt;&lt;'EOF'
+[Unit]
 Description=caddy-analyzer Security Guard Daemon
 After=network.target caddy.service
-
 [Service]
 Type=simple
 ExecStart=/usr/local/bin/caddy-analyze guard --limit 50 --window 1m /var/log/caddy/access.log
 Restart=always
 RestartSec=5
-
 [Install]
-WantedBy=multi-user.target</pre>
-            <p>Enable and start the service:</p>
-<pre>sudo systemctl daemon-reload
-sudo systemctl enable --now caddy-guard</pre>
-        </section>
+WantedBy=multi-user.target
+EOF
+sudo systemctl daemon-reload
+sudo systemctl enable --now caddy-guard</code></pre>
+<h3 id="verify-systemd">Verify</h3>
+<pre><code>systemctl status caddy-guard --no-pager
+journalctl -u caddy-guard -n 20 --no-pager
+# should show "guard started" and no "permission denied" on /var/log/caddy/access.log</code></pre>
 
-        <section class="reveal">
-            <h2>7. Verify Installation</h2>
-            <p>After installing via any method above, verify the binary is on your <code>PATH</code> and working:</p>
-<pre>caddy-analyze --version</pre>
-            <div class="callout callout-tip">
-                <p class="callout-label">✓ Tip</p>
-                If <code>command not found</code> appears after installation:
-                <ul>
-                    <li><strong>Linux/macOS:</strong> Ensure <code>/usr/local/bin</code> or <code>$GOPATH/bin</code> is in your <code>$PATH</code>. For Go installs: <code>export PATH=$PATH:$(go env GOPATH)/bin</code></li>
-                    <li><strong>Windows:</strong> Restart your terminal to pick up the new PATH entry, or run <code>refreshenv</code> if using Chocolatey.</li>
-                    <li><strong>Docker:</strong> No installation needed — just use <code>docker run</code> commands directly.</li>
-                </ul>
-            </div>
-        </section>
+<h2 id="update">Update</h2>
+<pre><code>caddy-analyze update --check   # check without installing
+caddy-analyze update           # install latest (cosign + SHA256 verified)
+caddy-analyze update --version v0.6.1 --force  # pin / downgrade</code></pre>
 
-        <footer class="footer reveal">
-            <p>caddy-analyzer is open-source software released under the <a href="https://github.com/lenny-ts/caddy-analyzer/blob/main/LICENSE">MIT License</a>.</p>
-        </footer>
+<h2 id="troubleshoot">Troubleshooting</h2>
+<ul>
+  <li><code>curl: command not found</code> → <code>sudo apt-get install curl</code> or use the binary download.</li>
+  <li><code>permission denied</code> on log → <code>sudo caddy-analyze …</code> or <code>sudo usermod -aG caddy $USER</code> then re-login.</li>
+  <li>Corporate proxy → set <code>https_proxy</code> before curl.</li>
+</ul>
+      <footer class="footer">
+  <p>caddy-analyzer is open-source under <a href="https://github.com/lenny-ts/caddy-analyzer/blob/main/LICENSE">MIT</a> · <a href="https://github.com/lenny-ts/caddy-analyzer">GitHub</a> · <a href="changelog.html">Changelog</a></p>
+</footer>
+<button class="back-to-top" aria-label="Back to top">↑</button>
 
-    </main>
-
-    <button class="back-to-top" aria-label="Back to top">↑</button>
-    <script src="docs.min.js?v=31" defer></script>
-
+    </div>
+  </main>
+  <nav class="doc-toc" aria-label="On this page"><div class="toc-label">On this page</div><a href="#linux-mac" class="toc-link">Linux / macOS — install.sh</a><a href="#verify-linux" class="toc-link h3">Verify</a><a href="#windows" class="toc-link">Windows — install.ps1</a><a href="#verify-windows" class="toc-link h3">Verify</a><a href="#go" class="toc-link">Go toolchain</a><a href="#verify-go" class="toc-link h3">Verify</a><a href="#docker" class="toc-link">Docker</a><a href="#verify-docker" class="toc-link h3">Verify</a><a href="#binaries" class="toc-link">Pre-built binaries</a><a href="#verify-binaries" class="toc-link h3">Verify</a><a href="#systemd" class="toc-link">Systemd (guard daemon)</a><a href="#verify-systemd" class="toc-link h3">Verify</a><a href="#update" class="toc-link">Update</a><a href="#troubleshoot" class="toc-link">Troubleshooting</a></nav>
+</div>
+<script src="docs.min.js?v=36"></script>
 </body>
 </html>

@@ -3,13 +3,13 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>404 — Page not found</title>
-  <meta name="description" content="The page you were looking for could not be found.">
+  <title>Contributing — caddy-analyzer</title>
+  <meta name="description" content="Setup, test/lint, commit convention, where to add detections and feeds.">
   <meta name="theme-color" content="#09090B">
   <link rel="icon" href="icon.svg">
-  <link rel="canonical" href="https://lenny-ts.github.io/caddy-analyzer/404.html">
-  <link rel="alternate" hreflang="x-default" href="https://lenny-ts.github.io/caddy-analyzer/404.html">
-  <link rel="alternate" hreflang="en" href="https://lenny-ts.github.io/caddy-analyzer/404.html">
+  <link rel="canonical" href="https://lenny-ts.github.io/caddy-analyzer/contributing.html">
+  <link rel="alternate" hreflang="x-default" href="https://lenny-ts.github.io/caddy-analyzer/contributing.html">
+  <link rel="alternate" hreflang="en" href="https://lenny-ts.github.io/caddy-analyzer/contributing.html">
   <script>try{var t=localStorage.getItem('caddy-docs-theme');if(t==='light')document.documentElement.setAttribute('data-theme','light');}catch(e){}</script>
   <meta name="color-scheme" content="dark light">
   <link rel="stylesheet" href="styles.min.css?v=36">
@@ -62,21 +62,80 @@
   <a href="security.html" class="sidebar-link" data-page="security.html">Threat Engine</a>
   <a href="architecture.html" class="sidebar-link" data-page="architecture.html">Architecture</a>
   <a href="tui-html.html" class="sidebar-link" data-page="tui-html.html">TUI &amp; HTML Reports</a>
-  <a href="contributing.html" class="sidebar-link" data-page="contributing.html">Contributing</a>
+  <a href="contributing.html" class="sidebar-link active" data-page="contributing.html">Contributing</a>
   <a href="faq.html" class="sidebar-link" data-page="faq.html">FAQ</a>
   <a href="changelog.html" class="sidebar-link" data-page="changelog.html">Changelog</a>
 </aside>
 
   <main class="wrap" id="main">
     <div class="doc-content">
-      <nav class="breadcrumb" aria-label="Breadcrumb"><span>404</span></nav>
+      <nav class="breadcrumb" aria-label="Breadcrumb"><a href="index.html">Overview</a><span class="sep">/</span><span>Contributing</span></nav>
       <div class="page-meta"><a href="https://github.com/lenny-ts/caddy-analyzer/releases">v0.6.1</a> · updated <time datetime="2026-08-31">2026-08-31</time> · <a href="https://github.com/lenny-ts/caddy-analyzer">GitHub</a></div>
-      <div style="text-align:center;padding:48px 0;">
-  <div style="font-size:4rem;font-weight:700;color:var(--accent);line-height:1;">404</div>
-  <p style="margin-top:12px;">Page not found.</p>
-  <p>The page you were looking for does not exist or has been moved.</p>
-  <a href="index.html" class="btn btn-primary" style="margin-top:16px;">Back to docs</a>
-</div>
+      <h1>Contributing</h1>
+<p>Read <a href="architecture.html">Architecture</a> first — it shows where parser, guard, enrich and blocklist sit in the data flow. For package signatures, see <a href="reference/api.html">API / Packages</a>.</p>
+
+<h2 id="setup">Setup</h2>
+<pre><code>git clone https://github.com/lenny-ts/caddy-analyzer.git && cd caddy-analyzer
+go version # 1.25+</code></pre>
+
+<h2 id="test-lint">Test &amp; lint — exact commands (as in CI)</h2>
+<pre><code># full suite (what CI runs)
+go vet ./...
+go test -race -v ./...
+go test -race -coverprofile=coverage.out ./... &amp;&amp; go tool cover -func=coverage.out | tail
+# coverage gate is 55% (CI enforces &lt;55 → error)
+
+# fmt
+gofmt -l .
+# should be empty; fix with:
+gofmt -w .</code></pre>
+<pre><code># lint (golangci-lint v2, 17 linters, see .golangci.yml)
+golangci-lint run
+
+# security / vuln
+govulncheck ./...
+gosec -exclude G204,G302,G304,G401,G501,G505 ./...
+
+# gitleaks (secrets)
+gitleaks detect --source .</code></pre>
+
+<h3>Test only the module you touched</h3>
+<p>Faster feedback — run the package, not the whole suite:</p>
+<pre><code>go test -race ./pkg/analysis -run TestDetector -count=1
+go test -race ./pkg/guard -run TestGuard -count=1
+go test -race ./pkg/enrich -count=1
+go test -race ./pkg/blocklist -count=1
+go test -race ./cmd -run TestResolveSources -count=1</code></pre>
+<p>Or a single file (when editing one file):</p>
+<pre><code>go test -race ./pkg/parser -run TestParse -count=1 -v</code></pre>
+
+<h2 id="where">Where to add things</h2>
+<div class="table-wrap"><table>
+<thead><tr><th>What</th><th>Where</th><th>Note</th></tr></thead>
+<tbody>
+<tr><td>New detection category</td><td><code>pkg/analysis/detect.go</code></td><td>Add pattern + MITRE ID, add test in <code>detect_test.go</code>, ensure <code>TestPatternUniqueness</code> passes</td></tr>
+<tr><td>Blocklist feed</td><td><code>pkg/blocklist/blocklist.go</code> + test</td><td>Implement <code>Source</code> fetch/parse, respect <code>cacheTTL 7d</code></td></tr>
+<tr><td>Firewall backend</td><td><code>pkg/guard/firewall/</code></td><td>Implement <code>Backend</code> interface, cover <code>Detect()</code></td></tr>
+<tr><td>CLI flag</td><td><code>cmd/root.go</code> + <code>cmd/tuning.go</code></td><td>Persistent vs root-only, handle <code>applyTuning</code></td></tr>
+<tr><td>Output format</td><td><code>pkg/output/*</code></td><td>Table/JSON/CSV/HTML — keep <code>defang</code> and <code>csvSafe</code></td></tr>
+</tbody>
+</table></div>
+
+<h2 id="commit">Commit convention</h2>
+<p><strong>Single line, imperative, 35–62 chars.</strong> No body, no <code>type:</code> prefix, no version prefix.</p>
+<pre><code>Add GeoIP filter for ASN
+Fix guard state persistence across restarts
+Update blocklist cache TTL handling</code></pre>
+<p>Bad: <code>feat: add ...</code> or <code>v0.6.1: fix</code> or multi-line body. See <code>AGENTS.md</code>. Release is via <code>v*</code> tag → GoReleaser + Syft + cosign (you handle merge + tag + push).</p>
+
+<h2 id="pr">PR checklist</h2>
+<ul>
+  <li><code>go vet ./... && go test -race ./... && golangci-lint run</code> green</li>
+  <li>Tests for new code, docs updated via <code>node tools/build-docs.js && bash tools/minify.sh</code> if you touched <code>docs/src/</code></li>
+  <li>Commit message 35–62 chars, imperative</li>
+</ul>
+
+<div class="callout callout-info"><div class="callout-label">See also</div><a href="architecture.html">Architecture</a> — data flow and package map. <a href="reference/api.html">API / Packages</a> — import + usage per package.</div>
       <footer class="footer">
   <p>caddy-analyzer is open-source under <a href="https://github.com/lenny-ts/caddy-analyzer/blob/main/LICENSE">MIT</a> · <a href="https://github.com/lenny-ts/caddy-analyzer">GitHub</a> · <a href="changelog.html">Changelog</a></p>
 </footer>
@@ -84,7 +143,7 @@
 
     </div>
   </main>
-  
+  <nav class="doc-toc" aria-label="On this page"><div class="toc-label">On this page</div><a href="#setup" class="toc-link">Setup</a><a href="#test-lint" class="toc-link">Test &amp;amp; lint — exact commands (as in CI)</a><a href="#where" class="toc-link">Where to add things</a><a href="#commit" class="toc-link">Commit convention</a><a href="#pr" class="toc-link">PR checklist</a><a href="#test-only-the-module-you-touched" class="toc-link h3">Test only the module you touched</a></nav>
 </div>
 <script src="docs.min.js?v=36"></script>
 </body>

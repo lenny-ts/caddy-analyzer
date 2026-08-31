@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="{{lang}}">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{title}}</title>
+  <meta name="description" content="{{description}}">
+  <meta name="theme-color" content="#09090B">
+  <link rel="icon" href="{{base}}icon.svg">
+  {{canonical}}
+  {{hreflang}}
+  <script>try{var t=localStorage.getItem('caddy-docs-theme');if(t==='light')document.documentElement.setAttribute('data-theme','light');}catch(e){}</script>
+  <meta name="color-scheme" content="dark light">
+  <link rel="stylesheet" href="{{base}}styles.min.css?v=36">
+</head>
+<body{{body-class}}>
+{{header}}
+<div class="docs-layout">
+  {{sidebar}}
+  <main class="wrap" id="main">
+    <div class="doc-content">
+      {{breadcrumb}}
+      {{page-meta}}
+      {{content}}
+      {{footer}}
+    </div>
+  </main>
+  {{toc}}
+</div>
+<script src="{{base}}docs.min.js?v=36"></script>
+</body>
+</html>
