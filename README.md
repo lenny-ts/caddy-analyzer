@@ -1,8 +1,5 @@
 <p align="center">
-  <img src="assets/mascot.svg" width="90" alt="caddy-analyzer mascot"><br>
-  <img src="assets/title.svg" alt="caddy-analyzer" height="80">
-  <br>
-  <sub>Gopher created with <a href="https://gopherize.me">gopherize.me</a> &middot; Artwork by <a href="https://twitter.com/ashleymcnamara">Ashley McNamara</a>, inspired by <a href="http://reneefrench.blogspot.com/">Renee French</a></sub>
+  <img src="caddy-analyzer-logo.png" width="280" alt="caddy-analyzer logo">
 </p>
 
 <p align="center">

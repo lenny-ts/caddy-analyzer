@@ -76,7 +76,7 @@ h4{font-size:0.95rem;margin:1.25rem 0 0.4rem}
 .site-header{position:sticky;top:0;z-index:100;height:var(--header-h);display:flex;align-items:center;padding:0 16px;background:var(--bg);border-bottom:1px solid var(--border);gap:16px}
 .site-header .logo{font-weight:700;font-size:0.95rem;color:var(--text);display:flex;align-items:center;gap:8px;letter-spacing:-0.02em;flex-shrink:0}
 .site-header .logo{height:30px}
-.site-logo{width:162px;height:30px;display:block}
+.site-logo{width:30px;height:30px;display:block;object-fit:contain}
 .site-header nav{display:flex;align-items:center;gap:18px}
 .site-header nav a{color:var(--text-sec);font-size:0.875rem;font-weight:500;padding:4px 0;border-bottom:2px solid transparent;margin-bottom:-1px;transition:color .15s,border-color .15s}
 .site-header nav a:hover{color:var(--text)}
