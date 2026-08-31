@@ -20,10 +20,10 @@
   --success: #22C55E;
   --warning: #F59E0B;
   --info: #3B82F6;
-  --sidebar-w: 220px;
-  --toc-w: 200px;
+  --sidebar-w: 200px;
+  --toc-w: 180px;
   --header-h: 52px;
-  --content-max: 800px;
+  --content-max: 1000px;
   --radius: 8px;
   --radius-lg: 12px;
 }
@@ -96,8 +96,9 @@ h4{font-size:0.95rem;margin:1.25rem 0 0.4rem}
 .sidebar-link.sub{padding-left:22px;font-size:0.84rem}
 .sidebar-sep{height:1px;background:var(--border);margin:10px 4px}
 
-/* Content — centered within middle column */
-.doc-content{padding:20px 24px;max-width:var(--content-max);min-width:0;width:100%;margin:0 auto}
+/* Content — use available width, centered */
+.doc-content{padding:20px;max-width:var(--content-max);min-width:0;width:100%;margin:0 auto}
+.doc-content .table-wrap, .doc-content pre{max-width:100%}
 .doc-content > :first-child{margin-top:0}
 
 /* TOC */
