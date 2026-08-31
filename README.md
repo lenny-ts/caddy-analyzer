@@ -213,7 +213,7 @@ Once installed, self-update with signature verification (cosign keyless + SHA256
 ```bash
 caddy-analyze update                     # install the latest verified release
 caddy-analyze update --check             # report availability only
-caddy-analyze update --version v0.5.0    # pin an exact release
+caddy-analyze update --version v0.6.1    # pin an exact release
 sudo caddy-analyze update                # when the binary is in a root-owned path
 ```
 
@@ -221,7 +221,17 @@ sudo caddy-analyze update                # when the binary is in a root-owned pa
 
 ## Documentation
 
-Full documentation is available at **[lenny-ts.github.io/caddy-analyzer](https://lenny-ts.github.io/caddy-analyzer/)**.
+The full documentation is available at **[lenny-ts.github.io/caddy-analyzer](https://lenny-ts.github.io/caddy-analyzer/)**. Use the focused pages below when you need a specific workflow:
+
+| Need | Start here |
+|---|---|
+| Install and run your first analysis | [Quickstart](https://lenny-ts.github.io/caddy-analyzer/quickstart.html) |
+| Configure sources and defaults | [Configuration guide](https://lenny-ts.github.io/caddy-analyzer/guide/configuration.html) |
+| Connect files, Docker, Kubernetes, or journalctl | [Log sources](https://lenny-ts.github.io/caddy-analyzer/sources.html) |
+| Find a flag or subcommand | [CLI reference](https://lenny-ts.github.io/caddy-analyzer/reference/cli.html) |
+| Understand detections and MITRE/Sigma output | [Threat engine](https://lenny-ts.github.io/caddy-analyzer/security.html) |
+| Run firewall protection safely | [Guard reference](https://lenny-ts.github.io/caddy-analyzer/subcommands-guard.html) |
+| Browse all guides and references | [Documentation index](https://lenny-ts.github.io/caddy-analyzer/) |
 
 <details>
 <summary><strong>Command Reference</strong></summary>

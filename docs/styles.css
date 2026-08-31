@@ -75,7 +75,8 @@ h4{font-size:0.95rem;margin:1.25rem 0 0.4rem}
 /* Header */
 .site-header{position:sticky;top:0;z-index:100;height:var(--header-h);display:flex;align-items:center;padding:0 16px;background:var(--bg);border-bottom:1px solid var(--border);gap:16px}
 .site-header .logo{font-weight:700;font-size:0.95rem;color:var(--text);display:flex;align-items:center;gap:8px;letter-spacing:-0.02em;flex-shrink:0}
-.site-header .logo svg{width:22px;height:22px;flex-shrink:0}
+.site-header .logo{height:30px}
+.site-logo{width:162px;height:30px;display:block}
 .site-header nav{display:flex;align-items:center;gap:18px}
 .site-header nav a{color:var(--text-sec);font-size:0.875rem;font-weight:500;padding:4px 0;border-bottom:2px solid transparent;margin-bottom:-1px;transition:color .15s,border-color .15s}
 .site-header nav a:hover{color:var(--text)}
@@ -130,7 +131,6 @@ html.theme-transition body,html.theme-transition body *{transition:background-co
   .doc-sidebar.open{transform:translateX(0);box-shadow:4px 0 24px rgba(0,0,0,0.35)}
   .sidebar-toggle{display:flex}
   .doc-content{padding:20px 16px}
-  .cli-heading{gap:12px}.cli-heading img{width:56px;height:56px;border-radius:12px}
 }
 .sidebar-toggle{display:none;position:fixed;bottom:16px;left:16px;z-index:91;width:40px;height:40px;border-radius:999px;background:var(--surface);border:1px solid var(--border);color:var(--text);font-size:16px;cursor:pointer;align-items:center;justify-content:center;box-shadow:0 4px 12px rgba(0,0,0,0.15)}
 .sidebar-backdrop{display:none;position:fixed;inset:0;top:var(--header-h);background:rgba(0,0,0,0.4);z-index:89;backdrop-filter:blur(2px)}
@@ -190,8 +190,7 @@ tr:hover td{background:var(--surface)}
 .hero-badge{display:inline-flex;align-items:center;gap:6px;font-size:0.75rem;font-weight:500;letter-spacing:0.02em;padding:4px 10px;border-radius:999px;background:var(--accent-soft);border:1px solid var(--border);color:var(--text-sec);margin-bottom:16px}
 .hero h1{font-size:2.15rem;line-height:1.1;letter-spacing:-0.03em;margin-bottom:10px}
 .hero p{font-size:1.02rem;max-width:620px;line-height:1.6;margin-bottom:0}
-.cli-heading{display:flex;align-items:center;gap:18px;margin-bottom:8px}
-.cli-heading img{width:72px;height:72px;flex:0 0 auto;border-radius:16px;box-shadow:0 10px 24px rgba(37,99,235,.18)}
+.cli-heading{display:flex;align-items:center;margin-bottom:8px}
 .cli-heading h1{margin-bottom:0}
 .hero-actions{display:flex;gap:10px;margin-top:18px;flex-wrap:wrap}
 .btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:8px 16px;border-radius:8px;font-size:0.875rem;font-weight:500;text-decoration:none;transition:background .15s,border-color .15s,color .15s,transform .12s}

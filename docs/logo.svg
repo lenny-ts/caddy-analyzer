@@ -1,4 +1,6 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" fill="none">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 520 96" role="img" aria-labelledby="title desc">
+  <title id="title">caddy-analyzer</title>
+  <desc id="desc">caddy-analyzer logo with a terminal prompt and threat signal.</desc>
   <defs>
     <linearGradient id="mark" x1="8" y1="8" x2="88" y2="88" gradientUnits="userSpaceOnUse">
       <stop stop-color="#60A5FA"/>
@@ -9,4 +11,5 @@
   <path d="m25 34 15 14-15 14" fill="none" stroke="url(#mark)" stroke-linecap="round" stroke-linejoin="round" stroke-width="7"/>
   <path d="M49 65h21" stroke="#A5F3FC" stroke-linecap="round" stroke-width="7"/>
   <path d="M75 68V53m9 15V39" stroke="#60A5FA" stroke-linecap="round" stroke-width="5"/>
+  <text x="112" y="64" fill="#FAFAFA" font-family="Inter,Arial,sans-serif" font-size="42" font-weight="700" letter-spacing="-1.5">caddy-analyzer</text>
 </svg>
