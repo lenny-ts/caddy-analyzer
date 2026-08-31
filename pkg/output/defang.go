@@ -1,12 +1,13 @@
 package output
 
 import (
+	"net/netip"
 	"regexp"
 	"strings"
 )
 
 var (
-	bareIPv4Pattern    = regexp.MustCompile(`\b(\d{1,3}\.){3}\d{1,3}\b`)
+	dottedTokenPattern = regexp.MustCompile(`[A-Za-z0-9_]+(?:\.[A-Za-z0-9_]+)+`)
 	urlHostnamePattern = regexp.MustCompile(`://([a-zA-Z0-9-]+\.)+[a-zA-Z]{2,}`)
 )
 
@@ -25,8 +26,13 @@ func defangSchemes(s string) string {
 }
 
 func defangIPv4(s string) string {
-	return bareIPv4Pattern.ReplaceAllStringFunc(s, func(ip string) string {
-		return strings.ReplaceAll(ip, ".", "[.]")
+	return dottedTokenPattern.ReplaceAllStringFunc(s, func(candidate string) string {
+		addr, err := netip.ParseAddr(candidate)
+		if err != nil || !addr.Is4() {
+			return candidate
+		}
+
+		return strings.ReplaceAll(candidate, ".", "[.]")
 	})
 }
 
