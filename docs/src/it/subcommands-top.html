@@ -1,0 +1,46 @@
+<!-- fm: title=top — caddy-analyzer | description=Ispettore classificato: 9 dimensioni, inclusi country/asn con GeoIP. | breadcrumb=Riferimento > top -->
+<h1>top</h1>
+<p>Ispettore classificato. <span class="pill pill-readonly">sola lettura</span> — non modifica mai il sistema.</p>
+
+<h2 id="synopsis">Sintassi</h2>
+<pre><code>caddy-analyze top [dimension] [source...] [flags]
+caddy-analyze top -b &lt;dimension&gt; [source...]   # --by alias</code></pre>
+<p>La dimensione predefinita è <code>path</code> se omessa.</p>
+
+<h2 id="flags">Flag</h2>
+<div class="table-wrap"><table>
+<thead><tr><th>Flag</th><th>Breve</th><th>Predefinito</th><th>Descrizione</th></tr></thead>
+<tbody>
+<tr><td><code>--by</code></td><td><code>-b</code></td><td></td><td>Alias della dimensione per l'argomento posizionale</td></tr>
+<tr><td><code>--top</code></td><td><code>-t</code></td><td>10</td><td>Numero massimo di voci (anche <code>--top</code> globale)</td></tr>
+</tbody>
+</table></div>
+<p>Eredita tutti i flag globali (<code>--from</code>, <code>--country</code>, <code>--5xx</code>, <code>--format</code> ecc. — consulta <a href="reference/cli.html">Riferimento CLI</a>).</p>
+
+<h3>Dimensioni</h3>
+<div class="table-wrap"><table>
+<thead><tr><th>Dimensione</th><th>Richiede GeoIP</th><th>Descrizione</th></tr></thead>
+<tbody>
+<tr><td><code>path</code></td><td></td><td>Percorsi più richiesti</td></tr>
+<tr><td><code>ip</code></td><td></td><td>IP client principali</td></tr>
+<tr><td><code>ua</code></td><td></td><td>User agent principali</td></tr>
+<tr><td><code>status</code></td><td></td><td>Codici di stato principali</td></tr>
+<tr><td><code>method</code></td><td></td><td>Metodi HTTP principali</td></tr>
+<tr><td><code>host</code></td><td></td><td>Host principali</td></tr>
+<tr><td><code>bandwidth</code></td><td></td><td>Primi per dimensione della risposta</td></tr>
+<tr><td><code>country</code></td><td>sì</td><td>Paesi principali (nomi leggibili)</td></tr>
+<tr><td><code>asn</code></td><td>sì</td><td>ASN principali</td></tr>
+</tbody>
+</table></div>
+
+<h2 id="minimal">Esempio minimo</h2>
+<p><span class="pill pill-readonly">sola lettura</span></p>
+<pre><code>caddy-analyze top ip testdata/sample.log
+caddy-analyze top path -t 20 testdata/sample.log
+caddy-analyze top country testdata/sample.log</code></pre>
+
+<h2 id="advanced">Esempio avanzato</h2>
+<p><span class="pill pill-readonly">sola lettura</span> — filtrato, formattato, output su file.</p>
+<pre><code>caddy-analyze top path --5xx -t 20 -f csv -o top-5xx.csv testdata/sample.log
+caddy-analyze top ip --from 1h --country IT -t 15 -f json testdata/large.log | jq
+caddy-analyze top asn --no-bots --from 7d /var/log/caddy/access.log -f csv -o top-asn.csv</code></pre>

@@ -1,0 +1,64 @@
+<!-- fm: title=guard — caddy-analyzer | description=Blocco automatico di IP dannosi tramite iptables/nftables/Docker. Soglie, backend, audit e stato. | breadcrumb=Riferimento > guard -->
+<h1>guard</h1>
+<p>Segue una sorgente di log e blocca automaticamente gli IP che superano le soglie. <span class="pill pill-danger">modifica il firewall</span> — ogni esecuzione può aggiungere regole <code>iptables</code>/<code>nftables</code>/<code>DOCKER-USER</code>. Non eseguire esempi da copiare e incollare su un host remoto senza prima consentire il tuo IP.</p>
+
+<div class="callout callout-danger"><div class="callout-label">Richiede root</div><code>guard</code> richiede <code>sudo</code>. Prova con <code>--never-block YOUR_IP</code> oppure esegui prima <a href="subcommands-blocklist.html">blocklist refresh</a>.</div>
+
+<h2 id="synopsis">Sintassi</h2>
+<pre><code>caddy-analyze guard [source] [flags]
+# source: file, docker://name, k8s://pod -n ns, journalctl://unit, or via caddy-analyzer.json
+# see Log Sources for syntax — this page covers guard flags only</code></pre>
+
+<h2 id="flags">Flag</h2>
+<div class="table-wrap"><table>
+<thead><tr><th>Flag</th><th>Breve</th><th>Predefinito</th><th>Descrizione</th></tr></thead>
+<tbody>
+<tr><td><code>--limit</code></td><td><code>-l</code></td><td>100</td><td>Massime richieste HTTP per IP nella finestra prima del blocco</td></tr>
+<tr><td><code>--window</code></td><td><code>-w</code></td><td>1m</td><td>Finestra scorrevole (bucket al secondo)</td></tr>
+<tr><td><code>--duration</code></td><td><code>-d</code></td><td>10m</td><td>Durata del ban (0 = permanente)</td></tr>
+<tr><td><code>--auth-limit</code></td><td></td><td>10</td><td>401/403 prima del blocco</td></tr>
+<tr><td><code>--notfound-limit</code></td><td></td><td>50</td><td>404 prima del blocco</td></tr>
+<tr><td><code>--detect-confidence</code></td><td></td><td>8</td><td>Confidenza minima 1-10 per blocchi da pattern (0 disabilita solo questo percorso; non è un dry run)</td></tr>
+<tr><td><code>--firewall-backend</code></td><td></td><td>auto</td><td><code>auto|iptables|docker|nftables|hybrid</code></td></tr>
+<tr><td><code>--iptables-timeout</code></td><td></td><td>10s</td><td>Timeout iptables per invocazione</td></tr>
+<tr><td><code>--country-block</code></td><td></td><td></td><td>Codici ISO da bloccare subito (ad es. <code>CN,RU</code>)</td></tr>
+<tr><td><code>--no-blocklist</code></td><td></td><td>false</td><td>Disabilita gli 8 feed blocklist</td></tr>
+<tr><td><code>--blocklist-refresh</code></td><td></td><td>6h</td><td>Intervallo di aggiornamento (min 1h, 0 disattivato)</td></tr>
+<tr><td><code>--cache-dir</code></td><td></td><td>~/.cache/…/blocklists</td><td>Directory cache blocklist</td></tr>
+<tr><td><code>--geoip-db</code></td><td></td><td></td><td>Percorso mmdb GeoIP (rilevamento automatico)</td></tr>
+<tr><td><code>--no-auto-download</code></td><td></td><td>false</td><td>Disabilita il download automatico di GeoIP</td></tr>
+<tr><td><code>--never-block</code></td><td></td><td></td><td>CIDR/IP da non bloccare mai (proteggi il tuo IP!)</td></tr>
+<tr><td><code>--never-block-file</code></td><td></td><td></td><td>File con CIDR (uno per riga, commento #)</td></tr>
+<tr><td><code>--audit-log</code></td><td></td><td>/var/log/…-audit.jsonl</td><td>Audit JSON Lines (0600)</td></tr>
+<tr><td><code>--state-file</code></td><td></td><td>/var/lib/…/blocked.json</td><td>Conserva i blocchi tra i riavvii</td></tr>
+<tr><td><code>--subnet-limit</code></td><td></td><td>0</td><td>Soglia di scansione distribuita /24 o /64</td></tr>
+<tr><td><code>--rps-anomaly</code></td><td></td><td>0</td><td>Fattore di picco RPS EWMA (solo alert audit; richiede <code>--audit-log</code>)</td></tr>
+<tr><td><code>--cred-stuffing-limit</code></td><td></td><td>0</td><td>IP distinti che falliscono sullo stesso percorso (solo alert audit; richiede <code>--audit-log</code>)</td></tr>
+<tr><td><code>--ua-rotation</code></td><td></td><td>10</td><td>Soglia di rotazione UA</td></tr>
+<tr><td><code>--trust-forwarded</code></td><td></td><td>false</td><td>Usa l'ultimo hop XFF pubblico</td></tr>
+</tbody>
+</table></div>
+
+<h2 id="minimal">Esempio minimo</h2>
+<p><span class="pill pill-danger">modifica il firewall</span> — blocca IP reali. Consenti prima il tuo IP se usi un host remoto.</p>
+<pre><code># allowlist yourself, then run guard on auto-discovered source
+MY_IP=$(curl -s ifconfig.me)
+sudo caddy-analyze guard --never-block $MY_IP --limit 50 --window 1m /var/log/caddy/access.log</code></pre>
+
+<h2 id="advanced">Esempio avanzato</h2>
+<p><span class="pill pill-danger">modifica il firewall</span> — backend ibrido + paese + stato persistente. <code>guard</code> non ha modalità dry-run o solo-audit; usa <a href="subcommands-blocklist.html">blocklist list</a> solo per ispezionare i feed senza modificare il firewall.</p>
+<pre><code># hybrid = INPUT + DOCKER-USER; blocks survive restart; full audit
+sudo caddy-analyze guard docker://caddy \
+  --firewall-backend hybrid \
+  --country-block CN,RU,IR \
+  --never-block 10.0.0.0/8,192.168.1.50 \
+  --never-block-file /etc/caddy-analyzer/whitelist.txt \
+  --audit-log /var/log/caddy-analyzer-audit.jsonl \
+  --state-file /var/lib/caddy-analyzer/blocked.json \
+  --blocklist-refresh 6h \
+  --detect-confidence 8
+# verify what was blocked:
+sudo caddy-analyze unban --list
+cat /var/log/caddy-analyzer-audit.jsonl | tail</code></pre>
+
+<div class="callout callout-warning"><div class="callout-label">Non bloccarti fuori</div>Su una VM remota, passa sempre <code>--never-block $(curl -s ifconfig.me)</code> oppure il CIDR del tuo ufficio. Non esiste un dry run sicuro: una allowlist sopprime blocchi e record audit, mentre <code>0.0.0.0/0</code> non copre IPv6. Prova il firewall solo su un host sacrificabile.</div>

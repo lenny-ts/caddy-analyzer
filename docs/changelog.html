@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Changelog — caddy-analyzer</title>
+  <meta name="description" content="All notable changes — Keep a Changelog, Semantic Versioning.">
+  <meta name="theme-color" content="#09090B">
+  <link rel="icon" href="caddy-analyzer-logo.png" type="image/png">
+  <link rel="canonical" href="https://lenny-ts.github.io/caddy-analyzer/changelog.html">
+  <link rel="alternate" hreflang="x-default" href="https://lenny-ts.github.io/caddy-analyzer/changelog.html">
+  <link rel="alternate" hreflang="en" href="https://lenny-ts.github.io/caddy-analyzer/changelog.html">
+  <link rel="alternate" hreflang="it" href="https://lenny-ts.github.io/caddy-analyzer/it/changelog.html">
+  <script>try{var t=localStorage.getItem('caddy-docs-theme');if(t==='light')document.documentElement.setAttribute('data-theme','light');}catch(e){}</script>
+  <meta name="color-scheme" content="dark light">
+  <link rel="stylesheet" href="styles.min.css?v=36">
+</head>
+<body>
+<header class="site-header">
+  <a href="index.html" class="logo">
+    <img src="caddy-analyzer-logo.png" alt="" class="site-logo">
+    <span>caddy-analyzer</span>
+  </a>
+  <nav aria-label="Primary">
+    <a href="installation.html" data-nav="installation.html">Installation</a>
+    <a href="sources.html" data-nav="sources.html">Log Sources</a>
+    <a href="reference/cli.html" data-nav="cli.html">CLI Reference</a>
+    <a href="security.html" data-nav="security.html">Threat Engine</a>
+    <a href="tui-html.html" data-nav="tui-html.html">TUI & HTML Reports</a>
+  </nav>
+  <div class="header-actions">
+    <a href="https://github.com/lenny-ts/caddy-analyzer" style="color:var(--text-sec);font-size:0.85rem;" rel="noopener">GitHub</a>
+    <div class="language-switch" role="group" aria-label="Language"><span class="lang-option active" aria-current="page">EN</span><a class="lang-option" href="it/changelog.html" hreflang="it" lang="it">IT</a></div>
+    <button class="theme-toggle" type="button" aria-label="Switch to light theme">
+      <span class="theme-icon theme-sun" aria-hidden="true">☀</span>
+      <span class="theme-icon theme-moon" aria-hidden="true">☾</span>
+    </button>
+  </div>
+</header>
+<div class="scroll-progress" aria-hidden="true"></div>
+
+<div class="docs-layout">
+   <aside class="doc-sidebar" aria-label="Page navigation">
+  <div class="sidebar-label">Documentation</div>
+  <a href="index.html" class="sidebar-link" data-page="index.html">Overview</a>
+  <a href="quickstart.html" class="sidebar-link" data-page="quickstart.html">Quickstart</a>
+  <a href="installation.html" class="sidebar-link" data-page="installation.html">Installation</a>
+  <a href="sources.html" class="sidebar-link" data-page="sources.html">Log Sources</a>
+  <div class="sidebar-sep"></div>
+  <div class="sidebar-label">Guide</div>
+  <a href="guide/configuration.html" class="sidebar-link" data-page="configuration.html">Configuration</a>
+  <a href="guide/usage.html" class="sidebar-link" data-page="usage.html">Usage</a>
+  <a href="guide/examples.html" class="sidebar-link" data-page="examples.html">Examples</a>
+  <a href="guide/troubleshooting.html" class="sidebar-link" data-page="troubleshooting.html">Troubleshooting</a>
+  <div class="sidebar-sep"></div>
+  <div class="sidebar-label">Reference</div>
+  <a href="reference/cli.html" class="sidebar-link" data-page="cli.html">CLI Reference</a>
+  <a href="reference/security-categories.html" class="sidebar-link sub" data-page="security-categories.html">— Categories</a>
+  <a href="reference/security-detection.html" class="sidebar-link sub" data-page="security-detection.html">— Detection</a>
+  <a href="subcommands-guard.html" class="sidebar-link sub" data-page="subcommands-guard.html">— Guard</a>
+  <a href="subcommands-blocklist.html" class="sidebar-link sub" data-page="subcommands-blocklist.html">— Blocklist</a>
+  <a href="subcommands-block.html" class="sidebar-link sub" data-page="subcommands-block.html">— Block / Unban</a>
+  <a href="subcommands-top.html" class="sidebar-link sub" data-page="subcommands-top.html">— Top</a>
+  <a href="reference/api.html" class="sidebar-link" data-page="api.html">API / Packages</a>
+  <div class="sidebar-sep"></div>
+  <a href="security.html" class="sidebar-link" data-page="security.html">Threat Engine</a>
+  <a href="architecture.html" class="sidebar-link" data-page="architecture.html">Architecture</a>
+  <a href="tui-html.html" class="sidebar-link" data-page="tui-html.html">TUI & HTML Reports</a>
+  <a href="contributing.html" class="sidebar-link" data-page="contributing.html">Contributing</a>
+  <a href="faq.html" class="sidebar-link" data-page="faq.html">FAQ</a>
+  <a href="changelog.html" class="sidebar-link active" data-page="changelog.html">Changelog</a>
+</aside>
+
+  <main class="wrap" id="main">
+    <div class="doc-content">
+      <nav class="breadcrumb" aria-label="Breadcrumb"><a href="index.html">Overview</a><span class="sep">/</span><span>Changelog</span></nav>
+      <div class="page-meta"><a href="https://github.com/lenny-ts/caddy-analyzer/releases">v0.6.1</a> · updated <time datetime="2026-08-31">2026-08-31</time> · <a href="https://github.com/lenny-ts/caddy-analyzer">GitHub</a></div>
+      <h1>Changelog</h1>
+<p>All notable changes to <code>caddy-analyzer</code> will be documented in this file.</p>
+<p>The format is based on <a href="https://keepachangelog.com/en/1.0.0/">Keep a Changelog</a>, and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semantic Versioning</a>.</p>
+
+<h2 id="0-6-1">0.6.1 — 2026-08-31</h2>
+<h3>Added</h3>
+<ul>
+<li><strong>GeoIP entry filters (#37)</strong>: <code>--country</code>, <code>--exclude-country</code>, <code>--asn</code>, <code>--exclude-asn</code> filter log entries by GeoIP data. Supports both ISO codes (<code>IT</code>, <code>US</code>) and country names (<code>Italy</code>, <code>United States</code>). — @lenny-ts</li>
+<li><strong>Auto-download cosign (#62)</strong>: <code>caddy-analyze update</code> now automatically downloads cosign for signature verification when not installed, removing the manual setup requirement. — @lenny-ts</li>
+</ul>
+<h3>Fixed</h3>
+<ul>
+<li><strong>Guard output now shows blocklist/country-block bans (#83)</strong>: blocklist and country-block bans were only logged to audit but not shown in terminal output. — @lenny-ts</li>
+<li><strong>Unblock idempotent</strong>: <code>unban</code> and guard expiry no longer fail with "partial unblock failures" when the iptables rule doesn't exist in one chain (hybrid mode). — @lenny-ts</li>
+</ul>
+
+<h2 id="0-6-0">0.6.0 — 2026-08-30</h2>
+<h3>Added</h3>
+<ul>
+<li><strong>Firewall backend redesign</strong>: multi-backend support (iptables, Docker DOCKER-USER, nftables, hybrid) with automatic environment detection. Guard now applies rules to both INPUT and DOCKER-USER chains when Docker containers are detected, solving the issue where blocked IPs bypassed the firewall in Dockerised Caddy deployments. — @lenny-ts</li>
+<li><strong>Whitelist command</strong>: <code>caddy-analyze whitelist --add/--remove/--list/--init</code> manages the never-block list. Auto-loaded by guard via <code>/etc/caddy-analyzer/whitelist.txt</code>. — @lenny-ts</li>
+<li><strong>Operational tuning flags (#56)</strong>: <code>--geo-cache-ttl</code>, <code>--geo-cache-size</code>, <code>--iptables-timeout</code> replace compile-time constants. — @dchaudhari7177</li>
+</ul>
+<h3>Fixed</h3>
+<ul>
+<li><strong><code>loadState</code> does not recreate iptables rules (#79)</strong>: on guard restart, <code>loadState()</code> restores IPs to the in-memory map but did not call <code>blocker.Block()</code> to recreate iptables rules. Banned IPs could pass through until the sliding window filled again. — @lenny-ts</li>
+<li><strong>Graceful shutdown</strong>: guard now flushes state and suppresses noisy "context canceled" errors on Ctrl+C. — @lenny-ts</li>
+<li><strong>Active filters not shown in report header (#51)</strong>: <code>--max-latency</code>, <code>--min-size</code>, <code>--max-size</code>, <code>--level</code>, <code>--ops-only</code> were omitted from the "Filters:" line. — @dchaudhari7177</li>
+<li><strong><code>validateIP</code> / <code>validateIPOrCIDR</code> duplication (#49)</strong>: unified into a single <code>validateIP</code>. — @dchaudhari7177</li>
+</ul>
+<h3>Changed</h3>
+<ul>
+<li><strong>Sigma rule UUIDs are now RFC 4122 version 5 (#59)</strong>: MD5-based identifiers were not valid UUIDs. Now uses <code>uuidV5</code> with a derived namespace, matching Sigma conventions. <strong>Rules exported before this release carry different UUIDs</strong>. — @dchaudhari7177</li>
+<li><strong>GitHub Actions SHA-pinned (#55)</strong>: all third-party actions pinned to full commit SHAs. — @dchaudhari7177</li>
+</ul>
+
+<h2 id="0-5-1">0.5.1 — 2026-08-29</h2>
+<h3>Fixed</h3>
+<ul>
+<li><strong>Docker log monitoring (<code>docker://</code>) not capturing entries (#57)</strong>: <code>execLines</code> only read stdout via <code>StdoutPipe</code>, but Caddy writes to stderr. Replaced with <code>io.Pipe()</code> merging both streams.</li>
+</ul>
+<h3>Changed</h3>
+<ul>
+<li><strong>Deduplicate <code>yamlEscape</code>/<code>yamlQuote</code></strong>: removed <code>yamlQuote</code> exact copy; call sites now call <code>yamlEscape</code> (#48).</li>
+</ul>
+<h3>Fixed (also in 0.5.1)</h3>
+<ul>
+<li><strong>Zero-duration delta formatting</strong>: <code>formatDurationDelta(0)</code> now returns <code>"N/A"</code> via <code>output.FormatDuration</code> (#47).</li>
+</ul>
+<h3>Added</h3>
+<ul>
+<li><strong>GeoIP entry filters (<code>--country</code> / <code>--exclude-country</code> / <code>--asn</code> / <code>--exclude-asn</code>) (#21)</strong>: keep or drop entries by GeoIP. Requires mmdb.</li>
+</ul>
+<h3>Fixed</h3>
+<ul>
+<li><strong>Enrich-before-filter order</strong>: entries are GeoIP-enriched before filtering when geo-based filters are active. Non-geo runs keep filter-first optimization.</li>
+</ul>
+
+<h2 id="0-5-0">0.5.0 — 2026-08-22</h2>
+<h3>Added</h3>
+<ul>
+<li><strong><code>update</code> subcommand with cosign verification (#16)</strong>: fail-closed keyless signature + SHA256, flags <code>--check</code>, <code>--version</code>, <code>--force</code>, <code>--install-dir</code>, Windows rename-aside handling.</li>
+<li><strong>Operational (non-HTTP) log support</strong>: level/logger/msg counts, <code>Extra</code> map, flags <code>--level</code>, <code>--ops-only</code>, 8th tab in watch.</li>
+<li><strong>Operational tab in <code>--watch</code> dashboard</strong>: key <code>8</code>.</li>
+<li><strong>Sample log fixtures</strong>: <code>testdata/sample.log</code> (68 lines) and <code>testdata/large.log</code> (~50K lines) + <code>testdata/generate.py</code>.</li>
+</ul>
+<h3>Docs</h3>
+<ul>
+<li><strong>README</strong>: Sample Logs &amp; Test Fixtures section.</li>
+<li><strong>docs/sources.html</strong>: Section 7 on fixtures.</li>
+</ul>
+
+<h2 id="0-4-1">0.4.1 — 2026-08-18</h2>
+<h3>Fixed</h3>
+<ul>
+<li><strong>Apparent freeze with no log source (#19)</strong>: now prints clear error instead of blocking on stdin TTY; <code>--watch</code> refuses stdin.</li>
+<li><strong><code>--watch</code> startup blocked on GeoIP download</strong>: now <code>NewGeoIPAsync</code> background.</li>
+<li><strong>Usage spam on source errors</strong>: <code>SilenceUsage: true</code> on root/tail/top/guard.</li>
+<li><strong>GeoIP search paths on Windows</strong>: <code>os.UserHomeDir()</code> instead of <code>HOME</code> (#27).</li>
+<li><strong>Follow/interval mode filters</strong>: applied before enrichment (#26).</li>
+</ul>
+<h3>Changed</h3>
+<ul>
+<li><strong>TUI tab navigation</strong>: modulo arithmetic (#18).</li>
+</ul>
+
+<h2 id="0-4-0">0.4.0 — 2026-08-17</h2>
+<h3>Added</h3>
+<ul>
+<li><strong>Blocklist feed system</strong>: <code>blocklist refresh/list/config/init</code> with 7-day CIDR trie cache.</li>
+<li><strong>8 default blocklist feeds</strong>: Spamhaus DROP v4/v6, FireHOL L1/2, CINS, Tor, ET, AbuseIPDB.</li>
+<li><strong>Guard blocklist integration</strong>: immediate block via CIDR trie; <code>--no-blocklist</code>, <code>--blocklist-refresh 6h</code>.</li>
+<li><strong>Guard country-block</strong>: <code>--country-block CN,RU,IR</code> with fail-fast mmdb check.</li>
+<li><strong>GeoIP enrichment</strong>: DB-IP/MaxMind mmdb with auto-download P3TERX mirror; <code>--geoip-db</code>, <code>--no-auto-download</code>.</li>
+<li><strong><code>top country</code> / <code>top asn</code></strong>: human-readable names.</li>
+<li><strong><code>--watch</code> GeoIP tab</strong>: key <code>7</code> with background enrichment.</li>
+<li><strong>Documentation site</strong>: initial glassmorphism docs with TOC and Lighthouse optimizations.</li>
+</ul>
+<h3>Fixed</h3>
+<ul>
+<li><strong>GeoIP download URLs</strong>: P3TERX mirror replacing dead <code>download.dbip.com</code>.</li>
+<li><strong>CINS Army URL</strong>: corrected.</li>
+<li><strong>Country codes shown instead of names</strong>: fixed.</li>
+</ul>
+<h3>Changed</h3>
+<ul>
+<li><strong>AbuseIPDB enricher removed</strong>: only GeoIP mmdb remains.</li>
+<li><strong>Guard startup summary</strong>: now prints blocklist + country-block stats.</li>
+<li><strong>Go 1.25.13</strong>.</li>
+</ul>
+
+<h2 id="0-3-0">0.3.0 — 2026-08-06</h2>
+<h3>Added</h3>
+<ul>
+<li><strong>3 new detection categories</strong> (26 total): <code>jwt_abuse</code>, <code>object_enumeration</code>, <code>beaconing</code>.</li>
+<li><strong><code>export-sigma</code></strong>: 23 Sigma YAML rules with MITRE tags and uuidV5.</li>
+<li><strong><code>--defang</code></strong>, <strong><code>tail --detect</code></strong>, <strong>Progress bar</strong>, <strong>GeoIP</strong>, <strong>Guard features</strong> (<code>--subnet-limit</code>, <code>--rps-anomaly</code>, <code>--cred-stuffing-limit</code>, <code>--trust-forwarded</code>), <strong><code>--state-file</code> on <code>block</code>/<code>unban</code></strong>, <strong>2× throughput</strong>, <strong>histogram</strong>, <strong>MITRE tags</strong>, <strong>filters</strong> (<code>--host</code>, <code>--max-latency</code>, etc.).</li>
+</ul>
+<h3>Fixed</h3>
+<ul>
+<li>Guard shutdown race, dirty-flag, <code>ListBlockedIPs</code>, state sync, duplicate rules, exit codes, <code>loadState</code> in tests. Detection zero-timestamp, <code>PathTimestamps</code> cap, LRU, literals, UA-rotation, audit logger, reader fan-in, TUI, output, parser, cmd leaks — see git log.</li>
+</ul>
+<h3>Changed</h3>
+<ul>
+<li>Go 1.24.6, golangci-lint v2, LRU true, cache 10K, scanner false positives narrowed.</li>
+</ul>
+
+<h2 id="0-2-0">0.2.0 — 2026-08-01</h2>
+<h3>Added</h3>
+<ul>
+<li><strong>Multi-category detection</strong> (<code>DetectAll</code>), <strong>confidence scoring</strong> (1–10), <strong>audit log</strong> (<code>--audit-log</code>), <strong>state persistence</strong> (<code>--state-file</code>), <strong>allowlist</strong> (<code>--never-block*</code>), <strong>validation</strong>, <strong>ldflags version</strong>, <strong>CI gates</strong>, <strong>SBOM + cosign</strong>.</li>
+</ul>
+<h3>Fixed</h3>
+<ul>
+<li>Regex dupes, race on <code>blocked</code> map, <code>parseBlockedIPs</code> index, swallowing <code>ParseDuration</code>, goroutine leak, rotation loss, zombie processes, installer, HTML escaper, scanner dupes, Windows CI.</li>
+</ul>
+<h3>Changed</h3>
+<ul>
+<li>New pattern families, Go 1.24, Dockerfile pin, <code>iptables -S</code>, perms <code>0750/0600</code>.</li>
+</ul>
+
+<h2 id="0-1-3">0.1.3 — 2026-07-30</h2>
+<p>22 categories, raw URI matching, expanded signatures, 55+ tests, security-first README, <code>docs/security.html</code>.</p>
+
+<h2 id="0-1-2">0.1.2 — 2026-07-29</h2>
+<p>CIDR filtering on <code>--ip</code>, smart filter listing, <code>tail</code> filters, active filter display, TUI colors, suspicious details, <code>MatchEntry</code> API.</p>
+
+<h2 id="0-1-1">0.1.1 — 2026-07-28</h2>
+<p><code>--detect</code> inspection mode, <code>top</code> defaults, <code>config</code> show/reset, clean terminal formatting, documentation site, permission diagnostics.</p>
+
+<h2 id="0-1-0">0.1.0 — 2026-07-28</h2>
+<p>Initial release — Caddy JSON parsing, traffic classification, P50/P95, bandwidth, <code>--detect</code> (8 categories), <code>guard</code>, <code>block</code>/<code>unban</code>, <code>tail</code>, <code>top</code>, <code>diff</code>, HTML report, 6-tab TUI, multi-source reader, installers, CI, GoReleaser, GitHub Pages.</p>
+      <footer class="footer">
+  <p>caddy-analyzer is open-source under <a href="https://github.com/lenny-ts/caddy-analyzer/blob/main/LICENSE">MIT</a> · <a href="https://github.com/lenny-ts/caddy-analyzer">GitHub</a> · <a href="changelog.html">Changelog</a></p>
+</footer>
+<button class="back-to-top" aria-label="Back to top">↑</button>
+
+    </div>
+  </main>
+  <nav class="doc-toc" aria-label="On this page"><div class="toc-label">On this page</div><a href="#0-6-1" class="toc-link">0.6.1 — 2026-08-31</a><a href="#0-6-0" class="toc-link">0.6.0 — 2026-08-30</a><a href="#0-5-1" class="toc-link">0.5.1 — 2026-08-29</a><a href="#0-5-0" class="toc-link">0.5.0 — 2026-08-22</a><a href="#0-4-1" class="toc-link">0.4.1 — 2026-08-18</a><a href="#0-4-0" class="toc-link">0.4.0 — 2026-08-17</a><a href="#0-3-0" class="toc-link">0.3.0 — 2026-08-06</a><a href="#0-2-0" class="toc-link">0.2.0 — 2026-08-01</a><a href="#0-1-3" class="toc-link">0.1.3 — 2026-07-30</a><a href="#0-1-2" class="toc-link">0.1.2 — 2026-07-29</a><a href="#0-1-1" class="toc-link">0.1.1 — 2026-07-28</a><a href="#0-1-0" class="toc-link">0.1.0 — 2026-07-28</a><a href="#added" class="toc-link h3">Added</a><a href="#fixed" class="toc-link h3">Fixed</a><a href="#added" class="toc-link h3">Added</a><a href="#fixed" class="toc-link h3">Fixed</a><a href="#changed" class="toc-link h3">Changed</a><a href="#fixed" class="toc-link h3">Fixed</a><a href="#changed" class="toc-link h3">Changed</a><a href="#fixed-also-in-051" class="toc-link h3">Fixed (also in 0.5.1)</a><a href="#added" class="toc-link h3">Added</a><a href="#fixed" class="toc-link h3">Fixed</a><a href="#added" class="toc-link h3">Added</a><a href="#docs" class="toc-link h3">Docs</a><a href="#fixed" class="toc-link h3">Fixed</a><a href="#changed" class="toc-link h3">Changed</a><a href="#added" class="toc-link h3">Added</a><a href="#fixed" class="toc-link h3">Fixed</a><a href="#changed" class="toc-link h3">Changed</a><a href="#added" class="toc-link h3">Added</a><a href="#fixed" class="toc-link h3">Fixed</a><a href="#changed" class="toc-link h3">Changed</a><a href="#added" class="toc-link h3">Added</a><a href="#fixed" class="toc-link h3">Fixed</a><a href="#changed" class="toc-link h3">Changed</a></nav>
+</div>
+<script src="docs.min.js?v=36"></script>
+</body>
+</html>

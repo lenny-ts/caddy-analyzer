@@ -1,439 +1,153 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="view-transition" content="same-origin">
-    <title>caddy-analyzer — Documentation</title>
-    <meta name="description" content="Caddy v2 access log analysis tool with 26-category evasion-resistant threat detection engine, real-time iptables firewall guard with blocklist feeds and country-block, TUI dashboard, and HTML reports.">
-    <meta name="theme-color" content="#0a0a0c">
-    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E🛡️%3C/text%3E%3C/svg%3E">
-    <link rel="apple-touch-icon" href="apple-touch-icon.png">
-    <link rel="canonical" href="https://lenny-ts.github.io/caddy-analyzer/">
-    <meta property="og:title" content="caddy-analyzer — Documentation">
-    <meta property="og:description" content="Caddy v2 log analysis with 26-category threat detection, real-time firewall guard with blocklist feeds & country-block, TUI dashboard, and HTML reports.">
-    <meta property="og:type" content="website">
-    <meta property="og:url" content="https://lenny-ts.github.io/caddy-analyzer/">
-    <meta property="og:image" content="https://lenny-ts.github.io/caddy-analyzer/og-image.png">
-    <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:title" content="caddy-analyzer — Documentation">
-    <meta name="twitter:description" content="Caddy v2 log analysis with 26-category threat detection, real-time firewall guard with blocklist feeds & country-block, TUI dashboard, and HTML reports.">
-    <script>try{var t=localStorage.getItem('caddy-docs-theme');if(t==='light')document.documentElement.setAttribute('data-theme','light');}catch(e){}
-    document.documentElement.classList.add('decor-paused');</script>
-    <meta name="doc:modified" content="2026-08-26T15:18:43+02:00">
-    <meta name="color-scheme" content="dark light">
-    <link rel="manifest" href="manifest.json">
-    <link rel="dns-prefetch" href="//github.com">
-    <link rel="dns-prefetch" href="//pkg.go.dev">
-    <link rel="dns-prefetch" href="//img.shields.io">
-    <link rel="dns-prefetch" href="//raw.githubusercontent.com">
-    <link rel="preload" as="image" href="mascot.svg" fetchpriority="high">
-    <link rel="prefetch" href="installation.html">
-    <link rel="stylesheet" href="styles.min.css?v=31">
-    <script type="speculationrules">{"prefetch":[{"where":{"href_matches":"/*.html"},"eagerness":"moderate"}]}</script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>caddy-analyzer — Caddy v2 log analysis &amp; threat detection</title>
+  <meta name="description" content="Caddy v2 uses structured JSON logs that grep and goaccess can't parse. caddy-analyzer parses them natively, detects 26 attack categories, and blocks threats via iptables.">
+  <meta name="theme-color" content="#09090B">
+  <link rel="icon" href="caddy-analyzer-logo.png" type="image/png">
+  <link rel="canonical" href="https://lenny-ts.github.io/caddy-analyzer/index.html">
+  <link rel="alternate" hreflang="x-default" href="https://lenny-ts.github.io/caddy-analyzer/index.html">
+  <link rel="alternate" hreflang="en" href="https://lenny-ts.github.io/caddy-analyzer/index.html">
+  <link rel="alternate" hreflang="it" href="https://lenny-ts.github.io/caddy-analyzer/it/index.html">
+  <script>try{var t=localStorage.getItem('caddy-docs-theme');if(t==='light')document.documentElement.setAttribute('data-theme','light');}catch(e){}</script>
+  <meta name="color-scheme" content="dark light">
+  <link rel="stylesheet" href="styles.min.css?v=36">
 </head>
 <body>
+<header class="site-header">
+  <a href="index.html" class="logo">
+    <img src="caddy-analyzer-logo.png" alt="" class="site-logo">
+    <span>caddy-analyzer</span>
+  </a>
+  <nav aria-label="Primary">
+    <a href="installation.html" data-nav="installation.html">Installation</a>
+    <a href="sources.html" data-nav="sources.html">Log Sources</a>
+    <a href="reference/cli.html" data-nav="cli.html">CLI Reference</a>
+    <a href="security.html" data-nav="security.html">Threat Engine</a>
+    <a href="tui-html.html" data-nav="tui-html.html">TUI & HTML Reports</a>
+  </nav>
+  <div class="header-actions">
+    <a href="https://github.com/lenny-ts/caddy-analyzer" style="color:var(--text-sec);font-size:0.85rem;" rel="noopener">GitHub</a>
+    <div class="language-switch" role="group" aria-label="Language"><span class="lang-option active" aria-current="page">EN</span><a class="lang-option" href="it/index.html" hreflang="it" lang="it">IT</a></div>
+    <button class="theme-toggle" type="button" aria-label="Switch to light theme">
+      <span class="theme-icon theme-sun" aria-hidden="true">☀</span>
+      <span class="theme-icon theme-moon" aria-hidden="true">☾</span>
+    </button>
+  </div>
+</header>
+<div class="scroll-progress" aria-hidden="true"></div>
 
-    <a href="#main" class="skip-link">Skip to content</a>
-    <div class="scroll-progress"></div>
-    <div class="aurora" aria-hidden="true">
-        <i class="aurora-blob-3"></i>
-        <i class="aurora-beam"></i>
-        <i class="aurora-vignette"></i>
+<div class="docs-layout">
+   <aside class="doc-sidebar" aria-label="Page navigation">
+  <div class="sidebar-label">Documentation</div>
+  <a href="index.html" class="sidebar-link active" data-page="index.html">Overview</a>
+  <a href="quickstart.html" class="sidebar-link" data-page="quickstart.html">Quickstart</a>
+  <a href="installation.html" class="sidebar-link" data-page="installation.html">Installation</a>
+  <a href="sources.html" class="sidebar-link" data-page="sources.html">Log Sources</a>
+  <div class="sidebar-sep"></div>
+  <div class="sidebar-label">Guide</div>
+  <a href="guide/configuration.html" class="sidebar-link" data-page="configuration.html">Configuration</a>
+  <a href="guide/usage.html" class="sidebar-link" data-page="usage.html">Usage</a>
+  <a href="guide/examples.html" class="sidebar-link" data-page="examples.html">Examples</a>
+  <a href="guide/troubleshooting.html" class="sidebar-link" data-page="troubleshooting.html">Troubleshooting</a>
+  <div class="sidebar-sep"></div>
+  <div class="sidebar-label">Reference</div>
+  <a href="reference/cli.html" class="sidebar-link" data-page="cli.html">CLI Reference</a>
+  <a href="reference/security-categories.html" class="sidebar-link sub" data-page="security-categories.html">— Categories</a>
+  <a href="reference/security-detection.html" class="sidebar-link sub" data-page="security-detection.html">— Detection</a>
+  <a href="subcommands-guard.html" class="sidebar-link sub" data-page="subcommands-guard.html">— Guard</a>
+  <a href="subcommands-blocklist.html" class="sidebar-link sub" data-page="subcommands-blocklist.html">— Blocklist</a>
+  <a href="subcommands-block.html" class="sidebar-link sub" data-page="subcommands-block.html">— Block / Unban</a>
+  <a href="subcommands-top.html" class="sidebar-link sub" data-page="subcommands-top.html">— Top</a>
+  <a href="reference/api.html" class="sidebar-link" data-page="api.html">API / Packages</a>
+  <div class="sidebar-sep"></div>
+  <a href="security.html" class="sidebar-link" data-page="security.html">Threat Engine</a>
+  <a href="architecture.html" class="sidebar-link" data-page="architecture.html">Architecture</a>
+  <a href="tui-html.html" class="sidebar-link" data-page="tui-html.html">TUI & HTML Reports</a>
+  <a href="contributing.html" class="sidebar-link" data-page="contributing.html">Contributing</a>
+  <a href="faq.html" class="sidebar-link" data-page="faq.html">FAQ</a>
+  <a href="changelog.html" class="sidebar-link" data-page="changelog.html">Changelog</a>
+</aside>
+
+  <main class="wrap" id="main">
+    <div class="doc-content">
+      <nav class="breadcrumb" aria-label="Breadcrumb"><span>Overview</span></nav>
+      <div class="page-meta"><a href="https://github.com/lenny-ts/caddy-analyzer/releases">v0.6.1</a> · updated <time datetime="2026-08-31">2026-08-31</time> · <a href="https://github.com/lenny-ts/caddy-analyzer">GitHub</a></div>
+      <div class="hero">
+  <div class="hero-badge">v0.6.1 · Go 1.25 · Zero dependencies · MIT</div>
+  <h1>Caddy JSON logs,<br>finally readable — and secured.</h1>
+  <p>Caddy v2 writes nested JSON (<code>request.uri</code>, <code>status</code>, <code>tls</code>, <code>headers</code>) — not Common Log Format. <code>grep</code>, <code>goaccess</code> and <code>lnav</code> miss it. <strong>caddy-analyzer</strong> parses it natively, ranks traffic, and flags attacks with a dual-pass 26-category engine.</p>
+  <div class="hero-actions">
+    <a class="btn btn-primary" href="quickstart.html">Get started in 60s →</a>
+    <a class="btn btn-ghost" href="https://github.com/lenny-ts/caddy-analyzer">GitHub</a>
+  </div>
+</div>
+
+<div style="margin:18px 0 24px;border:1px solid var(--border);border-radius:12px;overflow:hidden;background:var(--code-bg);">
+  <div style="display:flex;align-items:center;gap:8px;padding:10px 14px;border-bottom:1px solid var(--border);background:var(--surface);font-size:0.80rem;color:var(--text-muted);">
+    <span style="width:10px;height:10px;border-radius:50%;background:#EF4444;display:inline-block;"></span>
+    <span style="width:10px;height:10px;border-radius:50%;background:#F59E0B;display:inline-block;"></span>
+    <span style="width:10px;height:10px;border-radius:50%;background:#22C55E;display:inline-block;"></span>
+    <span style="margin-left:8px;font-family:'JetBrains Mono',monospace;">caddy-analyze --detect /var/log/caddy/access.log</span>
+  </div>
+<pre style="margin:0;border:none;border-radius:0;background:transparent;"><code>Period: 2026-08-31 00:00 → 01:00  ·  12,450 req  ·  RPS 3.46
+2xx ████████████████░░ 89%  ·  3xx ██░░░░ 2%  ·  4xx ███░░ 7%  ·  5xx █░░░░ 2%
+Avg 4.2 KB  ·  P50 18ms  P95 210ms  ·  Human 92%  Bot 8%
+
+Top IPs
+  203.0.113.18    1,204  ████████████
+  198.51.100.23     892  ████████
+
+Suspicious (26-category detect)
+  198.51.100.23  15 malicious
+    [sql_injection T1190] GET /search?id=1' OR '1'='1 -- 
+    [xss T1189] GET /q=&lt;script&gt;alert(1)&lt;/script&gt;
+    [scanner] GET /.env  ·  GET /.git/config
+  203.0.113.18    8 malicious
+    [path_traversal] GET /../../../../etc/passwd</code></pre>
+</div>
+
+<div class="stat-row">
+  <div class="stat"><div class="stat-num">26</div><div class="stat-label">Categories</div></div>
+  <div class="stat"><div class="stat-num">~70K</div><div class="stat-label">Parse / sec</div></div>
+  <div class="stat"><div class="stat-num">~7K</div><div class="stat-label">Detect / sec</div></div>
+  <div class="stat"><div class="stat-num">0</div><div class="stat-label">Deps</div></div>
+</div>
+
+<h2 id="what-it-solves">What it solves vs. generic tools</h2>
+<div class="table-wrap"><table>
+<thead><tr><th></th><th>caddy-analyzer</th><th>goaccess / lnav / grep</th></tr></thead>
+<tbody>
+<tr><td>Caddy JSON native</td><td>✓ no regex, no config</td><td>✗ misses nested fields</td></tr>
+<tr><td>26-category detection</td><td>✓ dual-pass, confidence-scored</td><td>✗</td></tr>
+<tr><td>Firewall guard</td><td>✓ iptables / DOCKER-USER / nftables</td><td>✗</td></tr>
+<tr><td>Sources</td><td>file, stdin, docker://, k8s://, journalctl://</td><td>file only</td></tr>
+</tbody>
+</table></div>
+
+<h2 id="documentation">Documentation</h2>
+<div class="doc-grid">
+  <a class="doc-card" href="quickstart.html"><strong>Quickstart</strong><span>Install → first command → first report, copy-paste.</span></a>
+  <a class="doc-card" href="installation.html"><strong>Installation</strong><span>Linux, macOS, Windows, Docker, binaries, verify.</span></a>
+  <a class="doc-card" href="sources.html"><strong>Log Sources</strong><span>How to connect to each source + minimal perms.</span></a>
+  <a class="doc-card" href="reference/cli.html"><strong>CLI Reference</strong><span>All flags and subcommands.</span></a>
+  <a class="doc-card" href="security.html"><strong>Threat Engine</strong><span>26 categories, MITRE, Sigma, guard overview.</span></a>
+  <a class="doc-card" href="tui-html.html"><strong>TUI &amp; HTML Reports</strong><span>Live dashboard and export.</span></a>
+</div>
+
+<h2 id="next">Next step</h2>
+<p>New here? Follow the <a href="quickstart.html">60-second quickstart</a> — every command is copy-paste and produces a real report. Already installed? Jump to <a href="guide/usage.html">usage</a> or <a href="reference/cli.html">CLI reference</a>.</p>
+      <footer class="footer">
+  <p>caddy-analyzer is open-source under <a href="https://github.com/lenny-ts/caddy-analyzer/blob/main/LICENSE">MIT</a> · <a href="https://github.com/lenny-ts/caddy-analyzer">GitHub</a> · <a href="changelog.html">Changelog</a></p>
+</footer>
+<button class="back-to-top" aria-label="Back to top">↑</button>
+
     </div>
-    <div class="grid-overlay"></div>
-
-    <main class="wrap" id="main">
-
-        <nav class="doc-nav reveal" aria-label="Documentation">
-            <a href="index.html" class="active" aria-current="page">Overview</a>
-            <a href="installation.html">Installation</a>
-            <a href="sources.html">Log Sources</a>
-            <a href="subcommands.html">Subcommands</a>
-            <a href="security.html">Threat Detector</a>
-            <a href="tui-html.html">TUI &amp; HTML Reports</a>
-        </nav>
-
-        <section class="hero">
-            <div class="hero-inner">
-                <div class="hero-left">
-                    <span class="hero-mascot-wrap" aria-hidden="true">
-                        <span class="hero-mascot-glow"></span>
-                        <img class="hero-mascot" src="mascot.svg" alt="caddy-analyzer mascot" fetchpriority="high" decoding="async" width="130" height="130">
-                    </span>
-                    <h1 class="hero-title">caddy-analyzer</h1>
-                    <p class="hero-sub">Official Documentation &amp; User Manual — Caddy v2 access log analysis with a 26-category evasion-resistant threat engine, real-time <code>iptables</code> firewall guard, and blocklist/country-block enforcement.</p>
-
-                    <div class="hero-badges">
-                        <a href="https://go.dev"><img width="77" height="20" src="https://img.shields.io/badge/Go-1.25-38bdf8?style=flat-square&logo=go" alt="Go Version"></a>
-                        <a href="https://pkg.go.dev/github.com/lenny-ts/caddy-analyzer"><img width="120" height="20" src="https://pkg.go.dev/badge/github.com/lenny-ts/caddy-analyzer.svg" alt="Go Reference"></a>
-                        <a href="https://github.com/lenny-ts/caddy-analyzer/actions"><img width="90" height="20" src="https://github.com/lenny-ts/caddy-analyzer/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
-                        <a href="LICENSE"><img width="82" height="20" src="https://img.shields.io/badge/License-MIT-purple.svg?style=flat-square" alt="License"></a>
-                        <a href="https://github.com/lenny-ts/caddy-analyzer/releases"><img width="94" height="20" src="https://img.shields.io/github/v/release/lenny-ts/caddy-analyzer?style=flat-square&color=fbbf24" alt="Release"></a>
-                    </div>
-
-                    <div class="cta-row">
-                        <a class="btn btn-primary" href="installation.html">Get started</a>
-                        <a class="btn btn-ghost" href="https://github.com/lenny-ts/caddy-analyzer">View on GitHub</a>
-                    </div>
-
-                    <p class="attribution">
-                        Gopher created with <a href="https://gopherize.me">gopherize.me</a> · Artwork by <a href="https://twitter.com/ashleymcnamara">Ashley McNamara</a>, inspired by <a href="http://reneefrench.blogspot.com/">Renee French</a>
-                    </p>
-                </div>
-                <div class="hero-right">
-                    <div class="radar-rings" aria-hidden="true"></div>
-                    <div class="live-traffic" id="live-traffic" aria-hidden="true">
-                        <span class="traffic-dot"></span>
-                        <span class="traffic-dot"></span>
-                        <span class="traffic-dot"></span>
-                    </div>
-                    <div class="terminal" aria-label="Interactive SOC console. Click to type commands. Try help, analyze, threats, logs.">
-                        <div class="terminal-head">
-                            <span class="term-dot d-red" role="button" tabindex="0" aria-label="Clear terminal output" title="Clear"></span>
-                            <span class="term-dot d-yellow" role="button" tabindex="0" aria-label="Minimize terminal" title="Minimize"></span>
-                            <span class="term-dot d-green" role="button" tabindex="0" aria-label="Give terminal focus" title="Focus"></span>
-                            <span class="term-title">caddy-analyze — access.log</span>
-                            <span class="term-stats" id="term-stats" aria-hidden="true">reqs 0 · blocks 0</span>
-                            <span class="term-status" id="term-status">● LIVE</span>
-                        </div>
-                        <div class="term-body" id="term-body" aria-live="polite">
-                            <pre class="term-output" id="term-output"></pre>
-                            <div class="term-inputline">
-                                <span class="term-prompt">$</span>
-                                <span class="term-echo" id="term-echo"></span>
-                                <span class="term-cursor" aria-hidden="true"></span>
-                            </div>
-                        </div>
-                        <input type="text" id="term-hidden" class="term-hidden" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="Terminal input">
-                    </div>
-                    <p class="term-hint">click &amp; type — ↑↓ history · Ctrl+L clear · try <code>detect</code>, <code>top</code>, <code>guard</code></p>
-                </div>
-            </div>
-        </section>
-
-
-        <section class="reveal">
-            <h2>1. Overview</h2>
-            <p><strong>caddy-analyzer</strong> is a single-binary log analysis tool and security inspector written in Go. It parses Caddy v2 structured JSON access logs from files, standard input, Docker containers, Kubernetes pods, or systemd journalctl — producing terminal summaries, live streaming views, threat detection reports, and standalone HTML outputs.</p>
-
-            <div class="stat-row reveal-stagger">
-                <div class="stat"><div class="stat-num">26</div><div class="stat-label">attack categories</div></div>
-                <div class="stat"><div class="stat-num">~70K</div><div class="stat-label">lines/sec parse</div></div>
-                <div class="stat"><div class="stat-num">~7K</div><div class="stat-label">lines/sec detect</div></div>
-                <div class="stat"><div class="stat-num">0</div><div class="stat-label">external deps</div></div>
-            </div>
-        </section>
-
-        <section class="reveal">
-            <h2>2. Documentation sections</h2>
-            <div class="doc-grid reveal-stagger">
-                <a class="doc-card" href="installation.html">
-                    <div class="num">01 · INSTALL</div>
-                    <strong>Installation Guide</strong>
-                    <span>Linux, macOS, Windows PowerShell, Go toolchain, Docker, systemd, binary releases.</span>
-                    <div class="arrow">→ open</div>
-                </a>
-                <a class="doc-card" href="sources.html">
-                    <div class="num">02 · INPUTS</div>
-                    <strong>Log Sources Guide</strong>
-                    <span>Files, globs, stdin pipes, <code>docker://</code>, <code>k8s://</code>, <code>journalctl://</code>.</span>
-                    <div class="arrow">→ open</div>
-                </a>
-                <a class="doc-card" href="subcommands.html">
-                    <div class="num">03 · CLI</div>
-                    <strong>Subcommands Reference</strong>
-                    <span>Complete reference for <code>tail</code>, <code>top</code>, <code>diff</code>, <code>config</code>, <code>guard</code>, <code>blocklist</code>, <code>block</code>, <code>unban</code>.</span>
-                    <div class="arrow">→ open</div>
-                </a>
-                <a class="doc-card" href="security.html">
-                    <div class="num">04 · SECURITY</div>
-                    <strong>Threat Engine &amp; Firewall Guard</strong>
-                    <span>26 categories (SQLi, XSS, Log4j, RCE, JWT, Beaconing…) with MITRE tags, Sigma export, IOC defanging, <code>iptables</code> auto-blocking, 8 blocklist feeds, and GeoIP country-block.</span>
-                    <div class="arrow">→ open</div>
-                </a>
-                <a class="doc-card" href="tui-html.html">
-                    <div class="num">05 · UI</div>
-                    <strong>TUI Dashboard &amp; HTML Reports</strong>
-                    <span>8-tab interactive terminal interface (<code>--watch</code>) with live GeoIP enrichment and standalone dark-mode HTML web reports (<code>-f html</code>).</span>
-                    <div class="arrow">→ open</div>
-                </a>
-            </div>
-        </section>
-
-        <section class="reveal">
-            <h2>3. Why caddy-analyzer?</h2>
-            <div class="feature-grid reveal-stagger">
-                <div class="feature-card">
-                    <span class="feature-icon" aria-hidden="true">🛡️</span>
-                    <h3>Dual-pass detection</h3>
-                    <p>URL-unescaped + raw URI matching catches multibyte and double-encoded bypass attempts.</p>
-                </div>
-                <div class="feature-card">
-                    <span class="feature-icon" aria-hidden="true">⚡</span>
-                    <h3>Evasion-resistant</h3>
-                    <p>Marker triage, case-fold elimination, and literal fast paths keep benign traffic cheap.</p>
-                </div>
-                <div class="feature-card">
-                    <span class="feature-icon" aria-hidden="true">🔒</span>
-                    <h3>Real-time firewall</h3>
-                    <p>Guard daemon auto-blocks malicious IPs via <code>iptables</code> with sliding-window limits.</p>
-                </div>
-                <div class="feature-card">
-                    <span class="feature-icon" aria-hidden="true">📰</span>
-                    <h3>Blocklist feeds &amp; country-block</h3>
-                    <p>8 default threat-intel feeds (Spamhaus, FireHOL, CINS, Tor, ET, AbuseIPDB) cached as a CIDR trie, plus <code>--country-block</code> GeoIP enforcement.</p>
-                </div>
-                <div class="feature-card">
-                    <span class="feature-icon" aria-hidden="true">📊</span>
-                    <h3>MITRE-tagged</h3>
-                    <p>Every detection mapped to ATT&amp;CK technique IDs, exportable as Sigma rules for SIEM.</p>
-                </div>
-                <div class="feature-card">
-                    <span class="feature-icon" aria-hidden="true">🌍</span>
-                    <h3>GeoIP enrichment</h3>
-                    <p>Auto-downloaded GeoLite2 mmdb powers <code>top country</code> / <code>top asn</code> dimensions with human-readable country names.</p>
-                </div>
-            </div>
-        </section>
-
-        <section class="reveal" aria-label="Architecture flow diagram">
-            <h2>4. How it works</h2>
-            <figure class="arch-diagram">
-                <svg viewBox="0 0 900 250" role="img" aria-labelledby="arch-title arch-desc" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
-                    <title id="arch-title">caddy-analyzer data flow</title>
-                    <desc id="arch-desc">Diagram showing the flow: HTTP client, Caddy server, structured logs, caddy-analyzer with a 26-category threat engine, and outputs (TUI, HTML, iptables).</desc>
-                    <defs>
-                        <linearGradient id="arch-grad" gradientUnits="userSpaceOnUse" x1="160" y1="125" x2="680" y2="125">
-                            <stop offset="0%" stop-color="#48d1cc"/>
-                            <stop offset="50%" stop-color="#38bdf8"/>
-                            <stop offset="100%" stop-color="#a78bfa"/>
-                        </linearGradient>
-                        <linearGradient id="arch-grad-vert" gradientUnits="userSpaceOnUse" x1="640" y1="43" x2="680" y2="207">
-                            <stop offset="0%" stop-color="#48d1cc"/>
-                            <stop offset="50%" stop-color="#38bdf8"/>
-                            <stop offset="100%" stop-color="#a78bfa"/>
-                        </linearGradient>
-                        <marker id="arch-arrow" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
-                            <path d="M0,0 L8,4 L0,8 Z" fill="url(#arch-grad)"/>
-                        </marker>
-                        <filter id="arch-glow" x="-40%" y="-40%" width="180%" height="180%">
-                            <feGaussianBlur stdDeviation="5" result="b"/>
-                            <feMerge>
-                                <feMergeNode in="b"/>
-                                <feMergeNode in="SourceGraphic"/>
-                            </feMerge>
-                        </filter>
-                    </defs>
-                    <g font-family="var(--sans, sans-serif)" fill="var(--text, #e5e7eb)">
-                        <!-- HTTP Client -->
-                        <g transform="translate(20,89)">
-                            <rect width="140" height="72" rx="12" style="fill:var(--surface,#16161a)" stroke="#48d1cc" stroke-width="1.5"/>
-                            <text x="70" y="28" text-anchor="middle" font-size="20">🌐</text>
-                            <text x="70" y="50" text-anchor="middle" font-weight="600" font-size="13">HTTP Client</text>
-                            <text x="70" y="64" text-anchor="middle" font-size="9" fill="var(--text-dim,#a8b0bd)">attacker · bots · legit</text>
-                        </g>
-                        <!-- Caddy v2 -->
-                        <g transform="translate(220,89)">
-                            <rect width="140" height="72" rx="12" style="fill:var(--surface,#16161a)" stroke="#48d1cc" stroke-width="1.5"/>
-                            <text x="70" y="28" text-anchor="middle" font-size="20">🧱</text>
-                            <text x="70" y="50" text-anchor="middle" font-weight="600" font-size="13">Caddy v2</text>
-                            <text x="70" y="64" text-anchor="middle" font-size="9" fill="var(--text-dim,#a8b0bd)">access.log · JSON</text>
-                        </g>
-                        <!-- caddy-analyzer (main) -->
-                        <g transform="translate(430,82)">
-                            <rect width="170" height="86" rx="14" filter="url(#arch-glow)" style="fill:var(--surface,#16161a)" stroke="url(#arch-grad)" stroke-width="2"/>
-                            <text x="85" y="34" text-anchor="middle" font-weight="700" font-size="14" fill="var(--accent,#48d1cc)">🛡️ caddy-analyzer</text>
-                            <text x="85" y="52" text-anchor="middle" font-size="10" fill="var(--text-dim,#a8b0bd)">Go binary · live tail</text>
-                            <rect x="14" y="58" width="142" height="20" rx="10" fill="none" stroke="var(--amber,#fbbf24)" stroke-width="1" stroke-dasharray="4 3" opacity="0.7"/>
-                            <text x="85" y="72" text-anchor="middle" font-size="9.5" fill="var(--amber,#fbbf24)">🔍 26-category threat engine</text>
-                        </g>
-                        <!-- Outputs -->
-                        <g transform="translate(680,11)">
-                            <rect width="170" height="64" rx="12" style="fill:var(--surface,#16161a)" stroke="var(--violet,#a78bfa)" stroke-width="1.5"/>
-                            <text x="85" y="26" text-anchor="middle" font-size="18">📺</text>
-                            <text x="85" y="46" text-anchor="middle" font-weight="600" font-size="12.5">TUI Dashboard</text>
-                            <text x="85" y="59" text-anchor="middle" font-size="9" fill="var(--text-dim,#a8b0bd)">8-tab · --watch</text>
-                        </g>
-                        <g transform="translate(680,93)">
-                            <a href="demo.html" xlink:href="demo.html">
-                                <rect width="170" height="64" rx="12" style="fill:var(--surface,#16161a)" stroke="var(--accent-2,#38bdf8)" stroke-width="1.5" class="arch-link"/>
-                                <text x="85" y="26" text-anchor="middle" font-size="18">📄</text>
-                                <text x="85" y="46" text-anchor="middle" font-weight="600" font-size="12.5">HTML Report</text>
-                                <text x="85" y="59" text-anchor="middle" font-size="9" fill="var(--text-dim,#a8b0bd)">dark-mode · -f html</text>
-                            </a>
-                        </g>
-                        <g transform="translate(680,175)">
-                            <rect width="170" height="64" rx="12" style="fill:var(--surface,#16161a)" stroke="var(--danger,#f87171)" stroke-width="1.5"/>
-                            <text x="85" y="26" text-anchor="middle" font-size="18">🔥</text>
-                            <text x="85" y="46" text-anchor="middle" font-weight="600" font-size="12.5">iptables guard</text>
-                            <text x="85" y="59" text-anchor="middle" font-size="9" fill="var(--text-dim,#a8b0bd)">auto-block · sliding window</text>
-                        </g>
-                    </g>
-                    <g fill="none" stroke="url(#arch-grad)" stroke-width="2" marker-end="url(#arch-arrow)">
-                        <path d="M160,125 L220,125" class="arch-line"/>
-                        <path d="M360,125 L430,125" class="arch-line"/>
-                        <path d="M600,125 L640,125" class="arch-line" marker-end="none"/>
-                        <path d="M640,43 L640,207" class="arch-line" marker-end="none"/>
-                        <path d="M640,43 L680,43" class="arch-line"/>
-                        <path d="M640,125 L680,125" class="arch-line"/>
-                        <path d="M640,207 L680,207" class="arch-line"/>
-                    </g>
-                    <g fill="none" stroke="url(#arch-grad-vert)" stroke-width="2" stroke-linecap="round">
-                        <path d="M160,125 L220,125" class="arch-beam"/>
-                        <path d="M360,125 L430,125" class="arch-beam"/>
-                        <path d="M600,125 L640,125" class="arch-beam"/>
-                        <path d="M640,43 L640,207" class="arch-beam"/>
-                        <path d="M640,43 L680,43" class="arch-beam"/>
-                        <path d="M640,125 L680,125" class="arch-beam"/>
-                        <path d="M640,207 L680,207" class="arch-beam"/>
-                    </g>
-                    <style>
-                        .arch-line { stroke-dasharray: 240; stroke-dashoffset: 240; animation: arch-draw 1.2s ease-out forwards; }
-                        .arch-line:nth-of-type(2) { animation-delay: .15s; }
-                        .arch-line:nth-of-type(3) { animation-delay: .3s; }
-                        .arch-line:nth-of-type(4) { animation-delay: .45s; }
-                        .arch-line:nth-of-type(5) { animation-delay: .6s; }
-                        .arch-line:nth-of-type(6) { animation-delay: .75s; }
-                        .arch-line:nth-of-type(7) { animation-delay: .9s; }
-                        .arch-beam {
-                            stroke-dasharray: 5 15;
-                            opacity: 0;
-                            animation: arch-beam 1.7s linear infinite, arch-beam-in 1.2s ease-out forwards;
-                        }
-                        .arch-beam:nth-of-type(2) { animation-delay: .15s, .15s; }
-                        .arch-beam:nth-of-type(3) { animation-delay: .3s, .3s; }
-                        .arch-beam:nth-of-type(4) { animation-delay: .45s, .45s; }
-                        .arch-beam:nth-of-type(5) { animation-delay: .6s, .6s; }
-                        .arch-beam:nth-of-type(6) { animation-delay: .75s, .75s; }
-                        .arch-beam:nth-of-type(7) { animation-delay: .9s, .9s; }
-                        .arch-link { cursor: pointer; }
-                        .arch-link:hover rect { stroke-width: 2.5; filter: drop-shadow(0 0 6px var(--accent-glow)); }
-                        .arch-link:focus-visible { outline: 2px solid var(--focus-color); outline-offset: 2px; }
-                        @keyframes arch-draw { to { stroke-dashoffset: 0; } }
-                        @keyframes arch-beam { to { stroke-dashoffset: -80; } }
-                        @keyframes arch-beam-in { to { opacity: 0.9; } }
-                        @media (prefers-reduced-motion: reduce) {
-                            .arch-line { animation: none; stroke-dashoffset: 0; }
-                            .arch-beam { animation: none; opacity: 0; }
-                        }
-                    </style>
-                </svg>
-                <figcaption>Request flow: client → Caddy → structured logs → caddy-analyzer → 26-category threat engine → TUI, HTML report, or live iptables firewall action.</figcaption>
-            </figure>
-        </section>
-
-        <section class="reveal">
-            <h2>5. Demo</h2>
-            <div class="demo-frame">
-                <img loading="lazy" decoding="async" width="983" height="426" src="https://raw.githubusercontent.com/lenny-ts/caddy-analyzer/main/assets/demo.gif" alt="caddy-analyzer demo">
-            </div>
-        </section>
-
-        <section class="reveal">
-            <h2>6. Quickstart &amp; auto-configuration</h2>
-            <p>To avoid typing your log file or Docker container path every time, <code>caddy-analyze</code> offers persistent default configuration and zero-config auto-discovery.</p>
-
-            <h3>1. Set persistent default log source <span class="pill">recommended</span></h3>
-            <p>Configure your log source once, and all future commands will read from it automatically:</p>
-<pre># Set local default log path (saved to ./caddy-analyzer.json)
-caddy-analyze config /var/log/caddy/access.log
-
-# Or set global default log path for all directories
-caddy-analyze config docker://my-caddy --global</pre>
-            <p>Once configured, you never need to type the log path again:</p>
-<pre>caddy-analyze
-caddy-analyze --detect
-caddy-analyze top ip
-caddy-analyze --watch</pre>
-
-            <h3>2. Zero-config auto-discovery</h3>
-            <p>If no configuration file is set and no path argument is passed, <code>caddy-analyze</code> automatically scans for local log files in <code>./access.log</code>, <code>./caddy.log</code>, <code>./caddy-access.log</code>, <code>/var/log/caddy/access.log</code>, or <code>/var/log/caddy/caddy.log</code>.</p>
-
-            <details class="quick-ref">
-                <summary>Quick command reference</summary>
-<pre># Run terminal analysis on default configured log
-caddy-analyze
-
-# Enable threat detection engine
-caddy-analyze --detect
-
-# Filter by IP or CIDR subnet (shows color-coded log listing)
-caddy-analyze --ip 10.0.0.0/8
-
-# Filter errors excluding bots
-caddy-analyze --5xx --no-bots
-
-# Stream colorized logs in real time from Docker
-caddy-analyze tail docker://my-caddy
-
-# Tail with filters
-caddy-analyze tail --ip 192.168.1.100 --no-bots
-
-# Inspect top client IP addresses
-caddy-analyze top ip
-
-# Top countries / ASNs (requires GeoIP mmdb, auto-downloaded on first run)
-caddy-analyze top country
-caddy-analyze top asn
-
-# Compare baseline log vs current log
-caddy-analyze diff baseline.log current.log
-
-# Check or reset default log source configuration
-caddy-analyze config show
-caddy-analyze config reset
-
-# Manage threat-intel blocklist feeds
-caddy-analyze blocklist refresh
-caddy-analyze blocklist list
-
-# Guard: auto-block + enforce country block (requires root)
-sudo caddy-analyze guard --country-block CN,RU docker://my-caddy</pre>
-            </details>
-        </section>
-
-        <section class="reveal">
-            <h2>7. Performance</h2>
-            <p>Benchmarks on synthetic Caddy v2 JSON logs (10% attack traffic, single core):</p>
-            <div class="table-wrap">
-            <table class="perf">
-                <caption>Benchmark results on synthetic Caddy v2 JSON logs (10% attack traffic, single core)</caption>
-                <thead>
-                <tr>
-                    <th scope="col">Log size</th>
-                    <th scope="col"><code>--detect</code></th>
-                    <th scope="col">Parse only</th>
-                    <th scope="col">RAM</th>
-                </tr>
-                </thead>
-                <tbody>
-                <tr><td>1.5K lines (real)</td><td>0.6s</td><td>&lt;0.1s</td><td>21 MB</td></tr>
-                <tr><td>10K lines</td><td>1.5s</td><td>0.2s</td><td>25 MB</td></tr>
-                <tr><td>100K lines</td><td>14.3s</td><td>1.4s</td><td>53 MB</td></tr>
-                <tr><td>1M lines</td><td>2m29s</td><td>~14s</td><td>138 MB</td></tr>
-                </tbody>
-            </table>
-            </div>
-            <p>Throughput: ~7,000 lines/sec with <code>--detect</code>, ~70,000 lines/sec parse-only. Memory scales linearly and is bounded by LRU IP eviction (100K cap) and per-IP path caps (1K). The detection engine uses per-source marker triage, case-fold elimination, and a literal fast path to minimize regex evaluations on benign traffic.</p>
-        </section>
-
-        <section class="reveal">
-            <h2>8. Progress bar &amp; real-time detection</h2>
-            <p>When analyzing files on a TTY, a determinate progress bar is shown: <code>[████████░░░░] 5000/10000 (50%)</code>. Active on <code>caddy-analyze</code> (offline mode), <code>top</code>, and <code>diff</code> (per-file with filename label). Auto-disabled when stderr is redirected to a pipe or file. For non-file sources (stdin, <code>docker://</code>, <code>k8s://</code>, <code>journalctl://</code>) an indeterminate spinner is shown instead. Pre-scan overhead is &lt;3%.</p>
-            <p>The <code>tail</code> subcommand accepts <code>--detect</code> (<code>-d</code>) to run the detection engine on each streamed entry. Suspicious entries have their IP colored by severity (red critical/high, amber medium, olive low) and the attack type appended after a dim <code>→</code> arrow. Clean entries are unchanged — zero visual noise.</p>
-<pre>caddy-analyze tail --detect docker://my-caddy
-caddy-analyze tail -d --defang /var/log/caddy/access.log</pre>
-        </section>
-
-        <footer class="footer reveal">
-            <p>caddy-analyzer is open-source software released under the <a href="https://github.com/lenny-ts/caddy-analyzer/blob/main/LICENSE">MIT License</a>. Source code on <a href="https://github.com/lenny-ts/caddy-analyzer">GitHub</a>.</p>
-        </footer>
-
-    </main>
-
-    <button class="back-to-top" aria-label="Back to top">↑</button>
-    <script src="docs.min.js?v=31" defer></script>
-
+  </main>
+  <nav class="doc-toc" aria-label="On this page"><div class="toc-label">On this page</div><a href="#what-it-solves" class="toc-link">What it solves vs. generic tools</a><a href="#documentation" class="toc-link">Documentation</a><a href="#next" class="toc-link">Next step</a></nav>
+</div>
+<script src="docs.min.js?v=36"></script>
 </body>
 </html>

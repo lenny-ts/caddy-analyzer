@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MITRE, Sigma &amp; Evasion — caddy-analyzer</title>
+  <meta name="description" content="Verified ATT&amp;CK IDs, 23 Sigma rules, and how the engine resists bypass.">
+  <meta name="theme-color" content="#09090B">
+  <link rel="icon" href="../caddy-analyzer-logo.png" type="image/png">
+  <link rel="canonical" href="https://lenny-ts.github.io/caddy-analyzer/reference/security-detection.html">
+  <link rel="alternate" hreflang="x-default" href="https://lenny-ts.github.io/caddy-analyzer/reference/security-detection.html">
+  <link rel="alternate" hreflang="en" href="https://lenny-ts.github.io/caddy-analyzer/reference/security-detection.html">
+  <link rel="alternate" hreflang="it" href="https://lenny-ts.github.io/caddy-analyzer/it/reference/security-detection.html">
+  <script>try{var t=localStorage.getItem('caddy-docs-theme');if(t==='light')document.documentElement.setAttribute('data-theme','light');}catch(e){}</script>
+  <meta name="color-scheme" content="dark light">
+  <link rel="stylesheet" href="../styles.min.css?v=36">
+</head>
+<body>
+<header class="site-header">
+  <a href="../index.html" class="logo">
+    <img src="../caddy-analyzer-logo.png" alt="" class="site-logo">
+    <span>caddy-analyzer</span>
+  </a>
+  <nav aria-label="Primary">
+    <a href="../installation.html" data-nav="installation.html">Installation</a>
+    <a href="../sources.html" data-nav="sources.html">Log Sources</a>
+    <a href="../reference/cli.html" data-nav="cli.html">CLI Reference</a>
+    <a href="../security.html" data-nav="security.html">Threat Engine</a>
+    <a href="../tui-html.html" data-nav="tui-html.html">TUI & HTML Reports</a>
+  </nav>
+  <div class="header-actions">
+    <a href="https://github.com/lenny-ts/caddy-analyzer" style="color:var(--text-sec);font-size:0.85rem;" rel="noopener">GitHub</a>
+    <div class="language-switch" role="group" aria-label="Language"><span class="lang-option active" aria-current="page">EN</span><a class="lang-option" href="../it/reference/security-detection.html" hreflang="it" lang="it">IT</a></div>
+    <button class="theme-toggle" type="button" aria-label="Switch to light theme">
+      <span class="theme-icon theme-sun" aria-hidden="true">☀</span>
+      <span class="theme-icon theme-moon" aria-hidden="true">☾</span>
+    </button>
+  </div>
+</header>
+<div class="scroll-progress" aria-hidden="true"></div>
+
+<div class="docs-layout">
+   <aside class="doc-sidebar" aria-label="Page navigation">
+  <div class="sidebar-label">Documentation</div>
+  <a href="../index.html" class="sidebar-link" data-page="index.html">Overview</a>
+  <a href="../quickstart.html" class="sidebar-link" data-page="quickstart.html">Quickstart</a>
+  <a href="../installation.html" class="sidebar-link" data-page="installation.html">Installation</a>
+  <a href="../sources.html" class="sidebar-link" data-page="sources.html">Log Sources</a>
+  <div class="sidebar-sep"></div>
+  <div class="sidebar-label">Guide</div>
+  <a href="../guide/configuration.html" class="sidebar-link" data-page="configuration.html">Configuration</a>
+  <a href="../guide/usage.html" class="sidebar-link" data-page="usage.html">Usage</a>
+  <a href="../guide/examples.html" class="sidebar-link" data-page="examples.html">Examples</a>
+  <a href="../guide/troubleshooting.html" class="sidebar-link" data-page="troubleshooting.html">Troubleshooting</a>
+  <div class="sidebar-sep"></div>
+  <div class="sidebar-label">Reference</div>
+  <a href="../reference/cli.html" class="sidebar-link" data-page="cli.html">CLI Reference</a>
+  <a href="../reference/security-categories.html" class="sidebar-link sub" data-page="security-categories.html">— Categories</a>
+  <a href="../reference/security-detection.html" class="sidebar-link sub active" data-page="security-detection.html">— Detection</a>
+  <a href="../subcommands-guard.html" class="sidebar-link sub" data-page="subcommands-guard.html">— Guard</a>
+  <a href="../subcommands-blocklist.html" class="sidebar-link sub" data-page="subcommands-blocklist.html">— Blocklist</a>
+  <a href="../subcommands-block.html" class="sidebar-link sub" data-page="subcommands-block.html">— Block / Unban</a>
+  <a href="../subcommands-top.html" class="sidebar-link sub" data-page="subcommands-top.html">— Top</a>
+  <a href="../reference/api.html" class="sidebar-link" data-page="api.html">API / Packages</a>
+  <div class="sidebar-sep"></div>
+  <a href="../security.html" class="sidebar-link" data-page="security.html">Threat Engine</a>
+  <a href="../architecture.html" class="sidebar-link" data-page="architecture.html">Architecture</a>
+  <a href="../tui-html.html" class="sidebar-link" data-page="tui-html.html">TUI & HTML Reports</a>
+  <a href="../contributing.html" class="sidebar-link" data-page="contributing.html">Contributing</a>
+  <a href="../faq.html" class="sidebar-link" data-page="faq.html">FAQ</a>
+  <a href="../changelog.html" class="sidebar-link" data-page="changelog.html">Changelog</a>
+</aside>
+
+  <main class="wrap" id="main">
+    <div class="doc-content">
+      <nav class="breadcrumb" aria-label="Breadcrumb"><a href="../reference/cli.html">Reference</a><span class="sep">/</span><span>Detection</span></nav>
+      <div class="page-meta"><a href="https://github.com/lenny-ts/caddy-analyzer/releases">v0.6.1</a> · updated <time datetime="2026-08-31">2026-08-31</time> · <a href="https://github.com/lenny-ts/caddy-analyzer">GitHub</a></div>
+      <h1>MITRE, Sigma &amp; Evasion</h1>
+<p>How detections are tagged, exported, and why simple encodings do not bypass them. For the 26 rows with confidence/description/example, see <a href="security-categories.html">Categories</a>.</p>
+
+<h2 id="mitre">MITRE ATT&amp;CK mapping — verified IDs</h2>
+<p>IDs from <code>pkg/analysis/detectionTechniques</code>, verified against ATT&amp;CK. The mapping is used for Sigma export; current JSON and HTML report records do not include a <code>techniques</code> array.</p>
+<div class="table-wrap"><table>
+<thead><tr><th>Category</th><th>Technique ID</th><th>Name</th></tr></thead>
+<tbody>
+<tr><td><code>sql_injection</code></td><td>T1190</td><td>Exploit Public-Facing Application</td></tr>
+<tr><td><code>nosql_injection</code></td><td>T1190</td><td>Exploit Public-Facing Application</td></tr>
+<tr><td><code>xss</code></td><td>T1059.007</td><td>Command and Scripting Interpreter: JavaScript</td></tr>
+<tr><td></td><td>T1189</td><td>Drive-by Compromise</td></tr>
+<tr><td><code>ssti</code></td><td>T1190</td><td>Exploit Public-Facing Application</td></tr>
+<tr><td><code>ssrf</code></td><td>T1190</td><td>Exploit Public-Facing Application</td></tr>
+<tr><td><code>rce</code></td><td>T1059</td><td>Command and Scripting Interpreter</td></tr>
+<tr><td></td><td>T1190</td><td>Exploit Public-Facing Application</td></tr>
+<tr><td><code>path_traversal</code></td><td>T1083</td><td>File and Directory Discovery</td></tr>
+<tr><td><code>lfi_wrapper_abuse</code></td><td>T1083</td><td>File and Directory Discovery</td></tr>
+<tr><td></td><td>T1190</td><td>Exploit Public-Facing Application</td></tr>
+<tr><td><code>graphql_introspection</code></td><td>T1595.002</td><td>Active Scanning: Vulnerability Scanning</td></tr>
+<tr><td><code>log4j_jndi</code></td><td>T1190</td><td>Exploit Public-Facing Application</td></tr>
+<tr><td></td><td>T1059</td><td>Command and Scripting Interpreter</td></tr>
+<tr><td><code>sensitive_file_probe</code></td><td>T1083</td><td>File and Directory Discovery</td></tr>
+<tr><td></td><td>T1552.001</td><td>Unsecured Credentials: Credentials In Files</td></tr>
+<tr><td><code>admin_probe</code></td><td>T1595.002</td><td>Active Scanning: Vulnerability Scanning</td></tr>
+<tr><td><code>wordpress_probe</code></td><td>T1595.002</td><td>Active Scanning: Vulnerability Scanning</td></tr>
+<tr><td><code>cgi_probe</code></td><td>T1595.002</td><td>Active Scanning: Vulnerability Scanning</td></tr>
+<tr><td><code>scanner</code></td><td>T1595</td><td>Active Scanning</td></tr>
+<tr><td><code>xxe</code></td><td>T1190</td><td>Exploit Public-Facing Application</td></tr>
+<tr><td><code>open_redirect</code></td><td>T1566.002</td><td>Phishing: Spearphishing Link</td></tr>
+<tr><td><code>ldap_injection</code></td><td>T1190</td><td>Exploit Public-Facing Application</td></tr>
+<tr><td><code>xpath_injection</code></td><td>T1190</td><td>Exploit Public-Facing Application</td></tr>
+<tr><td><code>crlf_injection</code></td><td>T1190</td><td>Exploit Public-Facing Application</td></tr>
+<tr><td></td><td>T1059</td><td>Command and Scripting Interpreter</td></tr>
+<tr><td><code>prototype_pollution</code></td><td>T1190</td><td>Exploit Public-Facing Application</td></tr>
+<tr><td></td><td>T1059.007</td><td>Command and Scripting Interpreter: JavaScript</td></tr>
+<tr><td><code>ssi_injection</code></td><td>T1190</td><td>Exploit Public-Facing Application</td></tr>
+<tr><td></td><td>T1059</td><td>Command and Scripting Interpreter</td></tr>
+<tr><td><code>ua_rotation</code></td><td>T1595.001</td><td>Active Scanning: Scanning IP Blocks</td></tr>
+<tr><td><code>jwt_abuse</code></td><td>T1550.001</td><td>Use Alternate Authentication Material: Application Access Token</td></tr>
+<tr><td></td><td>T1190</td><td>Exploit Public-Facing Application</td></tr>
+<tr><td><code>object_enumeration</code></td><td>T1595.002</td><td>Active Scanning: Vulnerability Scanning</td></tr>
+<tr><td></td><td>T1190</td><td>Exploit Public-Facing Application</td></tr>
+<tr><td><code>beaconing</code></td><td>T1071.001</td><td>Application Layer Protocol: Web Protocols</td></tr>
+<tr><td></td><td>T1573</td><td>Encrypted Channel</td></tr>
+</tbody>
+</table></div>
+<p>Source of truth: <code>pkg/analysis/detect.go:64-91</code>. If an ID looks wrong, open an issue — IDs are not approximated.</p>
+
+<h2 id="sigma">Sigma export — 23 of 26</h2>
+<p>Pattern categories export; 3 behavioral do not (they need state, not a single request).</p>
+<div class="table-wrap"><table>
+<thead><tr><th>Exported</th><th>Why</th></tr></thead>
+<tbody>
+<tr><td>23 pattern categories</td><td>Single-request regex + <code>uri|status|client_ip</code> fields, deterministic <code>uuidV5</code> (<code>uuidNamespaceDNS + "caddy-analyzer:sigma:"+title</code>)</td></tr>
+<tr><td>3 excluded: <code>ua_rotation</code>, <code>object_enumeration</code>, <code>beaconing</code></td><td>Need ≥10 samples per IP/path, CV check, ring buffer — not expressible as single-event Sigma</td></tr>
+</tbody>
+</table></div>
+<pre><code>caddy-analyze export-sigma rules.yml
+caddy-analyze export-sigma - | sigma check --rules -  # validate
+# import into Splunk/Elastic — tags carry ATT&CK IDs above</code></pre>
+
+<h2 id="evasion">Evasion resistance</h2>
+<p>Why <code>%2e%2e</code>, double-encode and mixed case do not bypass detection.</p>
+<div class="table-wrap"><table>
+<thead><tr><th>Technique</th><th>How</th><th>Code</th></tr></thead>
+<tbody>
+<tr><td>Dual-pass</td><td>Every URI checked as <code>decodeURI</code> (query-aware <code>PathUnescape+QueryUnescape</code> + manual <code>%</code> fallback) <em>and</em> raw</td><td><code>DetectAll</code> + <code>rawPatterns</code> in <code>init()</code></td></tr>
+<tr><td>Literal fast path</td><td>Pure alternations matched via <code>strings.Contains</code> lowercased (~100× faster)</td><td><code>extractPureLiterals / compileLowercase</code></td></tr>
+<tr><td>Gate</td><td>Longest required literal must be present (<code>strings.Contains</code>) before regex runs</td><td><code>extractGate</code></td></tr>
+<tr><td>Markers / triage</td><td>Collect all ≥2-char literals; if none present, skip all patterns for that source</td><td><code>buildMarkers / matchMarkers / isMarkerCovered</code></td></tr>
+<tr><td>Case-fold elimination</td><td>Compile regexes lowercased, lowercase source once — no <code>FoldCase</code> per match (~8% CPU saved)</td><td><code>lowercaseFold</code></td></tr>
+<tr><td>LRU caps</td><td>IPs 100k, GeoIP 50k, histogram 1K buckets</td><td><code>DefaultIPCap, geoCache</code></td></tr>
+</tbody>
+</table></div>
+<p>Test that bypass is covered: <code>rawPatterns</code> includes <code>%2e%2e%2f</code>, <code>%252e</code>, <code>%c0%ae</code>, <code>0x7f000001</code> etc. See <code>pkg/analysis/detect.go:778-801</code> and <code>testdata/generate.py</code> fixtures.</p>
+      <footer class="footer">
+  <p>caddy-analyzer is open-source under <a href="https://github.com/lenny-ts/caddy-analyzer/blob/main/LICENSE">MIT</a> · <a href="https://github.com/lenny-ts/caddy-analyzer">GitHub</a> · <a href="../changelog.html">Changelog</a></p>
+</footer>
+<button class="back-to-top" aria-label="Back to top">↑</button>
+
+    </div>
+  </main>
+  <nav class="doc-toc" aria-label="On this page"><div class="toc-label">On this page</div><a href="#mitre" class="toc-link">MITRE ATT&amp;amp;CK mapping — verified IDs</a><a href="#sigma" class="toc-link">Sigma export — 23 of 26</a><a href="#evasion" class="toc-link">Evasion resistance</a></nav>
+</div>
+<script src="../docs.min.js?v=36"></script>
+</body>
+</html>

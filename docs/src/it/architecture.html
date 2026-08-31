@@ -1,0 +1,50 @@
+<!-- fm: title=Architettura — caddy-analyzer | description=Flusso dei dati, pacchetti e collocazione di parser, guard, enrich e blocklist. | breadcrumb=Panoramica > Architettura -->
+<h1>Architettura</h1>
+<p>Singolo binario, zero CGO, memoria limitata (LRU + istogramma). Per le firme dei pacchetti e gli esempi di importazione, consulta <a href="reference/api.html">API / Pacchetti</a>. Per aggiungere una funzionalita, consulta <a href="contributing.html">Contribuire</a>.</p>
+
+<h2 id="data-flow">Flusso dei dati</h2>
+<pre style="font-size:0.80rem;line-height:1.55;"><code> Sources                    Reader                     Parser
+ ──────────                 ──────                     ──────
+ file / glob ─┐
+ stdin  -     ├─▶  reader.FromSource(follow)  ─▶  parser.Parse(line) ─┐
+ docker:// ───┤         fan-in + rotation                                │
+ k8s:// ──────┤         stdout+stderr merge                              ▼
+ journalctl ──┘                                                ┌─────────────────┐
+                                                               │  analysis.Engine │
+                                                               │  ├─ MatchEntry() │◀── types.Filters (--from, --ip, --country, --grep, --level…)
+                                                               │  ├─ Enrich  ───────▶ enrich.GeoIP.Lookup(ip) → Country/ASN (LRU 50K, TTL 24h)
+                                                               │  ├─ Detect  ───────▶ analysis.Detector (26 cats, dual-pass, MITRE)
+                                                               │  └─ Stats (TopN, histogram 1K buckets, human/bot)                │
+                                                               └────────┬────────┘
+                                                                        │
+                                               ┌────────────────────────┼────────────────────────┐
+                                               │                        │                        │
+                                            output.Report         tui.Model (watch)        guard.Guard
+                                            table/json/csv/html   8 tabs, 2s tick          ├─ Evaluate(entry) ──▶ blocklist.Manager.Contains(ip) → immediate
+                                                                                            ├─ enrich.GeoIP ──▶ country-block → immediate
+                                                                                            ├─ sliding window (per-sec buckets) → Tick()
+                                                                                            ├─ firewall.Backend (auto → hybrid/iptables/docker/nftables)
+                                                                                            └─ audit + state (JSONL + blocked.json)</code></pre>
+
+<h2 id="packages">Pacchetti — dove risiedono i concetti</h2>
+<div class="table-wrap"><table>
+<thead><tr><th>Concetto letto altrove</th><th>Pacchetto</th><th>Collegamento</th></tr></thead>
+<tbody>
+<tr><td>“Caddy JSON → LogEntry”</td><td><code>pkg/parser</code></td><td><a href="reference/api.html#parser">API → parser</a></td></tr>
+<tr><td>“Paese/asn principale, cache GeoIP”</td><td><code>pkg/enrich</code></td><td><a href="reference/api.html#enrich">API → enrich</a></td></tr>
+<tr><td>“26 categorie, MITRE, Sigma”</td><td><code>pkg/analysis</code></td><td><a href="reference/api.html#analysis">API → analysis</a>, <a href="reference/security-detection.html">Rilevamento</a></td></tr>
+<tr><td>“8 feed, trie CIDR, cache 7g”</td><td><code>pkg/blocklist</code></td><td><a href="reference/api.html#blocklist">API → blocklist</a></td></tr>
+<tr><td>“finestra scorrevole, audit, stato”</td><td><code>pkg/guard</code> + <code>guard/firewall</code></td><td><a href="reference/api.html#guard">API → guard</a></td></tr>
+<tr><td>“file/docker/k8s/journalctl”</td><td><code>pkg/reader</code></td><td><a href="reference/api.html#reader">API → reader</a></td></tr>
+<tr><td>“table/html/json”</td><td><code>pkg/output</code></td><td><a href="reference/api.html#output">API → output</a></td></tr>
+<tr><td>“dashboard live”</td><td><code>pkg/tui</code></td><td><a href="tui-html.html">TUI e report</a></td></tr>
+</tbody>
+</table></div>
+
+<h2 id="memory">Limiti di memoria</h2>
+<p><code>MaxCardinality 100k</code> per contatore, LRU IP da 100k, istogramma da 1000 bucket (log10, 1µs–10s), LRU GeoIP da 50k. Nessuna mappa senza limiti.</p>
+
+<h2 id="config-flow">Flusso di configurazione</h2>
+<p><code>caddy-analyzer.json</code> (locale → globale) → <code>PersistentPreRunE applyTuning()</code> → override dei flag CLI. Guard aggiunge l'unione di <code>whitelist</code> + <code>--never-block</code>. Consulta <a href="guide/configuration.html">Configurazione</a>.</p>
+
+<div class="callout callout-info"><div class="callout-label">Vedi anche</div><a href="reference/api.html">API / Pacchetti</a> — importazione e uso per pacchetto. <a href="contributing.html">Contribuire</a> — dove aggiungere un rilevamento (<code>pkg/analysis/detect.go</code>), un feed (<code>pkg/blocklist</code>) o un backend firewall (<code>pkg/guard/firewall</code>).</div>

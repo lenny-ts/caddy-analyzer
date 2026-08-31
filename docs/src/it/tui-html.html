@@ -1,0 +1,36 @@
+<!-- fm: title=Report TUI e HTML — caddy-analyzer | description=Dashboard live a 8 schede ed esportazione HTML autonoma: avvio, contenuto delle schede e formati di output. | breadcrumb=Panoramica > Report TUI e HTML -->
+<h1>Report TUI e HTML</h1>
+<p>Due modi per visualizzare risultati live o condivisibili. Parti da <a href="quickstart.html">Avvio rapido → passaggio 5</a>; flag in <a href="reference/cli.html">Riferimento CLI</a>.</p>
+
+<h2 id="tui">TUI — dashboard live (<code>--watch</code>)</h2>
+<pre><code>caddy-analyze --watch /var/log/caddy/access.log
+caddy-analyze --watch docker://caddy
+caddy-analyze --watch --detect /var/log/caddy/access.log  # with security tab</code></pre>
+<p>Tasti: <code>1</code>–<code>8</code> cambia scheda, <code>Tab</code>/<code>Shift+Tab</code> scorrono, <code>r</code> reimposta la finestra, <code>q</code> esce. Reimpostazione automatica ogni 5 min.</p>
+
+<div class="table-wrap"><table>
+<thead><tr><th>Scheda</th><th>Mostra</th></tr></thead>
+<tbody>
+<tr><td>1 Riepilogo</td><td>Periodo, RPS, barre 2xx/3xx/4xx/5xx, byte, P50/P95/P99, umani/bot</td></tr>
+<tr><td>2 Tempo reale</td><td>Stream colorato (ultimi 15)</td></tr>
+<tr><td>3 Sicurezza</td><td>Primi 15 IP sospetti con confidenza e tecniche (richiede <code>--detect</code>)</td></tr>
+<tr><td>4 IP principali</td><td>Primi 20 IP per richieste</td></tr>
+<tr><td>5 Percorsi principali</td><td>Primi 20 percorsi</td></tr>
+<tr><td>6 User agent</td><td>Primi 15 UA</td></tr>
+<tr><td>7 Geo</td><td>Primi 15 paesi + primi 15 ASN (richiede GeoIP; suggerimento di download in background se in attesa)</td></tr>
+<tr><td>8 Operativo</td><td>Conteggi livello/logger/messaggio + ultimi 15 eventi operativi (richiede <code>--level</code> o log misto)</td></tr>
+</tbody>
+</table></div>
+<p>Combina con i filtri globali: <code>caddy-analyze --watch --from 1h --country IT --no-bots --detect</code>. Flag: <code>--watch</code> e solo root; si applicano comunque flag persistenti come <code>--top</code>/<code>--format</code>.</p>
+
+<h2 id="html">Report HTML — autonomo</h2>
+<pre><code>caddy-analyze -f html -o report.html --detect testdata/sample.log
+caddy-analyze -f html -o report.html --detect /var/log/caddy/access.log
+xdg-open report.html  # or open / start</code></pre>
+<p>Singolo file scuro, nessun server, nessuna risorsa esterna, sicuro con <code>html.EscapeString</code>. Disponibili anche <code>-f json</code>/<code>-f csv</code> (<code>-o</code> scrive con <code>0600</code>):</p>
+<pre><code>caddy-analyze -f json -o report.json --detect /var/log/caddy/access.log
+caddy-analyze -f csv -o report.csv /var/log/caddy/access.log</code></pre>
+
+<h3>Anteprima</h3>
+<iframe src="../demo.html" title="Anteprima report HTML" width="100%" height="720" loading="lazy" style="border:1px solid var(--border);border-radius:10px;margin:12px 0;"></iframe>
+<p>La <em>demo</em> e l'output del formatter HTML (stesso CSS dei report). CLI completa per i formati: <a href="reference/cli.html#global">Riferimento CLI → Output</a> e <a href="guide/usage.html#formats">Guida → Utilizzo → Formati</a>.</p>

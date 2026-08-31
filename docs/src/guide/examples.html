@@ -1,0 +1,40 @@
+<!-- fm: title=Examples — caddy-analyzer | description=Real cases: debug 5xx, hunt bots, diff deploys, forensics with detect. | breadcrumb=Guide > Examples -->
+<h1>Examples</h1>
+<p>Real tasks, copy-paste. Replace <code>testdata/sample.log</code> with your source — <a href="../sources.html">Log Sources</a>.</p>
+
+<h2 id="debug-5xx">Debug 5xx after a deploy</h2>
+<pre><code># which paths 500 most?
+caddy-analyze top path --5xx -t 20 testdata/sample.log
+# only errors from last hour, host-filtered
+caddy-analyze --5xx --from 1h --host api.example.com testdata/sample.log
+# compare before/after
+caddy-analyze diff /var/log/caddy/before.log /var/log/caddy/after.log -f csv -o diff.csv</code></pre>
+
+<h2 id="hunt-bots">Hunt bots &amp; scanners</h2>
+<pre><code>caddy-analyze --bots-only -t 20 testdata/sample.log
+caddy-analyze --no-bots --grep "wp-" testdata/sample.log
+caddy-analyze top ua --bots-only testdata/sample.log
+caddy-analyze top ip --no-bots --from 24h testdata/large.log</code></pre>
+
+<h2 id="geo">Geo — where is traffic from</h2>
+<pre><code>caddy-analyze top country -t 15 testdata/sample.log
+caddy-analyze --country IT --5xx testdata/sample.log
+caddy-analyze --exclude-country CN,RU --from 7d /var/log/caddy/access.log -f html -o week.html</code></pre>
+<p>Needs GeoIP mmdb (auto-downloaded to <code>~/.config/caddy-analyzer/</code> on first use, see <a href="configuration.html#caches">Configuration → caches</a>).</p>
+
+<h2 id="forensics">Forensics with --detect</h2>
+<pre><code>caddy-analyze --detect testdata/sample.log
+caddy-analyze --detect --country US -f json -o suspicious.json testdata/sample.log
+caddy-analyze --detect -f html -o sec.html testdata/large.log && open sec.html
+# live
+caddy-analyze tail docker://caddy --detect</code></pre>
+<p>Every hit is MITRE-tagged; export Sigma: <code>caddy-analyze export-sigma rules.yml</code> (see <a href="../reference/security-detection.html">Detection</a>).</p>
+
+<h2 id="perf">Slow endpoints</h2>
+<pre><code>caddy-analyze --slow 500ms -t 20 testdata/sample.log
+caddy-analyze --max-latency 100ms --min-size 500kb testdata/sample.log
+caddy-analyze top path --slow 1s testdata/sample.log</code></pre>
+
+<h2 id="ops">Operational logs</h2>
+<pre><code>caddy-analyze --ops-only --level error,warn testdata/sample.log
+caddy-analyze --watch journalctl://caddy.service  # 8th tab = Operational</code></pre>

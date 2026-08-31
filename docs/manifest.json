@@ -5,27 +5,27 @@
     "start_url": "./index.html",
     "scope": "./",
     "display": "standalone",
-    "background_color": "#0a0a0c",
-    "theme_color": "#0a0a0c",
+    "background_color": "#09090B",
+    "theme_color": "#09090B",
     "orientation": "any",
     "lang": "en",
     "categories": ["developer-tools", "utilities", "productivity"],
     "icons": [
         {
-            "src": "icon-192.png",
-            "sizes": "192x192",
+            "src": "caddy-analyzer-logo.png",
+            "sizes": "1254x1254",
             "type": "image/png",
             "purpose": "any"
         },
         {
-            "src": "icon-512.png",
-            "sizes": "512x512",
+            "src": "caddy-analyzer-logo.png",
+            "sizes": "1254x1254",
             "type": "image/png",
             "purpose": "any"
         },
         {
-            "src": "icon-512.png",
-            "sizes": "512x512",
+            "src": "caddy-analyzer-logo.png",
+            "sizes": "1254x1254",
             "type": "image/png",
             "purpose": "maskable"
         },

@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Contribuire — caddy-analyzer</title>
+  <meta name="description" content="Configurazione, test/lint, convenzione dei commit e dove aggiungere rilevamenti e feed.">
+  <meta name="theme-color" content="#09090B">
+  <link rel="icon" href="../caddy-analyzer-logo.png" type="image/png">
+  <link rel="canonical" href="https://lenny-ts.github.io/caddy-analyzer/it/contributing.html">
+  <link rel="alternate" hreflang="x-default" href="https://lenny-ts.github.io/caddy-analyzer/contributing.html">
+  <link rel="alternate" hreflang="en" href="https://lenny-ts.github.io/caddy-analyzer/contributing.html">
+  <link rel="alternate" hreflang="it" href="https://lenny-ts.github.io/caddy-analyzer/it/contributing.html">
+  <script>try{var t=localStorage.getItem('caddy-docs-theme');if(t==='light')document.documentElement.setAttribute('data-theme','light');}catch(e){}</script>
+  <meta name="color-scheme" content="dark light">
+  <link rel="stylesheet" href="../styles.min.css?v=36">
+</head>
+<body>
+<header class="site-header">
+  <a href="../it/index.html" class="logo">
+    <img src="../caddy-analyzer-logo.png" alt="" class="site-logo">
+    <span>caddy-analyzer</span>
+  </a>
+  <nav aria-label="Navigazione principale">
+    <a href="../it/installation.html" data-nav="installation.html">Installazione</a>
+    <a href="../it/sources.html" data-nav="sources.html">Sorgenti log</a>
+    <a href="../it/reference/cli.html" data-nav="cli.html">Riferimento CLI</a>
+    <a href="../it/security.html" data-nav="security.html">Motore minacce</a>
+    <a href="../it/tui-html.html" data-nav="tui-html.html">Report TUI e HTML</a>
+  </nav>
+  <div class="header-actions">
+    <a href="https://github.com/lenny-ts/caddy-analyzer" style="color:var(--text-sec);font-size:0.85rem;" rel="noopener">GitHub</a>
+    <div class="language-switch" role="group" aria-label="Lingua"><a class="lang-option" href="../contributing.html" hreflang="en" lang="en">EN</a><span class="lang-option active" aria-current="page">IT</span></div>
+    <button class="theme-toggle" type="button" aria-label="Switch to light theme">
+      <span class="theme-icon theme-sun" aria-hidden="true">☀</span>
+      <span class="theme-icon theme-moon" aria-hidden="true">☾</span>
+    </button>
+  </div>
+</header>
+<div class="scroll-progress" aria-hidden="true"></div>
+
+<div class="docs-layout">
+   <aside class="doc-sidebar" aria-label="Navigazione della pagina">
+  <div class="sidebar-label">Documentazione</div>
+  <a href="../it/index.html" class="sidebar-link" data-page="index.html">Panoramica</a>
+  <a href="../it/quickstart.html" class="sidebar-link" data-page="quickstart.html">Avvio rapido</a>
+  <a href="../it/installation.html" class="sidebar-link" data-page="installation.html">Installazione</a>
+  <a href="../it/sources.html" class="sidebar-link" data-page="sources.html">Sorgenti log</a>
+  <div class="sidebar-sep"></div>
+  <div class="sidebar-label">Guida</div>
+  <a href="../it/guide/configuration.html" class="sidebar-link" data-page="configuration.html">Configurazione</a>
+  <a href="../it/guide/usage.html" class="sidebar-link" data-page="usage.html">Utilizzo</a>
+  <a href="../it/guide/examples.html" class="sidebar-link" data-page="examples.html">Esempi</a>
+  <a href="../it/guide/troubleshooting.html" class="sidebar-link" data-page="troubleshooting.html">Risoluzione problemi</a>
+  <div class="sidebar-sep"></div>
+  <div class="sidebar-label">Riferimento</div>
+  <a href="../it/reference/cli.html" class="sidebar-link" data-page="cli.html">Riferimento CLI</a>
+  <a href="../it/reference/security-categories.html" class="sidebar-link sub" data-page="security-categories.html">— Categorie</a>
+  <a href="../it/reference/security-detection.html" class="sidebar-link sub" data-page="security-detection.html">— Rilevamento</a>
+  <a href="../it/subcommands-guard.html" class="sidebar-link sub" data-page="subcommands-guard.html">— Guard</a>
+  <a href="../it/subcommands-blocklist.html" class="sidebar-link sub" data-page="subcommands-blocklist.html">— Blocklist</a>
+  <a href="../it/subcommands-block.html" class="sidebar-link sub" data-page="subcommands-block.html">— Block / Unban</a>
+  <a href="../it/subcommands-top.html" class="sidebar-link sub" data-page="subcommands-top.html">— Top</a>
+  <a href="../it/reference/api.html" class="sidebar-link" data-page="api.html">API / Pacchetti</a>
+  <div class="sidebar-sep"></div>
+  <a href="../it/security.html" class="sidebar-link" data-page="security.html">Motore minacce</a>
+  <a href="../it/architecture.html" class="sidebar-link" data-page="architecture.html">Architettura</a>
+  <a href="../it/tui-html.html" class="sidebar-link" data-page="tui-html.html">Report TUI e HTML</a>
+  <a href="../it/contributing.html" class="sidebar-link active" data-page="contributing.html">Contribuire</a>
+  <a href="../it/faq.html" class="sidebar-link" data-page="faq.html">FAQ</a>
+  <a href="../it/changelog.html" class="sidebar-link" data-page="changelog.html">Registro modifiche</a>
+</aside>
+
+  <main class="wrap" id="main">
+    <div class="doc-content">
+      <nav class="breadcrumb" aria-label="Breadcrumb"><a href="../it/index.html">Panoramica</a><span class="sep">/</span><span>Contribuire</span></nav>
+      <div class="page-meta"><a href="https://github.com/lenny-ts/caddy-analyzer/releases">v0.6.1</a> · aggiornata <time datetime="2026-08-31">2026-08-31</time> · <a href="https://github.com/lenny-ts/caddy-analyzer">GitHub</a></div>
+      <h1>Contribuire</h1>
+<p>Leggi prima <a href="architecture.html">Architettura</a>: mostra dove si trovano parser, guard, enrich e blocklist nel flusso dei dati. Per le firme dei pacchetti, consulta <a href="reference/api.html">API / Pacchetti</a>.</p>
+
+<h2 id="setup">Configurazione</h2>
+<pre><code>git clone https://github.com/lenny-ts/caddy-analyzer.git && cd caddy-analyzer
+go version # 1.25+</code></pre>
+
+<h2 id="test-lint">Test e lint — comandi esatti (come in CI)</h2>
+<pre><code># full suite (what CI runs)
+go vet ./...
+go test -race -v ./...
+go test -race -coverprofile=coverage.out ./... &amp;&amp; go tool cover -func=coverage.out | tail
+# coverage gate is 55% (CI enforces &lt;55 → error)
+
+# fmt
+gofmt -l .
+# should be empty; fix with:
+gofmt -w .</code></pre>
+<pre><code># lint (golangci-lint v2, 17 linters, see .golangci.yml)
+golangci-lint run
+
+# security / vuln
+govulncheck ./...
+gosec -exclude G204,G302,G304,G401,G501,G505 ./...
+
+# gitleaks (secrets)
+gitleaks detect --source .</code></pre>
+
+<h3>Testa solo il modulo modificato</h3>
+<p>Riscontro piu rapido: esegui il pacchetto, non l'intera suite:</p>
+<pre><code>go test -race ./pkg/analysis -run TestDetector -count=1
+go test -race ./pkg/guard -run TestGuard -count=1
+go test -race ./pkg/enrich -count=1
+go test -race ./pkg/blocklist -count=1
+go test -race ./cmd -run TestResolveSources -count=1</code></pre>
+<p>Oppure un singolo file (quando ne modifichi uno):</p>
+<pre><code>go test -race ./pkg/parser -run TestParse -count=1 -v</code></pre>
+
+<h2 id="where">Dove aggiungere elementi</h2>
+<div class="table-wrap"><table>
+<thead><tr><th>Cosa</th><th>Dove</th><th>Nota</th></tr></thead>
+<tbody>
+<tr><td>Nuova categoria di rilevamento</td><td><code>pkg/analysis/detect.go</code></td><td>Aggiungi pattern + ID MITRE, aggiungi il test in <code>detect_test.go</code>, assicurati che <code>TestPatternUniqueness</code> passi</td></tr>
+<tr><td>Feed blocklist</td><td><code>pkg/blocklist/blocklist.go</code> + test</td><td>Implementa fetch/parse di <code>Source</code>, rispetta <code>cacheTTL 7d</code></td></tr>
+<tr><td>Backend firewall</td><td><code>pkg/guard/firewall/</code></td><td>Implementa l'interfaccia <code>Backend</code>, copri <code>Detect()</code></td></tr>
+<tr><td>Flag CLI</td><td><code>cmd/root.go</code> + <code>cmd/tuning.go</code></td><td>Persistente oppure solo root, gestisci <code>applyTuning</code></td></tr>
+<tr><td>Formato di output</td><td><code>pkg/output/*</code></td><td>Table/JSON/CSV/HTML — mantieni <code>defang</code> e <code>csvSafe</code></td></tr>
+</tbody>
+</table></div>
+
+<h2 id="commit">Convenzione dei commit</h2>
+<p><strong>Riga singola, imperativo, 35–62 caratteri.</strong> Nessun corpo, nessun prefisso <code>type:</code>, nessun prefisso di versione.</p>
+<pre><code>Add GeoIP filter for ASN
+Fix guard state persistence across restarts
+Update blocklist cache TTL handling</code></pre>
+<p>Non valido: <code>feat: add ...</code>, <code>v0.6.1: fix</code> o corpo su piu righe. Consulta <code>AGENTS.md</code>. Il rilascio avviene tramite tag <code>v*</code> → GoReleaser + Syft + cosign (gestisci tu merge + tag + push).</p>
+
+<h2 id="pr">Checklist PR</h2>
+<ul>
+  <li><code>go vet ./... && go test -race ./... && golangci-lint run</code> completati con successo</li>
+  <li>Test per il nuovo codice, documentazione aggiornata con <code>node tools/build-docs.js && bash tools/minify.sh</code> se hai modificato <code>docs/src/</code></li>
+  <li>Messaggio di commit di 35–62 caratteri, imperativo</li>
+</ul>
+
+<div class="callout callout-info"><div class="callout-label">Vedi anche</div><a href="architecture.html">Architettura</a> — flusso dei dati e mappa dei pacchetti. <a href="reference/api.html">API / Pacchetti</a> — importazione e uso per pacchetto.</div>
+      <footer class="footer">
+  <p>caddy-analyzer è open-source sotto licenza <a href="https://github.com/lenny-ts/caddy-analyzer/blob/main/LICENSE">MIT</a> · <a href="https://github.com/lenny-ts/caddy-analyzer">GitHub</a> · <a href="../it/changelog.html">Registro modifiche</a></p>
+</footer>
+<button class="back-to-top" aria-label="Back to top">↑</button>
+
+    </div>
+  </main>
+  <nav class="doc-toc" aria-label="In questa pagina"><div class="toc-label">In questa pagina</div><a href="#setup" class="toc-link">Configurazione</a><a href="#test-lint" class="toc-link">Test e lint — comandi esatti (come in CI)</a><a href="#where" class="toc-link">Dove aggiungere elementi</a><a href="#commit" class="toc-link">Convenzione dei commit</a><a href="#pr" class="toc-link">Checklist PR</a><a href="#testa-solo-il-modulo-modificato" class="toc-link h3">Testa solo il modulo modificato</a></nav>
+</div>
+<script src="../docs.min.js?v=36"></script>
+</body>
+</html>

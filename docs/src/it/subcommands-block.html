@@ -1,0 +1,46 @@
+<!-- fm: title=block / unban — caddy-analyzer | description=Firewall iptables manuale: blocca e sblocca IP. | breadcrumb=Riferimento > block / unban -->
+<h1>block / unban</h1>
+<p>Firewall manuale. <span class="pill pill-danger">modifica il firewall</span> — aggiunge/rimuove regole legacy <code>iptables</code>. Si sincronizza con lo stato di guard e il log di audit.</p>
+
+<div class="callout callout-danger"><div class="callout-label">Richiede root</div>Entrambi richiedono <code>sudo</code>. Usa prima <code>--list</code> per un audit prima di modificare lo stato.</div>
+
+<h2 id="synopsis">Sintassi</h2>
+<pre><code>caddy-analyze block &lt;ip...&gt; [flags]
+caddy-analyze unban &lt;ip...&gt; [flags]
+caddy-analyze unban --all
+caddy-analyze unban --list        # audit — read-only</code></pre>
+
+<h2 id="flags">Flag</h2>
+<div class="table-wrap"><table>
+<thead><tr><th>Flag</th><th>Breve</th><th>Predefinito</th><th>Descrizione</th></tr></thead>
+<tbody>
+<tr><td><code>--audit-log</code></td><td></td><td><code>/var/log/caddy-analyzer-audit.jsonl</code></td><td>Percorso del log di audit (vuoto disabilita)</td></tr>
+<tr><td><code>--state-file</code></td><td></td><td><code>/var/lib/caddy-analyzer/blocked.json</code></td><td>Sincronizzazione stato guard (vuoto disabilita)</td></tr>
+<tr><td><code>--all</code></td><td><code>-A</code></td><td>false</td><td>unban: tutti gli IP attualmente bloccati</td></tr>
+<tr><td><code>--list</code></td><td><code>-l</code></td><td>false</td><td>unban: elenco senza rimuovere (<span class="pill pill-readonly">sola lettura</span>)</td></tr>
+</tbody>
+</table></div>
+
+<h2 id="minimal">Esempio minimo</h2>
+<p>Prima <span class="pill pill-readonly">sola lettura</span>, poi <span class="pill pill-danger">modifica il firewall</span>:</p>
+<pre><code># audit — who is blocked?
+sudo caddy-analyze unban --list
+# block one IP (idempotent — no duplicate rule if already blocked)
+sudo caddy-analyze block 203.0.113.5
+# unban it
+sudo caddy-analyze unban 203.0.113.5
+# check audit
+cat /var/log/caddy-analyzer-audit.jsonl | tail</code></pre>
+
+<h2 id="advanced">Esempio avanzato</h2>
+<p><span class="pill pill-danger">modifica il firewall</span> — blocco in massa + reset completo. Controlla prima in sola lettura sugli host remoti.</p>
+<pre><code># audit before bulk
+sudo caddy-analyze unban --list
+
+# block multiple (non-zero exit if any IP fails)
+sudo caddy-analyze block 203.0.113.5 198.51.100.23 203.0.113.18
+
+# reset all (danger — verify you are not about to unblock an active attacker)
+sudo caddy-analyze unban --list
+sudo caddy-analyze unban --all
+</code></pre>

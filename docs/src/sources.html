@@ -1,0 +1,83 @@
+<!-- fm: title=Log Sources — caddy-analyzer | description=Connect to every source: file, stdin, docker://, k8s://, journalctl:// — syntax and minimal permissions per source. | breadcrumb=Overview > Log Sources -->
+<h1>Log Sources</h1>
+<p>Every command accepts one or more sources. If you pass none, the tool tries <code>caddy-analyzer.json</code> → pipe → auto-discovery. Below: how to connect to <em>each</em> source and what permission that source needs. For tool configuration (config file, tuning, env), see <a href="guide/configuration.html">Guide → Configuration</a>.</p>
+
+<h2 id="file">File &amp; glob</h2>
+<pre><code>caddy-analyze /var/log/caddy/access.log
+caddy-analyze /var/log/caddy/*.log
+caddy-analyze /var/log/caddy/access.log.1 /var/log/caddy/access.log.2.gz
+# no args → tries ./access.log, ./caddy.log, ./caddy-access.log, /var/log/caddy/access.log, /var/log/caddy/caddy.log
+caddy-analyze</code></pre>
+<h3 id="permissions">Permissions for files</h3>
+<p>Caddy often writes as <code>caddy:caddy 0600</code>. You need read on the file and execute on the directory.</p>
+<pre><code>sudo caddy-analyze /var/log/caddy/access.log
+# persistent — add yourself to the group then re-login:
+sudo usermod -aG caddy $USER</code></pre>
+<div class="callout callout-warning"><div class="callout-label">Compressed files</div>Pipe through <code>zcat</code>: <code>zcat /var/log/caddy/*.gz | caddy-analyze -</code>. Do not pass <code>.gz</code> directly.</div>
+
+<h2 id="stdin">Stdin — <code>-</code></h2>
+<pre><code>cat /var/log/caddy/access.log | caddy-analyze -
+zcat /var/log/caddy/access.log.*.gz | caddy-analyze - --detect -f json -o out.json
+ssh app@prod "cat /var/log/caddy/access.log" | caddy-analyze - -t 25</code></pre>
+<h3>Permissions for stdin</h3>
+<p>None on the local side. Remote side needs read as above, plus SSH access. Stdin is also auto-detected when data is piped and no source arg is given.</p>
+
+<h2 id="docker">Docker — <code>docker://&lt;name|id&gt;</code></h2>
+<pre><code>caddy-analyze docker://caddy
+caddy-analyze docker://a3f9c1e2d4b5
+caddy-analyze tail docker://caddy          # live
+caddy-analyze --follow docker://caddy      # same via root flag</code></pre>
+<p>Streams with <code>docker logs -f &lt;container&gt;</code> in an interactive terminal; non-interactive reads add <code>--tail=all</code>. Both merge stdout and stderr.</p>
+<h3>Permissions for Docker</h3>
+<pre><code># docker.sock is root:docker 0660 by default
+sudo usermod -aG docker $USER  # re-login
+# or
+sudo caddy-analyze docker://caddy
+# if Caddy runs in Docker but guard must block host:
+sudo caddy-analyze guard --firewall-backend hybrid docker://caddy</code></pre>
+<div class="callout callout-info"><div class="callout-label">Tip</div>If you run Caddy in Docker, prefer <code>--firewall-backend hybrid</code> or <code>auto</code> — it blocks both <code>INPUT</code> and <code>DOCKER-USER</code>.</div>
+
+<h2 id="k8s">Kubernetes — <code>k8s://&lt;pod&gt;</code></h2>
+<pre><code>caddy-analyze k8s://caddy-7d9f8c9d4-abc12
+caddy-analyze k8s://caddy-7d9f8c9d4-abc12 -n production
+caddy-analyze tail k8s://caddy-7d9f8c9d4-abc12 -n prod --detect</code></pre>
+<p>Reads via <code>kubectl logs --tail=-1 --follow -n &lt;ns&gt; &lt;pod&gt;</code> using your active <code>kubectl</code> context.</p>
+<h3>Permissions for Kubernetes</h3>
+<pre><code>kubectl auth can-i get pods/log -n production  # should be yes
+kubectl config current-context
+kubectl get pods -n production | grep caddy</code></pre>
+<p>Namespace can also be persisted: <code>caddy-analyze config k8s://caddy-xxx -n production</code> (see <a href="guide/configuration.html">Configuration</a>).</p>
+
+<h2 id="journalctl">journalctl — <code>journalctl://&lt;unit&gt;</code></h2>
+<pre><code>caddy-analyze journalctl://caddy.service
+caddy-analyze tail journalctl://caddy.service
+caddy-analyze journalctl://caddy.service --follow</code></pre>
+<p>Reads via <code>journalctl -u &lt;unit&gt; --output=cat [--follow]</code>.</p>
+<h3>Permissions for journalctl</h3>
+<pre><code>sudo usermod -aG systemd-journal $USER  # re-login
+# or
+sudo caddy-analyze journalctl://caddy.service</code></pre>
+
+<h2 id="auto-discovery">Auto-discovery (no source arg)</h2>
+<p>When you run <code>caddy-analyze</code> with no file/URI and no pipe, it probes in order:</p>
+<ol>
+  <li><code>caddy-analyzer.json</code> (local then global — <a href="guide/configuration.html">Configuration</a>)</li>
+  <li>stdin pipe if data is piped</li>
+  <li>5 candidates: <code>./access.log</code>, <code>./caddy.log</code>, <code>./caddy-access.log</code>, <code>/var/log/caddy/access.log</code>, <code>/var/log/caddy/caddy.log</code></li>
+</ol>
+<pre><code>caddy-analyze config /var/log/caddy/access.log  # remember for next time
+caddy-analyze --detect                # now works with no arg</code></pre>
+
+<h2 id="fixtures">Fixtures — try without a server</h2>
+<p>Repo ships two deterministic fixtures under <code>testdata/</code> (regenerate with <code>python3 testdata/generate.py</code>). All IPs are RFC 5737 TEST-NET.</p>
+<div class="table-wrap"><table>
+<thead><tr><th>File</th><th>Lines</th><th>Use</th></tr></thead>
+<tbody>
+<tr><td><code>testdata/sample.log</code></td><td>68</td><td>One entry per category — verify all 26 fire</td></tr>
+<tr><td><code>testdata/large.log</code></td><td>~50K</td><td>24h mix (95% benign) — throughput demo</td></tr>
+</tbody>
+</table></div>
+<pre><code>caddy-analyze --detect testdata/sample.log
+caddy-analyze tail -d testdata/sample.log
+caddy-analyze -f html -o report.html --detect testdata/sample.log && open report.html
+caddy-analyze diff testdata/sample.log testdata/large.log</code></pre>

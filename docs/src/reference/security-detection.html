@@ -1,0 +1,77 @@
+<!-- fm: title=MITRE, Sigma & Evasion — caddy-analyzer | description=Verified ATT&CK IDs, 23 Sigma rules, and how the engine resists bypass. | breadcrumb=Reference > Detection -->
+<h1>MITRE, Sigma &amp; Evasion</h1>
+<p>How detections are tagged, exported, and why simple encodings do not bypass them. For the 26 rows with confidence/description/example, see <a href="security-categories.html">Categories</a>.</p>
+
+<h2 id="mitre">MITRE ATT&amp;CK mapping — verified IDs</h2>
+<p>IDs from <code>pkg/analysis/detectionTechniques</code>, verified against ATT&amp;CK. The mapping is used for Sigma export; current JSON and HTML report records do not include a <code>techniques</code> array.</p>
+<div class="table-wrap"><table>
+<thead><tr><th>Category</th><th>Technique ID</th><th>Name</th></tr></thead>
+<tbody>
+<tr><td><code>sql_injection</code></td><td>T1190</td><td>Exploit Public-Facing Application</td></tr>
+<tr><td><code>nosql_injection</code></td><td>T1190</td><td>Exploit Public-Facing Application</td></tr>
+<tr><td><code>xss</code></td><td>T1059.007</td><td>Command and Scripting Interpreter: JavaScript</td></tr>
+<tr><td></td><td>T1189</td><td>Drive-by Compromise</td></tr>
+<tr><td><code>ssti</code></td><td>T1190</td><td>Exploit Public-Facing Application</td></tr>
+<tr><td><code>ssrf</code></td><td>T1190</td><td>Exploit Public-Facing Application</td></tr>
+<tr><td><code>rce</code></td><td>T1059</td><td>Command and Scripting Interpreter</td></tr>
+<tr><td></td><td>T1190</td><td>Exploit Public-Facing Application</td></tr>
+<tr><td><code>path_traversal</code></td><td>T1083</td><td>File and Directory Discovery</td></tr>
+<tr><td><code>lfi_wrapper_abuse</code></td><td>T1083</td><td>File and Directory Discovery</td></tr>
+<tr><td></td><td>T1190</td><td>Exploit Public-Facing Application</td></tr>
+<tr><td><code>graphql_introspection</code></td><td>T1595.002</td><td>Active Scanning: Vulnerability Scanning</td></tr>
+<tr><td><code>log4j_jndi</code></td><td>T1190</td><td>Exploit Public-Facing Application</td></tr>
+<tr><td></td><td>T1059</td><td>Command and Scripting Interpreter</td></tr>
+<tr><td><code>sensitive_file_probe</code></td><td>T1083</td><td>File and Directory Discovery</td></tr>
+<tr><td></td><td>T1552.001</td><td>Unsecured Credentials: Credentials In Files</td></tr>
+<tr><td><code>admin_probe</code></td><td>T1595.002</td><td>Active Scanning: Vulnerability Scanning</td></tr>
+<tr><td><code>wordpress_probe</code></td><td>T1595.002</td><td>Active Scanning: Vulnerability Scanning</td></tr>
+<tr><td><code>cgi_probe</code></td><td>T1595.002</td><td>Active Scanning: Vulnerability Scanning</td></tr>
+<tr><td><code>scanner</code></td><td>T1595</td><td>Active Scanning</td></tr>
+<tr><td><code>xxe</code></td><td>T1190</td><td>Exploit Public-Facing Application</td></tr>
+<tr><td><code>open_redirect</code></td><td>T1566.002</td><td>Phishing: Spearphishing Link</td></tr>
+<tr><td><code>ldap_injection</code></td><td>T1190</td><td>Exploit Public-Facing Application</td></tr>
+<tr><td><code>xpath_injection</code></td><td>T1190</td><td>Exploit Public-Facing Application</td></tr>
+<tr><td><code>crlf_injection</code></td><td>T1190</td><td>Exploit Public-Facing Application</td></tr>
+<tr><td></td><td>T1059</td><td>Command and Scripting Interpreter</td></tr>
+<tr><td><code>prototype_pollution</code></td><td>T1190</td><td>Exploit Public-Facing Application</td></tr>
+<tr><td></td><td>T1059.007</td><td>Command and Scripting Interpreter: JavaScript</td></tr>
+<tr><td><code>ssi_injection</code></td><td>T1190</td><td>Exploit Public-Facing Application</td></tr>
+<tr><td></td><td>T1059</td><td>Command and Scripting Interpreter</td></tr>
+<tr><td><code>ua_rotation</code></td><td>T1595.001</td><td>Active Scanning: Scanning IP Blocks</td></tr>
+<tr><td><code>jwt_abuse</code></td><td>T1550.001</td><td>Use Alternate Authentication Material: Application Access Token</td></tr>
+<tr><td></td><td>T1190</td><td>Exploit Public-Facing Application</td></tr>
+<tr><td><code>object_enumeration</code></td><td>T1595.002</td><td>Active Scanning: Vulnerability Scanning</td></tr>
+<tr><td></td><td>T1190</td><td>Exploit Public-Facing Application</td></tr>
+<tr><td><code>beaconing</code></td><td>T1071.001</td><td>Application Layer Protocol: Web Protocols</td></tr>
+<tr><td></td><td>T1573</td><td>Encrypted Channel</td></tr>
+</tbody>
+</table></div>
+<p>Source of truth: <code>pkg/analysis/detect.go:64-91</code>. If an ID looks wrong, open an issue — IDs are not approximated.</p>
+
+<h2 id="sigma">Sigma export — 23 of 26</h2>
+<p>Pattern categories export; 3 behavioral do not (they need state, not a single request).</p>
+<div class="table-wrap"><table>
+<thead><tr><th>Exported</th><th>Why</th></tr></thead>
+<tbody>
+<tr><td>23 pattern categories</td><td>Single-request regex + <code>uri|status|client_ip</code> fields, deterministic <code>uuidV5</code> (<code>uuidNamespaceDNS + "caddy-analyzer:sigma:"+title</code>)</td></tr>
+<tr><td>3 excluded: <code>ua_rotation</code>, <code>object_enumeration</code>, <code>beaconing</code></td><td>Need ≥10 samples per IP/path, CV check, ring buffer — not expressible as single-event Sigma</td></tr>
+</tbody>
+</table></div>
+<pre><code>caddy-analyze export-sigma rules.yml
+caddy-analyze export-sigma - | sigma check --rules -  # validate
+# import into Splunk/Elastic — tags carry ATT&CK IDs above</code></pre>
+
+<h2 id="evasion">Evasion resistance</h2>
+<p>Why <code>%2e%2e</code>, double-encode and mixed case do not bypass detection.</p>
+<div class="table-wrap"><table>
+<thead><tr><th>Technique</th><th>How</th><th>Code</th></tr></thead>
+<tbody>
+<tr><td>Dual-pass</td><td>Every URI checked as <code>decodeURI</code> (query-aware <code>PathUnescape+QueryUnescape</code> + manual <code>%</code> fallback) <em>and</em> raw</td><td><code>DetectAll</code> + <code>rawPatterns</code> in <code>init()</code></td></tr>
+<tr><td>Literal fast path</td><td>Pure alternations matched via <code>strings.Contains</code> lowercased (~100× faster)</td><td><code>extractPureLiterals / compileLowercase</code></td></tr>
+<tr><td>Gate</td><td>Longest required literal must be present (<code>strings.Contains</code>) before regex runs</td><td><code>extractGate</code></td></tr>
+<tr><td>Markers / triage</td><td>Collect all ≥2-char literals; if none present, skip all patterns for that source</td><td><code>buildMarkers / matchMarkers / isMarkerCovered</code></td></tr>
+<tr><td>Case-fold elimination</td><td>Compile regexes lowercased, lowercase source once — no <code>FoldCase</code> per match (~8% CPU saved)</td><td><code>lowercaseFold</code></td></tr>
+<tr><td>LRU caps</td><td>IPs 100k, GeoIP 50k, histogram 1K buckets</td><td><code>DefaultIPCap, geoCache</code></td></tr>
+</tbody>
+</table></div>
+<p>Test that bypass is covered: <code>rawPatterns</code> includes <code>%2e%2e%2f</code>, <code>%252e</code>, <code>%c0%ae</code>, <code>0x7f000001</code> etc. See <code>pkg/analysis/detect.go:778-801</code> and <code>testdata/generate.py</code> fixtures.</p>

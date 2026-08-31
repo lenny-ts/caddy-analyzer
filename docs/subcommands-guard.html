@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>guard — caddy-analyzer</title>
+  <meta name="description" content="Auto-block malicious IPs via iptables/nftables/Docker. Thresholds, backends, audit and state.">
+  <meta name="theme-color" content="#09090B">
+  <link rel="icon" href="caddy-analyzer-logo.png" type="image/png">
+  <link rel="canonical" href="https://lenny-ts.github.io/caddy-analyzer/subcommands-guard.html">
+  <link rel="alternate" hreflang="x-default" href="https://lenny-ts.github.io/caddy-analyzer/subcommands-guard.html">
+  <link rel="alternate" hreflang="en" href="https://lenny-ts.github.io/caddy-analyzer/subcommands-guard.html">
+  <link rel="alternate" hreflang="it" href="https://lenny-ts.github.io/caddy-analyzer/it/subcommands-guard.html">
+  <script>try{var t=localStorage.getItem('caddy-docs-theme');if(t==='light')document.documentElement.setAttribute('data-theme','light');}catch(e){}</script>
+  <meta name="color-scheme" content="dark light">
+  <link rel="stylesheet" href="styles.min.css?v=36">
+</head>
+<body>
+<header class="site-header">
+  <a href="index.html" class="logo">
+    <img src="caddy-analyzer-logo.png" alt="" class="site-logo">
+    <span>caddy-analyzer</span>
+  </a>
+  <nav aria-label="Primary">
+    <a href="installation.html" data-nav="installation.html">Installation</a>
+    <a href="sources.html" data-nav="sources.html">Log Sources</a>
+    <a href="reference/cli.html" data-nav="cli.html">CLI Reference</a>
+    <a href="security.html" data-nav="security.html">Threat Engine</a>
+    <a href="tui-html.html" data-nav="tui-html.html">TUI & HTML Reports</a>
+  </nav>
+  <div class="header-actions">
+    <a href="https://github.com/lenny-ts/caddy-analyzer" style="color:var(--text-sec);font-size:0.85rem;" rel="noopener">GitHub</a>
+    <div class="language-switch" role="group" aria-label="Language"><span class="lang-option active" aria-current="page">EN</span><a class="lang-option" href="it/subcommands-guard.html" hreflang="it" lang="it">IT</a></div>
+    <button class="theme-toggle" type="button" aria-label="Switch to light theme">
+      <span class="theme-icon theme-sun" aria-hidden="true">☀</span>
+      <span class="theme-icon theme-moon" aria-hidden="true">☾</span>
+    </button>
+  </div>
+</header>
+<div class="scroll-progress" aria-hidden="true"></div>
+
+<div class="docs-layout">
+   <aside class="doc-sidebar" aria-label="Page navigation">
+  <div class="sidebar-label">Documentation</div>
+  <a href="index.html" class="sidebar-link" data-page="index.html">Overview</a>
+  <a href="quickstart.html" class="sidebar-link" data-page="quickstart.html">Quickstart</a>
+  <a href="installation.html" class="sidebar-link" data-page="installation.html">Installation</a>
+  <a href="sources.html" class="sidebar-link" data-page="sources.html">Log Sources</a>
+  <div class="sidebar-sep"></div>
+  <div class="sidebar-label">Guide</div>
+  <a href="guide/configuration.html" class="sidebar-link" data-page="configuration.html">Configuration</a>
+  <a href="guide/usage.html" class="sidebar-link" data-page="usage.html">Usage</a>
+  <a href="guide/examples.html" class="sidebar-link" data-page="examples.html">Examples</a>
+  <a href="guide/troubleshooting.html" class="sidebar-link" data-page="troubleshooting.html">Troubleshooting</a>
+  <div class="sidebar-sep"></div>
+  <div class="sidebar-label">Reference</div>
+  <a href="reference/cli.html" class="sidebar-link" data-page="cli.html">CLI Reference</a>
+  <a href="reference/security-categories.html" class="sidebar-link sub" data-page="security-categories.html">— Categories</a>
+  <a href="reference/security-detection.html" class="sidebar-link sub" data-page="security-detection.html">— Detection</a>
+  <a href="subcommands-guard.html" class="sidebar-link sub active" data-page="subcommands-guard.html">— Guard</a>
+  <a href="subcommands-blocklist.html" class="sidebar-link sub" data-page="subcommands-blocklist.html">— Blocklist</a>
+  <a href="subcommands-block.html" class="sidebar-link sub" data-page="subcommands-block.html">— Block / Unban</a>
+  <a href="subcommands-top.html" class="sidebar-link sub" data-page="subcommands-top.html">— Top</a>
+  <a href="reference/api.html" class="sidebar-link" data-page="api.html">API / Packages</a>
+  <div class="sidebar-sep"></div>
+  <a href="security.html" class="sidebar-link" data-page="security.html">Threat Engine</a>
+  <a href="architecture.html" class="sidebar-link" data-page="architecture.html">Architecture</a>
+  <a href="tui-html.html" class="sidebar-link" data-page="tui-html.html">TUI & HTML Reports</a>
+  <a href="contributing.html" class="sidebar-link" data-page="contributing.html">Contributing</a>
+  <a href="faq.html" class="sidebar-link" data-page="faq.html">FAQ</a>
+  <a href="changelog.html" class="sidebar-link" data-page="changelog.html">Changelog</a>
+</aside>
+
+  <main class="wrap" id="main">
+    <div class="doc-content">
+      <nav class="breadcrumb" aria-label="Breadcrumb"><a href="reference/cli.html">Reference</a><span class="sep">/</span><span>guard</span></nav>
+      <div class="page-meta"><a href="https://github.com/lenny-ts/caddy-analyzer/releases">v0.6.1</a> · updated <time datetime="2026-08-31">2026-08-31</time> · <a href="https://github.com/lenny-ts/caddy-analyzer">GitHub</a></div>
+      <h1>guard</h1>
+<p>Tail a log source and auto-block IPs that exceed thresholds. <span class="pill pill-danger">modifies firewall</span> — every run can add <code>iptables</code>/<code>nftables</code>/<code>DOCKER-USER</code> rules. Do not run copy-paste examples on a remote host without allowlisting your IP first.</p>
+
+<div class="callout callout-danger"><div class="callout-label">Requires root</div><code>guard</code> needs <code>sudo</code>. Test with <code>--never-block YOUR_IP</code> or run <a href="subcommands-blocklist.html">blocklist refresh</a> first.</div>
+
+<h2 id="synopsis">Synopsis</h2>
+<pre><code>caddy-analyze guard [source] [flags]
+# source: file, docker://name, k8s://pod -n ns, journalctl://unit, or via caddy-analyzer.json
+# see Log Sources for syntax — this page covers guard flags only</code></pre>
+
+<h2 id="flags">Flags</h2>
+<div class="table-wrap"><table>
+<thead><tr><th>Flag</th><th>Short</th><th>Default</th><th>Description</th></tr></thead>
+<tbody>
+<tr><td><code>--limit</code></td><td><code>-l</code></td><td>100</td><td>Max HTTP requests per IP in window before block</td></tr>
+<tr><td><code>--window</code></td><td><code>-w</code></td><td>1m</td><td>Sliding window (per-second buckets)</td></tr>
+<tr><td><code>--duration</code></td><td><code>-d</code></td><td>10m</td><td>Ban duration (0 = permanent)</td></tr>
+<tr><td><code>--auth-limit</code></td><td></td><td>10</td><td>401/403 before block</td></tr>
+<tr><td><code>--notfound-limit</code></td><td></td><td>50</td><td>404 before block</td></tr>
+<tr><td><code>--detect-confidence</code></td><td></td><td>8</td><td>Min confidence 1-10 for pattern-based blocks (0 disables only this block path; it is not a dry run)</td></tr>
+<tr><td><code>--firewall-backend</code></td><td></td><td>auto</td><td><code>auto|iptables|docker|nftables|hybrid</code></td></tr>
+<tr><td><code>--iptables-timeout</code></td><td></td><td>10s</td><td>Per-invocation iptables timeout</td></tr>
+<tr><td><code>--country-block</code></td><td></td><td></td><td>ISO codes to block immediately (e.g. <code>CN,RU</code>)</td></tr>
+<tr><td><code>--no-blocklist</code></td><td></td><td>false</td><td>Disable 8 blocklist feeds</td></tr>
+<tr><td><code>--blocklist-refresh</code></td><td></td><td>6h</td><td>Refresh interval (min 1h, 0 off)</td></tr>
+<tr><td><code>--cache-dir</code></td><td></td><td>~/.cache/…/blocklists</td><td>Blocklist cache dir</td></tr>
+<tr><td><code>--geoip-db</code></td><td></td><td></td><td>GeoIP mmdb path (auto-discovery)</td></tr>
+<tr><td><code>--no-auto-download</code></td><td></td><td>false</td><td>Disable GeoIP auto-download</td></tr>
+<tr><td><code>--never-block</code></td><td></td><td></td><td>CIDRs/IPs never block (protect your IP!)</td></tr>
+<tr><td><code>--never-block-file</code></td><td></td><td></td><td>File with CIDRs (one per line, # comment)</td></tr>
+<tr><td><code>--audit-log</code></td><td></td><td>/var/log/…-audit.jsonl</td><td>JSON lines audit (0600)</td></tr>
+<tr><td><code>--state-file</code></td><td></td><td>/var/lib/…/blocked.json</td><td>Persist blocks across restarts</td></tr>
+<tr><td><code>--subnet-limit</code></td><td></td><td>0</td><td>/24 or /64 distributed scan threshold</td></tr>
+<tr><td><code>--rps-anomaly</code></td><td></td><td>0</td><td>EWMA RPS spike factor (audit alert only; requires <code>--audit-log</code>)</td></tr>
+<tr><td><code>--cred-stuffing-limit</code></td><td></td><td>0</td><td>Distinct IPs failing same path (audit alert only; requires <code>--audit-log</code>)</td></tr>
+<tr><td><code>--ua-rotation</code></td><td></td><td>10</td><td>UA rotation threshold</td></tr>
+<tr><td><code>--trust-forwarded</code></td><td></td><td>false</td><td>Use last public XFF hop</td></tr>
+</tbody>
+</table></div>
+
+<h2 id="minimal">Minimal example</h2>
+<p><span class="pill pill-danger">modifies firewall</span> — blocks real IPs. Allowlist your IP first if on a remote host.</p>
+<pre><code># allowlist yourself, then run guard on auto-discovered source
+MY_IP=$(curl -s ifconfig.me)
+sudo caddy-analyze guard --never-block $MY_IP --limit 50 --window 1m /var/log/caddy/access.log</code></pre>
+
+<h2 id="advanced">Advanced example</h2>
+<p><span class="pill pill-danger">modifies firewall</span> — hybrid backend + country + persistent state. <code>guard</code> has no dry-run or audit-only mode; use <a href="subcommands-blocklist.html">blocklist list</a> only to inspect feeds without firewall changes.</p>
+<pre><code># hybrid = INPUT + DOCKER-USER; blocks survive restart; full audit
+sudo caddy-analyze guard docker://caddy \
+  --firewall-backend hybrid \
+  --country-block CN,RU,IR \
+  --never-block 10.0.0.0/8,192.168.1.50 \
+  --never-block-file /etc/caddy-analyzer/whitelist.txt \
+  --audit-log /var/log/caddy-analyzer-audit.jsonl \
+  --state-file /var/lib/caddy-analyzer/blocked.json \
+  --blocklist-refresh 6h \
+  --detect-confidence 8
+# verify what was blocked:
+sudo caddy-analyze unban --list
+cat /var/log/caddy-analyzer-audit.jsonl | tail</code></pre>
+
+<div class="callout callout-warning"><div class="callout-label">Do not lock yourself out</div>On a remote VM, always pass <code>--never-block $(curl -s ifconfig.me)</code> or your office CIDR. There is no safe dry-run flag: an allowlist suppresses blocks and their audit records, while <code>0.0.0.0/0</code> does not cover IPv6. Test firewall behavior only on a disposable host.</div>
+      <footer class="footer">
+  <p>caddy-analyzer is open-source under <a href="https://github.com/lenny-ts/caddy-analyzer/blob/main/LICENSE">MIT</a> · <a href="https://github.com/lenny-ts/caddy-analyzer">GitHub</a> · <a href="changelog.html">Changelog</a></p>
+</footer>
+<button class="back-to-top" aria-label="Back to top">↑</button>
+
+    </div>
+  </main>
+  <nav class="doc-toc" aria-label="On this page"><div class="toc-label">On this page</div><a href="#synopsis" class="toc-link">Synopsis</a><a href="#flags" class="toc-link">Flags</a><a href="#minimal" class="toc-link">Minimal example</a><a href="#advanced" class="toc-link">Advanced example</a></nav>
+</div>
+<script src="docs.min.js?v=36"></script>
+</body>
+</html>

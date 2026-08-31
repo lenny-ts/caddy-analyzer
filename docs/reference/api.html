@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>API / Packages — caddy-analyzer</title>
+  <meta name="description" content="Go packages: parser, analysis, guard, enrich, blocklist — import + real usage.">
+  <meta name="theme-color" content="#09090B">
+  <link rel="icon" href="../caddy-analyzer-logo.png" type="image/png">
+  <link rel="canonical" href="https://lenny-ts.github.io/caddy-analyzer/reference/api.html">
+  <link rel="alternate" hreflang="x-default" href="https://lenny-ts.github.io/caddy-analyzer/reference/api.html">
+  <link rel="alternate" hreflang="en" href="https://lenny-ts.github.io/caddy-analyzer/reference/api.html">
+  <link rel="alternate" hreflang="it" href="https://lenny-ts.github.io/caddy-analyzer/it/reference/api.html">
+  <script>try{var t=localStorage.getItem('caddy-docs-theme');if(t==='light')document.documentElement.setAttribute('data-theme','light');}catch(e){}</script>
+  <meta name="color-scheme" content="dark light">
+  <link rel="stylesheet" href="../styles.min.css?v=36">
+</head>
+<body>
+<header class="site-header">
+  <a href="../index.html" class="logo">
+    <img src="../caddy-analyzer-logo.png" alt="" class="site-logo">
+    <span>caddy-analyzer</span>
+  </a>
+  <nav aria-label="Primary">
+    <a href="../installation.html" data-nav="installation.html">Installation</a>
+    <a href="../sources.html" data-nav="sources.html">Log Sources</a>
+    <a href="../reference/cli.html" data-nav="cli.html">CLI Reference</a>
+    <a href="../security.html" data-nav="security.html">Threat Engine</a>
+    <a href="../tui-html.html" data-nav="tui-html.html">TUI & HTML Reports</a>
+  </nav>
+  <div class="header-actions">
+    <a href="https://github.com/lenny-ts/caddy-analyzer" style="color:var(--text-sec);font-size:0.85rem;" rel="noopener">GitHub</a>
+    <div class="language-switch" role="group" aria-label="Language"><span class="lang-option active" aria-current="page">EN</span><a class="lang-option" href="../it/reference/api.html" hreflang="it" lang="it">IT</a></div>
+    <button class="theme-toggle" type="button" aria-label="Switch to light theme">
+      <span class="theme-icon theme-sun" aria-hidden="true">☀</span>
+      <span class="theme-icon theme-moon" aria-hidden="true">☾</span>
+    </button>
+  </div>
+</header>
+<div class="scroll-progress" aria-hidden="true"></div>
+
+<div class="docs-layout">
+   <aside class="doc-sidebar" aria-label="Page navigation">
+  <div class="sidebar-label">Documentation</div>
+  <a href="../index.html" class="sidebar-link" data-page="index.html">Overview</a>
+  <a href="../quickstart.html" class="sidebar-link" data-page="quickstart.html">Quickstart</a>
+  <a href="../installation.html" class="sidebar-link" data-page="installation.html">Installation</a>
+  <a href="../sources.html" class="sidebar-link" data-page="sources.html">Log Sources</a>
+  <div class="sidebar-sep"></div>
+  <div class="sidebar-label">Guide</div>
+  <a href="../guide/configuration.html" class="sidebar-link" data-page="configuration.html">Configuration</a>
+  <a href="../guide/usage.html" class="sidebar-link" data-page="usage.html">Usage</a>
+  <a href="../guide/examples.html" class="sidebar-link" data-page="examples.html">Examples</a>
+  <a href="../guide/troubleshooting.html" class="sidebar-link" data-page="troubleshooting.html">Troubleshooting</a>
+  <div class="sidebar-sep"></div>
+  <div class="sidebar-label">Reference</div>
+  <a href="../reference/cli.html" class="sidebar-link" data-page="cli.html">CLI Reference</a>
+  <a href="../reference/security-categories.html" class="sidebar-link sub" data-page="security-categories.html">— Categories</a>
+  <a href="../reference/security-detection.html" class="sidebar-link sub" data-page="security-detection.html">— Detection</a>
+  <a href="../subcommands-guard.html" class="sidebar-link sub" data-page="subcommands-guard.html">— Guard</a>
+  <a href="../subcommands-blocklist.html" class="sidebar-link sub" data-page="subcommands-blocklist.html">— Blocklist</a>
+  <a href="../subcommands-block.html" class="sidebar-link sub" data-page="subcommands-block.html">— Block / Unban</a>
+  <a href="../subcommands-top.html" class="sidebar-link sub" data-page="subcommands-top.html">— Top</a>
+  <a href="../reference/api.html" class="sidebar-link active" data-page="api.html">API / Packages</a>
+  <div class="sidebar-sep"></div>
+  <a href="../security.html" class="sidebar-link" data-page="security.html">Threat Engine</a>
+  <a href="../architecture.html" class="sidebar-link" data-page="architecture.html">Architecture</a>
+  <a href="../tui-html.html" class="sidebar-link" data-page="tui-html.html">TUI & HTML Reports</a>
+  <a href="../contributing.html" class="sidebar-link" data-page="contributing.html">Contributing</a>
+  <a href="../faq.html" class="sidebar-link" data-page="faq.html">FAQ</a>
+  <a href="../changelog.html" class="sidebar-link" data-page="changelog.html">Changelog</a>
+</aside>
+
+  <main class="wrap" id="main">
+    <div class="doc-content">
+      <nav class="breadcrumb" aria-label="Breadcrumb"><a href="../reference/cli.html">Reference</a><span class="sep">/</span><span>API</span></nav>
+      <div class="page-meta"><a href="https://github.com/lenny-ts/caddy-analyzer/releases">v0.6.1</a> · updated <time datetime="2026-08-31">2026-08-31</time> · <a href="https://github.com/lenny-ts/caddy-analyzer">GitHub</a></div>
+      <h1>API / Packages</h1>
+<p>Import path: <code>github.com/lenny-ts/caddy-analyzer/pkg/*</code>. Go 1.25+. For the data flow across these packages, see <a href="../architecture.html">Architecture</a>.</p>
+
+<h2 id="parser">parser — Caddy JSON → Go structs</h2>
+<p>Parses one JSON line into <code>*LogEntry</code> (handled request) or <code>*OperationalEntry</code> (log without <code>request</code>).</p>
+<pre><code>import "github.com/lenny-ts/caddy-analyzer/pkg/parser"
+
+entry, err := parser.Parse(line)
+switch v := entry.(type) {
+case *parser.LogEntry:       // v.Method, v.URI, v.Status, v.RemoteIP, v.UserAgent
+case *parser.OperationalEntry: // v.Level, v.Logger, v.Msg, v.Extra
+}</code></pre>
+<div class="table-wrap"><table>
+<thead><tr><th>Key type</th><th>Fields</th></tr></thead>
+<tbody>
+<tr><td><code>LogEntry</code></td><td><code>Method, URI, Host, RemoteIP, Status, Size, Duration, UserAgent, Referer, ForwardedFor</code></td></tr>
+<tr><td><code>OperationalEntry</code></td><td><code>Level, Logger, Msg, Extra map[string]json.RawMessage</code></td></tr>
+</tbody>
+</table></div>
+
+<h2 id="analysis">analysis — filtering + 26-category detection</h2>
+<pre><code>import "github.com/lenny-ts/caddy-analyzer/pkg/analysis"
+import "github.com/lenny-ts/caddy-analyzer/pkg/types"
+
+eng := analysis.New(types.Filters{From: time.Now().Add(-1*time.Hour), Status: []string{"500"}})
+det := analysis.NewDetector(10) // uaRotation
+eng.SetDetector(det)
+
+// per line:
+if eng.MatchEntry(entry) { // respects all Filters (ip, country, asn, grep, bot, etc.)
+    eng.Process(entry)     // counters + detector + histogram
+}
+stats := eng.Finalize() // computes P50/P95/RPS
+topIPs := eng.TopN(10, types.TopFieldIP)
+suspicious := stats.SuspiciousIPs // grouped by IP with MITRE tags</code></pre>
+<p>Behavioral heuristics: <code>ua_rotation ≥10</code>, <code>object_enumeration ≥10 IDs/template</code>, <code>beaconing CV&lt;0.25</code>. Export Sigma: <code>det.ExportSigmaInfo()</code>.</p>
+
+<h2 id="enrich">enrich — GeoIP</h2>
+<pre><code>import "github.com/lenny-ts/caddy-analyzer/pkg/enrich"
+
+geo, err := enrich.NewGeoIP("") // auto-discovers mmdb in 7 paths + auto-downloads GeoLite2
+if err == nil { defer geo.Close() }
+info := geo.Lookup("203.0.113.18") // -&gt; CountryCode, CountryName, ASN
+code, _ := enrich.CountryCodeFromName("Italy") // "IT"</code></pre>
+<p>Cache: 50K LRU, 24h TTL (tunable via <a href="../guide/configuration.html#tuning">Configuration</a>). Async variant: <code>NewGeoIPAsync</code>.</p>
+
+<h2 id="blocklist">blocklist — CIDR trie</h2>
+<pre><code>import "github.com/lenny-ts/caddy-analyzer/pkg/blocklist"
+
+mgr := blocklist.NewManager("~/.cache/caddy-analyzer/blocklists")
+mgr.Refresh(context.Background()) // download 8 feeds
+hit := mgr.Contains("198.51.100.23") // O(1) via cidranger.PCTrie
+sources := mgr.ListSources() // name, URL, count, age, status</code></pre>
+<p>Add custom: <code>mgr.AddSource(blocklist.Source{Name:"My",URL:"https://…/list.txt"})</code>. Cache TTL 7d.</p>
+
+<h2 id="guard">guard — firewall</h2>
+<pre><code>import "github.com/lenny-ts/caddy-analyzer/pkg/guard"
+import "github.com/lenny-ts/caddy-analyzer/pkg/guard/firewall"
+
+backend, _ := firewall.Detect(guard.LevelInfo) // auto → hybrid/docker/iptables/nftables
+g := guard.New(guard.Config{
+  Limit: 100, Window: time.Minute, Duration: 10*time.Minute,
+  Blocker: backend, GeoIP: geo, BlocklistMgr: mgr,
+  NeverBlock: []string{"10.0.0.0/8"},
+  OnAudit: func(a guard.AuditEntry){ /* log */ },
+})
+// per log line:
+if g.Evaluate(entry) == guard.BlockNow { /* iptables BLOCK */ }
+// periodic:
+blocked := g.Tick() // expires, subnet/cred-stuffing/rps checks
+</code></pre>
+<p>State persists to <code>/var/lib/caddy-analyzer/blocked.json</code>. See <a href="../architecture.html#data-flow">Architecture → data flow</a> for where guard sits.</p>
+
+<h2 id="reader">reader — multi-source ingestion</h2>
+<pre><code>import "github.com/lenny-ts/caddy-analyzer/pkg/reader"
+
+src, _ := reader.ParseSource("docker://caddy")
+r, _ := reader.FromSource(src, true /*follow*/) // → LogReader (file/docker/k8s/journalctl/stdin)
+for line := range r.Lines() { entry, _ := parser.Parse(line) }</code></pre>
+<p>Merges Docker stdout+stderr, follows file rotation via inode check, globs via <code>expandPaths</code>.</p>
+
+<h2 id="output">output — table / json / csv / html</h2>
+<pre><code>import "github.com/lenny-ts/caddy-analyzer/pkg/output"
+
+output.Report(stats, output.FormatTable, false /*defang*/, nil)
+output.Report(stats, output.FormatHTML, true, os.Stdout) // standalone dark HTML</code></pre>
+
+<h2 id="types">types — shared structs</h2>
+<pre><code>import "github.com/lenny-ts/caddy-analyzer/pkg/types"
+
+var f types.Filters // --ip, --country, --asn, --grep, --level, --ops-only, Top, Format, ...
+stats := &amp;types.Stats{} // histogram 1000 buckets, TopN, SuspiciousIPs
+entry.EffectiveClientIP(trustForwarded) // last public XFF or RemoteIP</code></pre>
+
+<div class="callout callout-info"><div class="callout-label">See also</div><a href="../architecture.html">Architecture</a> — how parser → analysis/enrich → guard/blocklist → output fit together. <a href="../contributing.html">Contributing</a> — test/lint and where to add a new detection or feed.</div>
+      <footer class="footer">
+  <p>caddy-analyzer is open-source under <a href="https://github.com/lenny-ts/caddy-analyzer/blob/main/LICENSE">MIT</a> · <a href="https://github.com/lenny-ts/caddy-analyzer">GitHub</a> · <a href="../changelog.html">Changelog</a></p>
+</footer>
+<button class="back-to-top" aria-label="Back to top">↑</button>
+
+    </div>
+  </main>
+  <nav class="doc-toc" aria-label="On this page"><div class="toc-label">On this page</div><a href="#parser" class="toc-link">parser — Caddy JSON → Go structs</a><a href="#analysis" class="toc-link">analysis — filtering + 26-category detection</a><a href="#enrich" class="toc-link">enrich — GeoIP</a><a href="#blocklist" class="toc-link">blocklist — CIDR trie</a><a href="#guard" class="toc-link">guard — firewall</a><a href="#reader" class="toc-link">reader — multi-source ingestion</a><a href="#output" class="toc-link">output — table / json / csv / html</a><a href="#types" class="toc-link">types — shared structs</a></nav>
+</div>
+<script src="../docs.min.js?v=36"></script>
+</body>
+</html>

@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>blocklist — caddy-analyzer</title>
+  <meta name="description" content="Manage 8 threat-intel feeds: refresh, list, config, init.">
+  <meta name="theme-color" content="#09090B">
+  <link rel="icon" href="caddy-analyzer-logo.png" type="image/png">
+  <link rel="canonical" href="https://lenny-ts.github.io/caddy-analyzer/subcommands-blocklist.html">
+  <link rel="alternate" hreflang="x-default" href="https://lenny-ts.github.io/caddy-analyzer/subcommands-blocklist.html">
+  <link rel="alternate" hreflang="en" href="https://lenny-ts.github.io/caddy-analyzer/subcommands-blocklist.html">
+  <link rel="alternate" hreflang="it" href="https://lenny-ts.github.io/caddy-analyzer/it/subcommands-blocklist.html">
+  <script>try{var t=localStorage.getItem('caddy-docs-theme');if(t==='light')document.documentElement.setAttribute('data-theme','light');}catch(e){}</script>
+  <meta name="color-scheme" content="dark light">
+  <link rel="stylesheet" href="styles.min.css?v=36">
+</head>
+<body>
+<header class="site-header">
+  <a href="index.html" class="logo">
+    <img src="caddy-analyzer-logo.png" alt="" class="site-logo">
+    <span>caddy-analyzer</span>
+  </a>
+  <nav aria-label="Primary">
+    <a href="installation.html" data-nav="installation.html">Installation</a>
+    <a href="sources.html" data-nav="sources.html">Log Sources</a>
+    <a href="reference/cli.html" data-nav="cli.html">CLI Reference</a>
+    <a href="security.html" data-nav="security.html">Threat Engine</a>
+    <a href="tui-html.html" data-nav="tui-html.html">TUI & HTML Reports</a>
+  </nav>
+  <div class="header-actions">
+    <a href="https://github.com/lenny-ts/caddy-analyzer" style="color:var(--text-sec);font-size:0.85rem;" rel="noopener">GitHub</a>
+    <div class="language-switch" role="group" aria-label="Language"><span class="lang-option active" aria-current="page">EN</span><a class="lang-option" href="it/subcommands-blocklist.html" hreflang="it" lang="it">IT</a></div>
+    <button class="theme-toggle" type="button" aria-label="Switch to light theme">
+      <span class="theme-icon theme-sun" aria-hidden="true">☀</span>
+      <span class="theme-icon theme-moon" aria-hidden="true">☾</span>
+    </button>
+  </div>
+</header>
+<div class="scroll-progress" aria-hidden="true"></div>
+
+<div class="docs-layout">
+   <aside class="doc-sidebar" aria-label="Page navigation">
+  <div class="sidebar-label">Documentation</div>
+  <a href="index.html" class="sidebar-link" data-page="index.html">Overview</a>
+  <a href="quickstart.html" class="sidebar-link" data-page="quickstart.html">Quickstart</a>
+  <a href="installation.html" class="sidebar-link" data-page="installation.html">Installation</a>
+  <a href="sources.html" class="sidebar-link" data-page="sources.html">Log Sources</a>
+  <div class="sidebar-sep"></div>
+  <div class="sidebar-label">Guide</div>
+  <a href="guide/configuration.html" class="sidebar-link" data-page="configuration.html">Configuration</a>
+  <a href="guide/usage.html" class="sidebar-link" data-page="usage.html">Usage</a>
+  <a href="guide/examples.html" class="sidebar-link" data-page="examples.html">Examples</a>
+  <a href="guide/troubleshooting.html" class="sidebar-link" data-page="troubleshooting.html">Troubleshooting</a>
+  <div class="sidebar-sep"></div>
+  <div class="sidebar-label">Reference</div>
+  <a href="reference/cli.html" class="sidebar-link" data-page="cli.html">CLI Reference</a>
+  <a href="reference/security-categories.html" class="sidebar-link sub" data-page="security-categories.html">— Categories</a>
+  <a href="reference/security-detection.html" class="sidebar-link sub" data-page="security-detection.html">— Detection</a>
+  <a href="subcommands-guard.html" class="sidebar-link sub" data-page="subcommands-guard.html">— Guard</a>
+  <a href="subcommands-blocklist.html" class="sidebar-link sub active" data-page="subcommands-blocklist.html">— Blocklist</a>
+  <a href="subcommands-block.html" class="sidebar-link sub" data-page="subcommands-block.html">— Block / Unban</a>
+  <a href="subcommands-top.html" class="sidebar-link sub" data-page="subcommands-top.html">— Top</a>
+  <a href="reference/api.html" class="sidebar-link" data-page="api.html">API / Packages</a>
+  <div class="sidebar-sep"></div>
+  <a href="security.html" class="sidebar-link" data-page="security.html">Threat Engine</a>
+  <a href="architecture.html" class="sidebar-link" data-page="architecture.html">Architecture</a>
+  <a href="tui-html.html" class="sidebar-link" data-page="tui-html.html">TUI & HTML Reports</a>
+  <a href="contributing.html" class="sidebar-link" data-page="contributing.html">Contributing</a>
+  <a href="faq.html" class="sidebar-link" data-page="faq.html">FAQ</a>
+  <a href="changelog.html" class="sidebar-link" data-page="changelog.html">Changelog</a>
+</aside>
+
+  <main class="wrap" id="main">
+    <div class="doc-content">
+      <nav class="breadcrumb" aria-label="Breadcrumb"><a href="reference/cli.html">Reference</a><span class="sep">/</span><span>blocklist</span></nav>
+      <div class="page-meta"><a href="https://github.com/lenny-ts/caddy-analyzer/releases">v0.6.1</a> · updated <time datetime="2026-08-31">2026-08-31</time> · <a href="https://github.com/lenny-ts/caddy-analyzer">GitHub</a></div>
+      <h1>blocklist</h1>
+<p>Manage 8 threat-intel feeds behind guard. It never changes firewall rules; <code>refresh</code> writes its cache and <code>init</code> writes blocklist configuration.</p>
+
+<h2 id="synopsis">Synopsis</h2>
+<pre><code>caddy-analyze blocklist &lt;action&gt; [flags]
+# actions: refresh | list | config | init</code></pre>
+
+<h2 id="flags">Flags</h2>
+<div class="table-wrap"><table>
+<thead><tr><th>Flag</th><th>Default</th><th>Description</th></tr></thead>
+<tbody>
+<tr><td><code>--cache-dir</code></td><td><code>~/.cache/caddy-analyzer/blocklists</code></td><td>Cache directory</td></tr>
+<tr><td><code>--no-default-blocklists</code></td><td>false</td><td>Disable 8 defaults (use with <code>--blocklist-config</code> for custom-only)</td></tr>
+<tr><td><code>--blocklist-config</code></td><td></td><td>Path to JSON with extra sources <code>[{"name","url","format"}]</code></td></tr>
+<tr><td><code>--blocklist-remove</code></td><td></td><td>Names to remove (comma-separated)</td></tr>
+<tr><td><code>-f, --format</code></td><td>table</td><td><code>table</code> or <code>json</code> for <code>list</code>/<code>config</code></td></tr>
+</tbody>
+</table></div>
+
+<h3>Default feeds</h3>
+<div class="table-wrap"><table>
+<thead><tr><th>Name</th><th>Format</th></tr></thead>
+<tbody>
+<tr><td>Spamhaus DROP v4/v6</td><td>JSON Lines</td></tr>
+<tr><td>FireHOL level 1 / 2</td><td>netset</td></tr>
+<tr><td>CINS Army</td><td>plain</td></tr>
+<tr><td>Tor exit nodes</td><td>plain</td></tr>
+<tr><td>Emerging Threats</td><td>plain</td></tr>
+<tr><td>AbuseIPDB mirror</td><td>plain</td></tr>
+</tbody>
+</table></div>
+
+<h2 id="minimal">Minimal example</h2>
+<p><span class="pill pill-readonly">read-only</span></p>
+<pre><code>caddy-analyze blocklist refresh
+caddy-analyze blocklist list</code></pre>
+
+<h2 id="advanced">Advanced example</h2>
+<p>Custom feeds + JSON output; <code>init</code> persists settings to configuration.</p>
+<pre><code>caddy-analyze blocklist config -f json | jq
+# add custom + remove one default
+caddy-analyze blocklist --blocklist-config my.json --blocklist-remove tor-exit-nodes list
+# persist so guard picks it up without CLI flags (see Configuration)
+caddy-analyze blocklist --no-default-blocklists --blocklist-config my.json init</code></pre>
+      <footer class="footer">
+  <p>caddy-analyzer is open-source under <a href="https://github.com/lenny-ts/caddy-analyzer/blob/main/LICENSE">MIT</a> · <a href="https://github.com/lenny-ts/caddy-analyzer">GitHub</a> · <a href="changelog.html">Changelog</a></p>
+</footer>
+<button class="back-to-top" aria-label="Back to top">↑</button>
+
+    </div>
+  </main>
+  <nav class="doc-toc" aria-label="On this page"><div class="toc-label">On this page</div><a href="#synopsis" class="toc-link">Synopsis</a><a href="#flags" class="toc-link">Flags</a><a href="#minimal" class="toc-link">Minimal example</a><a href="#advanced" class="toc-link">Advanced example</a><a href="#default-feeds" class="toc-link h3">Default feeds</a></nav>
+</div>
+<script src="docs.min.js?v=36"></script>
+</body>
+</html>

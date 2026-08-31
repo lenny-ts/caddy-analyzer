@@ -1,143 +1,94 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="view-transition" content="same-origin">
-    <title>404 — Page Not Found | caddy-analyzer</title>
-    <meta name="description" content="The page you were looking for could not be found.">
-    <meta name="theme-color" content="#0a0a0c">
-    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E🛡️%3C/text%3E%3C/svg%3E">
-    <meta property="og:title" content="404 — caddy-analyzer">
-    <meta property="og:description" content="Page not found.">
-    <meta property="og:type" content="website">
-    <meta property="og:url" content="https://lenny-ts.github.io/caddy-analyzer/404.html">
-    <meta property="og:image" content="https://lenny-ts.github.io/caddy-analyzer/og-image.png">
-    <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:title" content="404 — caddy-analyzer">
-    <meta name="twitter:description" content="Page not found.">
-    <meta name="color-scheme" content="dark light">
-    <meta name="robots" content="noindex">
-    <script>
-        (function () {
-            try {
-                var t = localStorage.getItem("caddy-docs-theme");
-                if (t === "light") document.documentElement.setAttribute("data-theme", "light");
-            } catch (e) {}
-        })();
-        document.documentElement.classList.add("decor-paused");
-    </script>
-    <meta name="doc:modified" content="2026-08-26T15:18:43+02:00">
-    <link rel="manifest" href="manifest.json">
-    <link rel="apple-touch-icon" href="apple-touch-icon.png">
-    <link rel="canonical" href="https://lenny-ts.github.io/caddy-analyzer/index.html">
-    <link rel="stylesheet" href="styles.min.css?v=31">
-    <style>
-        body.error-page {
-            min-height: 100vh;
-            margin: 0;
-            padding: 1.5rem;
-            text-align: center;
-        }
-        .error-wrap {
-            max-width: 520px;
-            width: 100%;
-            position: relative;
-            z-index: 2;
-            flex: 1 0 auto;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-self: center;
-        }
-        .error-page .footer {
-            flex: 0 0 auto;
-            margin-top: 2.5rem;
-        }
-        .error-code {
-            font-family: var(--mono);
-            font-size: clamp(5rem, 18vw, 9rem);
-            font-weight: 700;
-            line-height: 1;
-            color: var(--text);
-            letter-spacing: -0.04em;
-            margin-bottom: 1.5rem;
-        }
-        .error-code .digit-ghost {
-            color: var(--border);
-        }
-        .error-title {
-            font-family: var(--sans);
-            font-size: 1.3rem;
-            color: var(--text);
-            margin: 0 0 0.6rem;
-            font-weight: 600;
-        }
-        .error-desc {
-            color: var(--text-dim);
-            font-size: 0.95rem;
-            line-height: 1.6;
-            margin-bottom: 2rem;
-        }
-        .error-actions {
-            display: flex;
-            gap: 0.8rem;
-            justify-content: center;
-            flex-wrap: wrap;
-        }
-        .error-btn {
-            display: inline-flex;
-            align-items: center;
-            gap: 0.4rem;
-            padding: 0.7rem 1.3rem;
-            border-radius: 10px;
-            font-family: var(--mono);
-            font-size: 0.85rem;
-            font-weight: 600;
-            text-decoration: none;
-            transition: transform .2s, box-shadow .2s, background .2s, border-color .2s;
-        }
-        .error-btn-primary {
-            background: var(--accent);
-            color: #0a0a0f;
-        }
-        [data-theme="light"] .error-btn-primary { color: #ffffff; }
-        .error-btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 24px -6px rgba(72,209,204,0.5);
-        }
-        .error-btn-secondary {
-            background: var(--surface);
-            color: var(--text);
-            border: 1px solid var(--border);
-        }
-        .error-btn-secondary:hover {
-            border-color: var(--accent);
-            transform: translateY(-2px);
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>404 — Page not found</title>
+  <meta name="description" content="The page you were looking for could not be found.">
+  <meta name="theme-color" content="#09090B">
+  <link rel="icon" href="caddy-analyzer-logo.png" type="image/png">
+  <link rel="canonical" href="https://lenny-ts.github.io/caddy-analyzer/404.html">
+  <link rel="alternate" hreflang="x-default" href="https://lenny-ts.github.io/caddy-analyzer/404.html">
+  <link rel="alternate" hreflang="en" href="https://lenny-ts.github.io/caddy-analyzer/404.html">
+  <script>try{var t=localStorage.getItem('caddy-docs-theme');if(t==='light')document.documentElement.setAttribute('data-theme','light');}catch(e){}</script>
+  <meta name="color-scheme" content="dark light">
+  <link rel="stylesheet" href="styles.min.css?v=36">
 </head>
-<body class="error-page">
-    <a href="#main" class="skip-link">Skip to content</a>
-    <div class="scroll-progress"></div>
-    <div class="aurora" aria-hidden="true">
-        <i class="aurora-blob-3"></i>
-        <i class="aurora-beam"></i>
-        <i class="aurora-vignette"></i>
+<body>
+<header class="site-header">
+  <a href="index.html" class="logo">
+    <img src="caddy-analyzer-logo.png" alt="" class="site-logo">
+    <span>caddy-analyzer</span>
+  </a>
+  <nav aria-label="Primary">
+    <a href="installation.html" data-nav="installation.html">Installation</a>
+    <a href="sources.html" data-nav="sources.html">Log Sources</a>
+    <a href="reference/cli.html" data-nav="cli.html">CLI Reference</a>
+    <a href="security.html" data-nav="security.html">Threat Engine</a>
+    <a href="tui-html.html" data-nav="tui-html.html">TUI & HTML Reports</a>
+  </nav>
+  <div class="header-actions">
+    <a href="https://github.com/lenny-ts/caddy-analyzer" style="color:var(--text-sec);font-size:0.85rem;" rel="noopener">GitHub</a>
+    <div class="language-switch" role="group" aria-label="Language"><span class="lang-option active" aria-current="page">EN</span><a class="lang-option" href="it/index.html" hreflang="it" lang="it" title="IT translation in progress">IT</a></div>
+    <button class="theme-toggle" type="button" aria-label="Switch to light theme">
+      <span class="theme-icon theme-sun" aria-hidden="true">☀</span>
+      <span class="theme-icon theme-moon" aria-hidden="true">☾</span>
+    </button>
+  </div>
+</header>
+<div class="scroll-progress" aria-hidden="true"></div>
+
+<div class="docs-layout">
+   <aside class="doc-sidebar" aria-label="Page navigation">
+  <div class="sidebar-label">Documentation</div>
+  <a href="index.html" class="sidebar-link" data-page="index.html">Overview</a>
+  <a href="quickstart.html" class="sidebar-link" data-page="quickstart.html">Quickstart</a>
+  <a href="installation.html" class="sidebar-link" data-page="installation.html">Installation</a>
+  <a href="sources.html" class="sidebar-link" data-page="sources.html">Log Sources</a>
+  <div class="sidebar-sep"></div>
+  <div class="sidebar-label">Guide</div>
+  <a href="guide/configuration.html" class="sidebar-link" data-page="configuration.html">Configuration</a>
+  <a href="guide/usage.html" class="sidebar-link" data-page="usage.html">Usage</a>
+  <a href="guide/examples.html" class="sidebar-link" data-page="examples.html">Examples</a>
+  <a href="guide/troubleshooting.html" class="sidebar-link" data-page="troubleshooting.html">Troubleshooting</a>
+  <div class="sidebar-sep"></div>
+  <div class="sidebar-label">Reference</div>
+  <a href="reference/cli.html" class="sidebar-link" data-page="cli.html">CLI Reference</a>
+  <a href="reference/security-categories.html" class="sidebar-link sub" data-page="security-categories.html">— Categories</a>
+  <a href="reference/security-detection.html" class="sidebar-link sub" data-page="security-detection.html">— Detection</a>
+  <a href="subcommands-guard.html" class="sidebar-link sub" data-page="subcommands-guard.html">— Guard</a>
+  <a href="subcommands-blocklist.html" class="sidebar-link sub" data-page="subcommands-blocklist.html">— Blocklist</a>
+  <a href="subcommands-block.html" class="sidebar-link sub" data-page="subcommands-block.html">— Block / Unban</a>
+  <a href="subcommands-top.html" class="sidebar-link sub" data-page="subcommands-top.html">— Top</a>
+  <a href="reference/api.html" class="sidebar-link" data-page="api.html">API / Packages</a>
+  <div class="sidebar-sep"></div>
+  <a href="security.html" class="sidebar-link" data-page="security.html">Threat Engine</a>
+  <a href="architecture.html" class="sidebar-link" data-page="architecture.html">Architecture</a>
+  <a href="tui-html.html" class="sidebar-link" data-page="tui-html.html">TUI & HTML Reports</a>
+  <a href="contributing.html" class="sidebar-link" data-page="contributing.html">Contributing</a>
+  <a href="faq.html" class="sidebar-link" data-page="faq.html">FAQ</a>
+  <a href="changelog.html" class="sidebar-link" data-page="changelog.html">Changelog</a>
+</aside>
+
+  <main class="wrap" id="main">
+    <div class="doc-content">
+      <nav class="breadcrumb" aria-label="Breadcrumb"><span>404</span></nav>
+      <div class="page-meta"><a href="https://github.com/lenny-ts/caddy-analyzer/releases">v0.6.1</a> · updated <time datetime="2026-08-31">2026-08-31</time> · <a href="https://github.com/lenny-ts/caddy-analyzer">GitHub</a></div>
+      <div style="text-align:center;padding:48px 0;">
+  <div style="font-size:4rem;font-weight:700;color:var(--accent);line-height:1;">404</div>
+  <p style="margin-top:12px;">Page not found.</p>
+  <p>The page you were looking for does not exist or has been moved.</p>
+  <a href="index.html" class="btn btn-primary" style="margin-top:16px;">Back to docs</a>
+</div>
+      <footer class="footer">
+  <p>caddy-analyzer is open-source under <a href="https://github.com/lenny-ts/caddy-analyzer/blob/main/LICENSE">MIT</a> · <a href="https://github.com/lenny-ts/caddy-analyzer">GitHub</a> · <a href="changelog.html">Changelog</a></p>
+</footer>
+<button class="back-to-top" aria-label="Back to top">↑</button>
+
     </div>
-    <div class="grid-overlay"></div>
-    <main class="error-wrap" id="main">
-        <div class="error-code" aria-hidden="true">4<span class="digit-ghost">0</span>4</div>
-        <h1 class="error-title">Page not found</h1>
-        <p class="error-desc">The page you're looking for doesn't exist or may have moved.</p>
-        <div class="error-actions">
-            <a href="index.html" class="error-btn error-btn-primary">&#9664; Back to docs</a>
-            <a href="https://github.com/lenny-ts/caddy-analyzer" class="error-btn error-btn-secondary" target="_blank" rel="noopener">GitHub &#8599;</a>
-        </div>
-    </main>
-    <footer class="footer reveal">
-        <p>caddy-analyzer is open-source software released under the <a href="https://github.com/lenny-ts/caddy-analyzer/blob/main/LICENSE">MIT License</a>.</p>
-    </footer>
-    <script src="docs.min.js?v=31" defer></script>
+  </main>
+  
+</div>
+<script src="docs.min.js?v=36"></script>
 </body>
 </html>

@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CLI Reference — caddy-analyzer</title>
+  <meta name="description" content="All flags and subcommands: global filters, root-only modes, guard, blocklist, top, tail, diff.">
+  <meta name="theme-color" content="#09090B">
+  <link rel="icon" href="../caddy-analyzer-logo.png" type="image/png">
+  <link rel="canonical" href="https://lenny-ts.github.io/caddy-analyzer/reference/cli.html">
+  <link rel="alternate" hreflang="x-default" href="https://lenny-ts.github.io/caddy-analyzer/reference/cli.html">
+  <link rel="alternate" hreflang="en" href="https://lenny-ts.github.io/caddy-analyzer/reference/cli.html">
+  <link rel="alternate" hreflang="it" href="https://lenny-ts.github.io/caddy-analyzer/it/reference/cli.html">
+  <script>try{var t=localStorage.getItem('caddy-docs-theme');if(t==='light')document.documentElement.setAttribute('data-theme','light');}catch(e){}</script>
+  <meta name="color-scheme" content="dark light">
+  <link rel="stylesheet" href="../styles.min.css?v=36">
+</head>
+<body>
+<header class="site-header">
+  <a href="../index.html" class="logo">
+    <img src="../caddy-analyzer-logo.png" alt="" class="site-logo">
+    <span>caddy-analyzer</span>
+  </a>
+  <nav aria-label="Primary">
+    <a href="../installation.html" data-nav="installation.html">Installation</a>
+    <a href="../sources.html" data-nav="sources.html">Log Sources</a>
+    <a href="../reference/cli.html" data-nav="cli.html" class="active">CLI Reference</a>
+    <a href="../security.html" data-nav="security.html">Threat Engine</a>
+    <a href="../tui-html.html" data-nav="tui-html.html">TUI & HTML Reports</a>
+  </nav>
+  <div class="header-actions">
+    <a href="https://github.com/lenny-ts/caddy-analyzer" style="color:var(--text-sec);font-size:0.85rem;" rel="noopener">GitHub</a>
+    <div class="language-switch" role="group" aria-label="Language"><span class="lang-option active" aria-current="page">EN</span><a class="lang-option" href="../it/reference/cli.html" hreflang="it" lang="it">IT</a></div>
+    <button class="theme-toggle" type="button" aria-label="Switch to light theme">
+      <span class="theme-icon theme-sun" aria-hidden="true">☀</span>
+      <span class="theme-icon theme-moon" aria-hidden="true">☾</span>
+    </button>
+  </div>
+</header>
+<div class="scroll-progress" aria-hidden="true"></div>
+
+<div class="docs-layout">
+   <aside class="doc-sidebar" aria-label="Page navigation">
+  <div class="sidebar-label">Documentation</div>
+  <a href="../index.html" class="sidebar-link" data-page="index.html">Overview</a>
+  <a href="../quickstart.html" class="sidebar-link" data-page="quickstart.html">Quickstart</a>
+  <a href="../installation.html" class="sidebar-link" data-page="installation.html">Installation</a>
+  <a href="../sources.html" class="sidebar-link" data-page="sources.html">Log Sources</a>
+  <div class="sidebar-sep"></div>
+  <div class="sidebar-label">Guide</div>
+  <a href="../guide/configuration.html" class="sidebar-link" data-page="configuration.html">Configuration</a>
+  <a href="../guide/usage.html" class="sidebar-link" data-page="usage.html">Usage</a>
+  <a href="../guide/examples.html" class="sidebar-link" data-page="examples.html">Examples</a>
+  <a href="../guide/troubleshooting.html" class="sidebar-link" data-page="troubleshooting.html">Troubleshooting</a>
+  <div class="sidebar-sep"></div>
+  <div class="sidebar-label">Reference</div>
+  <a href="../reference/cli.html" class="sidebar-link active" data-page="cli.html">CLI Reference</a>
+  <a href="../reference/security-categories.html" class="sidebar-link sub" data-page="security-categories.html">— Categories</a>
+  <a href="../reference/security-detection.html" class="sidebar-link sub" data-page="security-detection.html">— Detection</a>
+  <a href="../subcommands-guard.html" class="sidebar-link sub" data-page="subcommands-guard.html">— Guard</a>
+  <a href="../subcommands-blocklist.html" class="sidebar-link sub" data-page="subcommands-blocklist.html">— Blocklist</a>
+  <a href="../subcommands-block.html" class="sidebar-link sub" data-page="subcommands-block.html">— Block / Unban</a>
+  <a href="../subcommands-top.html" class="sidebar-link sub" data-page="subcommands-top.html">— Top</a>
+  <a href="../reference/api.html" class="sidebar-link" data-page="api.html">API / Packages</a>
+  <div class="sidebar-sep"></div>
+  <a href="../security.html" class="sidebar-link" data-page="security.html">Threat Engine</a>
+  <a href="../architecture.html" class="sidebar-link" data-page="architecture.html">Architecture</a>
+  <a href="../tui-html.html" class="sidebar-link" data-page="tui-html.html">TUI & HTML Reports</a>
+  <a href="../contributing.html" class="sidebar-link" data-page="contributing.html">Contributing</a>
+  <a href="../faq.html" class="sidebar-link" data-page="faq.html">FAQ</a>
+  <a href="../changelog.html" class="sidebar-link" data-page="changelog.html">Changelog</a>
+</aside>
+
+  <main class="wrap" id="main">
+    <div class="doc-content">
+      <nav class="breadcrumb" aria-label="Breadcrumb"><a href="../reference/cli.html">Reference</a><span class="sep">/</span><span>CLI Reference</span></nav>
+      <div class="page-meta"><a href="https://github.com/lenny-ts/caddy-analyzer/releases">v0.6.1</a> · updated <time datetime="2026-08-31">2026-08-31</time> · <a href="https://github.com/lenny-ts/caddy-analyzer">GitHub</a></div>
+      <div class="cli-heading"><div><div class="hero-badge">Command line interface</div><h1>CLI Reference</h1></div></div>
+<p>Entry point: <code>caddy-analyze [flags] [source...]</code> — sources resolved via <a href="../sources.html">Log Sources</a> or <a href="../guide/configuration.html">caddy-analyzer.json</a>. Below: every flag, its scope, and whether it touches the system.</p>
+
+<h2 id="global">Global flags — Scope &amp; root</h2>
+<p><span class="pill pill-all">all</span> = persistent on every subcommand. <span class="pill pill-root">root only</span> = only on the root command (not on <code>tail</code> etc.). No flag itself requires root; subcommands <code>guard</code>/<code>block</code>/<code>unban</code> do (see their pages).</p>
+
+<h3>Persistent — all subcommands</h3>
+<div class="table-wrap"><table>
+<thead><tr><th>Flag</th><th>Short</th><th>Default</th><th>Scope</th><th>Description</th></tr></thead>
+<tbody>
+<tr><td><code>--from</code></td><td></td><td></td><td><span class="pill pill-all">all</span></td><td>Entries after time (RFC3339 or <code>5m</code>, <code>1h</code>, <code>2d</code>)</td></tr>
+<tr><td><code>--to</code></td><td></td><td></td><td><span class="pill pill-all">all</span></td><td>Entries before time (RFC3339)</td></tr>
+<tr><td><code>--status</code></td><td><code>-s</code></td><td></td><td><span class="pill pill-all">all</span></td><td>Filter by status code(s) e.g. <code>-s 200,404</code></td></tr>
+<tr><td><code>--method</code></td><td><code>-m</code></td><td></td><td><span class="pill pill-all">all</span></td><td>Filter by HTTP method</td></tr>
+<tr><td><code>--path</code></td><td><code>-p</code></td><td></td><td><span class="pill pill-all">all</span></td><td>Path glob (<code>/api/*</code> → regex)</td></tr>
+<tr><td><code>--host</code></td><td></td><td></td><td><span class="pill pill-all">all</span></td><td>Filter by Host substring</td></tr>
+<tr><td><code>--ip</code></td><td></td><td></td><td><span class="pill pill-all">all</span></td><td>Client IP / CIDR</td></tr>
+<tr><td><code>--exclude-ip</code></td><td></td><td></td><td><span class="pill pill-all">all</span></td><td>Exclude IP / CIDR</td></tr>
+<tr><td><code>--country</code></td><td></td><td></td><td><span class="pill pill-all">all</span></td><td>Keep countries (ISO or name, needs GeoIP)</td></tr>
+<tr><td><code>--exclude-country</code></td><td></td><td></td><td><span class="pill pill-all">all</span></td><td>Drop countries (needs GeoIP)</td></tr>
+<tr><td><code>--asn</code></td><td></td><td></td><td><span class="pill pill-all">all</span></td><td>Keep ASNs (needs GeoIP)</td></tr>
+<tr><td><code>--exclude-asn</code></td><td></td><td></td><td><span class="pill pill-all">all</span></td><td>Drop ASNs</td></tr>
+<tr><td><code>--grep</code></td><td></td><td></td><td><span class="pill pill-all">all</span></td><td>Regex (fallback substring) on URI/UA/IP</td></tr>
+<tr><td><code>--2xx / --3xx / --4xx / --5xx</code></td><td></td><td>false</td><td><span class="pill pill-all">all</span></td><td>Status class shortcut</td></tr>
+<tr><td><code>--errors-only</code></td><td><code>-e</code></td><td>false</td><td><span class="pill pill-all">all</span></td><td>5xx only</td></tr>
+<tr><td><code>--slow</code></td><td></td><td></td><td><span class="pill pill-all">all</span></td><td>Slower than duration</td></tr>
+<tr><td><code>--max-latency</code></td><td></td><td></td><td><span class="pill pill-all">all</span></td><td>Faster than duration</td></tr>
+<tr><td><code>--min-size / --max-size</code></td><td></td><td></td><td><span class="pill pill-all">all</span></td><td>Bytes with k/mb/gb suffix</td></tr>
+<tr><td><code>--no-bots / --bots-only</code></td><td></td><td>false</td><td><span class="pill pill-all">all</span></td><td>Bot classifier</td></tr>
+<tr><td><code>--level</code></td><td></td><td></td><td><span class="pill pill-all">all</span></td><td>Operational level (<code>error,warn,info,debug</code>)</td></tr>
+<tr><td><code>--ops-only</code></td><td></td><td>false</td><td><span class="pill pill-all">all</span></td><td>Non-HTTP events only</td></tr>
+<tr><td><code>--top</code></td><td><code>-t</code></td><td>10</td><td><span class="pill pill-all">all</span></td><td>Top N (0 disables)</td></tr>
+<tr><td><code>--format</code></td><td><code>-f</code></td><td>table</td><td><span class="pill pill-all">all</span></td><td>Root reports: <code>table|json|csv|html</code>; <code>top</code>/<code>diff</code>: <code>table|json|csv</code></td></tr>
+<tr><td><code>--output</code></td><td><code>-o</code></td><td></td><td><span class="pill pill-all">all</span></td><td>Write to file</td></tr>
+<tr><td><code>--compact</code></td><td><code>-c</code></td><td>false</td><td><span class="pill pill-all">all</span></td><td>Compact table</td></tr>
+<tr><td><code>--defang</code></td><td></td><td>false</td><td><span class="pill pill-all">all</span></td><td><code>.</code>→<code>[.]</code> for IOC sharing</td></tr>
+<tr><td><code>--trust-forwarded</code></td><td></td><td>false</td><td><span class="pill pill-all">all</span></td><td>Trust X-Forwarded-For last public hop</td></tr>
+<tr><td><code>--max-cardinality</code></td><td></td><td>100k</td><td><span class="pill pill-all">all</span></td><td>Cap per counter (0 unlimited)</td></tr>
+<tr><td><code>--geo-cache-ttl</code></td><td></td><td>24h</td><td><span class="pill pill-all">all</span></td><td>GeoIP cache TTL</td></tr>
+<tr><td><code>--geo-cache-size</code></td><td></td><td>50k</td><td><span class="pill pill-all">all</span></td><td>GeoIP cache size</td></tr>
+<tr><td><code>--ua-rotation</code></td><td></td><td>10</td><td><span class="pill pill-all">all</span></td><td>UA rotation threshold</td></tr>
+<tr><td><code>--namespace</code></td><td><code>-n</code></td><td></td><td><span class="pill pill-all">all</span></td><td>K8s namespace</td></tr>
+<tr><td><code>--geoip-db</code></td><td></td><td></td><td><span class="pill pill-all">all</span></td><td>GeoIP mmdb path (auto-discovery)</td></tr>
+<tr><td><code>--no-auto-download</code></td><td></td><td>false</td><td><span class="pill pill-all">all</span></td><td>Disable GeoIP auto-download</td></tr>
+</tbody>
+</table></div>
+
+<h3>Root only</h3>
+<div class="table-wrap"><table>
+<thead><tr><th>Flag</th><th>Short</th><th>Scope</th><th>Description</th></tr></thead>
+<tbody>
+<tr><td><code>--follow</code></td><td><code>-F</code></td><td><span class="pill pill-root">root only</span></td><td>Follow new logs (fan-in)</td></tr>
+<tr><td><code>--interval</code></td><td><code>-i</code></td><td><span class="pill pill-root">root only</span></td><td>Re-aggregate every duration (e.g. <code>10s</code>)</td></tr>
+<tr><td><code>--watch</code></td><td><code>-w</code></td><td><span class="pill pill-root">root only</span></td><td>Live TUI dashboard (8 tabs)</td></tr>
+<tr><td><code>--detect</code></td><td><code>-d</code></td><td><span class="pill pill-root">root only</span></td><td>26-category threat detection</td></tr>
+<tr><td><code>--version</code></td><td><code>-v</code></td><td><span class="pill pill-root">root only</span></td><td>Print version and exit</td></tr>
+</tbody>
+</table></div>
+
+<div class="callout callout-info"><div class="callout-label">Root required?</div>No flag requires root by itself. The <strong>subcommands</strong> <code>guard</code>, <code>block</code>, <code>unban</code> require <code>sudo</code> because they modify firewall rules — see their pages for <span class="pill pill-danger">modifies firewall</span> vs <span class="pill pill-readonly">read-only</span>.</div>
+
+<h2 id="subcommands">Subcommands</h2>
+<div class="table-wrap"><table>
+<thead><tr><th>Command</th><th>Scope</th><th>Description</th></tr></thead>
+<tbody>
+<tr><td><code>tail</code></td><td><span class="pill pill-readonly">read-only</span></td><td>Stream and colorize (local <code>--detect</code>)</td></tr>
+<tr><td><code>top</code></td><td><span class="pill pill-readonly">read-only</span></td><td>Ranked inspector (9 dimensions)</td></tr>
+<tr><td><code>diff</code></td><td><span class="pill pill-readonly">read-only</span></td><td>Compare two logs</td></tr>
+<tr><td><code>guard</code></td><td><span class="pill pill-danger">modifies firewall</span></td><td>Auto-block via iptables/nftables/Docker</td></tr>
+<tr><td><code>block</code> / <code>unban</code></td><td><span class="pill pill-danger">modifies firewall</span></td><td>Manual firewall</td></tr>
+<tr><td><code>blocklist</code></td><td>writes cache/config</td><td>8 feeds, refresh/list/config/init</td></tr>
+<tr><td><code>config</code></td><td>writes config</td><td>Persist default source</td></tr>
+<tr><td><code>export-sigma</code></td><td>writes file/stdout</td><td>23 Sigma rules</td></tr>
+<tr><td><code>update</code></td><td>replaces binary</td><td>Self-update (cosign + SHA256)</td></tr>
+<tr><td><code>whitelist</code></td><td>writes allowlist</td><td>Never-block CIDRs</td></tr>
+</tbody>
+</table></div>
+<p>Details per subcommand: see sidebar <em>Guard</em>, <em>Blocklist</em>, <em>Block / Unban</em>, <em>Top</em>.</p>
+      <footer class="footer">
+  <p>caddy-analyzer is open-source under <a href="https://github.com/lenny-ts/caddy-analyzer/blob/main/LICENSE">MIT</a> · <a href="https://github.com/lenny-ts/caddy-analyzer">GitHub</a> · <a href="../changelog.html">Changelog</a></p>
+</footer>
+<button class="back-to-top" aria-label="Back to top">↑</button>
+
+    </div>
+  </main>
+  <nav class="doc-toc" aria-label="On this page"><div class="toc-label">On this page</div><a href="#global" class="toc-link">Global flags — Scope &amp;amp; root</a><a href="#subcommands" class="toc-link">Subcommands</a><a href="#persistent-all-subcommands" class="toc-link h3">Persistent — all subcommands</a><a href="#root-only" class="toc-link h3">Root only</a></nav>
+</div>
+<script src="../docs.min.js?v=36"></script>
+</body>
+</html>

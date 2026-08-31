@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Architecture — caddy-analyzer</title>
+  <meta name="description" content="Data flow, packages and where parser, guard, enrich, blocklist sit.">
+  <meta name="theme-color" content="#09090B">
+  <link rel="icon" href="caddy-analyzer-logo.png" type="image/png">
+  <link rel="canonical" href="https://lenny-ts.github.io/caddy-analyzer/architecture.html">
+  <link rel="alternate" hreflang="x-default" href="https://lenny-ts.github.io/caddy-analyzer/architecture.html">
+  <link rel="alternate" hreflang="en" href="https://lenny-ts.github.io/caddy-analyzer/architecture.html">
+  <link rel="alternate" hreflang="it" href="https://lenny-ts.github.io/caddy-analyzer/it/architecture.html">
+  <script>try{var t=localStorage.getItem('caddy-docs-theme');if(t==='light')document.documentElement.setAttribute('data-theme','light');}catch(e){}</script>
+  <meta name="color-scheme" content="dark light">
+  <link rel="stylesheet" href="styles.min.css?v=36">
+</head>
+<body>
+<header class="site-header">
+  <a href="index.html" class="logo">
+    <img src="caddy-analyzer-logo.png" alt="" class="site-logo">
+    <span>caddy-analyzer</span>
+  </a>
+  <nav aria-label="Primary">
+    <a href="installation.html" data-nav="installation.html">Installation</a>
+    <a href="sources.html" data-nav="sources.html">Log Sources</a>
+    <a href="reference/cli.html" data-nav="cli.html">CLI Reference</a>
+    <a href="security.html" data-nav="security.html">Threat Engine</a>
+    <a href="tui-html.html" data-nav="tui-html.html">TUI & HTML Reports</a>
+  </nav>
+  <div class="header-actions">
+    <a href="https://github.com/lenny-ts/caddy-analyzer" style="color:var(--text-sec);font-size:0.85rem;" rel="noopener">GitHub</a>
+    <div class="language-switch" role="group" aria-label="Language"><span class="lang-option active" aria-current="page">EN</span><a class="lang-option" href="it/architecture.html" hreflang="it" lang="it">IT</a></div>
+    <button class="theme-toggle" type="button" aria-label="Switch to light theme">
+      <span class="theme-icon theme-sun" aria-hidden="true">☀</span>
+      <span class="theme-icon theme-moon" aria-hidden="true">☾</span>
+    </button>
+  </div>
+</header>
+<div class="scroll-progress" aria-hidden="true"></div>
+
+<div class="docs-layout">
+   <aside class="doc-sidebar" aria-label="Page navigation">
+  <div class="sidebar-label">Documentation</div>
+  <a href="index.html" class="sidebar-link" data-page="index.html">Overview</a>
+  <a href="quickstart.html" class="sidebar-link" data-page="quickstart.html">Quickstart</a>
+  <a href="installation.html" class="sidebar-link" data-page="installation.html">Installation</a>
+  <a href="sources.html" class="sidebar-link" data-page="sources.html">Log Sources</a>
+  <div class="sidebar-sep"></div>
+  <div class="sidebar-label">Guide</div>
+  <a href="guide/configuration.html" class="sidebar-link" data-page="configuration.html">Configuration</a>
+  <a href="guide/usage.html" class="sidebar-link" data-page="usage.html">Usage</a>
+  <a href="guide/examples.html" class="sidebar-link" data-page="examples.html">Examples</a>
+  <a href="guide/troubleshooting.html" class="sidebar-link" data-page="troubleshooting.html">Troubleshooting</a>
+  <div class="sidebar-sep"></div>
+  <div class="sidebar-label">Reference</div>
+  <a href="reference/cli.html" class="sidebar-link" data-page="cli.html">CLI Reference</a>
+  <a href="reference/security-categories.html" class="sidebar-link sub" data-page="security-categories.html">— Categories</a>
+  <a href="reference/security-detection.html" class="sidebar-link sub" data-page="security-detection.html">— Detection</a>
+  <a href="subcommands-guard.html" class="sidebar-link sub" data-page="subcommands-guard.html">— Guard</a>
+  <a href="subcommands-blocklist.html" class="sidebar-link sub" data-page="subcommands-blocklist.html">— Blocklist</a>
+  <a href="subcommands-block.html" class="sidebar-link sub" data-page="subcommands-block.html">— Block / Unban</a>
+  <a href="subcommands-top.html" class="sidebar-link sub" data-page="subcommands-top.html">— Top</a>
+  <a href="reference/api.html" class="sidebar-link" data-page="api.html">API / Packages</a>
+  <div class="sidebar-sep"></div>
+  <a href="security.html" class="sidebar-link" data-page="security.html">Threat Engine</a>
+  <a href="architecture.html" class="sidebar-link active" data-page="architecture.html">Architecture</a>
+  <a href="tui-html.html" class="sidebar-link" data-page="tui-html.html">TUI & HTML Reports</a>
+  <a href="contributing.html" class="sidebar-link" data-page="contributing.html">Contributing</a>
+  <a href="faq.html" class="sidebar-link" data-page="faq.html">FAQ</a>
+  <a href="changelog.html" class="sidebar-link" data-page="changelog.html">Changelog</a>
+</aside>
+
+  <main class="wrap" id="main">
+    <div class="doc-content">
+      <nav class="breadcrumb" aria-label="Breadcrumb"><a href="index.html">Overview</a><span class="sep">/</span><span>Architecture</span></nav>
+      <div class="page-meta"><a href="https://github.com/lenny-ts/caddy-analyzer/releases">v0.6.1</a> · updated <time datetime="2026-08-31">2026-08-31</time> · <a href="https://github.com/lenny-ts/caddy-analyzer">GitHub</a></div>
+      <h1>Architecture</h1>
+<p>Single binary, zero CGO, bounded memory (LRU + histogram). For package signatures and import examples, see <a href="reference/api.html">API / Packages</a>. To add a feature, see <a href="contributing.html">Contributing</a>.</p>
+
+<h2 id="data-flow">Data flow</h2>
+<pre style="font-size:0.80rem;line-height:1.55;"><code> Sources                    Reader                     Parser
+ ──────────                 ──────                     ──────
+ file / glob ─┐
+ stdin  -     ├─▶  reader.FromSource(follow)  ─▶  parser.Parse(line) ─┐
+ docker:// ───┤         fan-in + rotation                                │
+ k8s:// ──────┤         stdout+stderr merge                              ▼
+ journalctl ──┘                                                ┌─────────────────┐
+                                                               │  analysis.Engine │
+                                                               │  ├─ MatchEntry() │◀── types.Filters (--from, --ip, --country, --grep, --level…)
+                                                               │  ├─ Enrich  ───────▶ enrich.GeoIP.Lookup(ip) → Country/ASN (LRU 50K, TTL 24h)
+                                                               │  ├─ Detect  ───────▶ analysis.Detector (26 cats, dual-pass, MITRE)
+                                                               │  └─ Stats (TopN, histogram 1K buckets, human/bot)                │
+                                                               └────────┬────────┘
+                                                                        │
+                                               ┌────────────────────────┼────────────────────────┐
+                                               │                        │                        │
+                                            output.Report         tui.Model (watch)        guard.Guard
+                                            table/json/csv/html   8 tabs, 2s tick          ├─ Evaluate(entry) ──▶ blocklist.Manager.Contains(ip) → immediate
+                                                                                            ├─ enrich.GeoIP ──▶ country-block → immediate
+                                                                                            ├─ sliding window (per-sec buckets) → Tick()
+                                                                                            ├─ firewall.Backend (auto → hybrid/iptables/docker/nftables)
+                                                                                            └─ audit + state (JSONL + blocked.json)</code></pre>
+
+<h2 id="packages">Packages — where concepts land</h2>
+<div class="table-wrap"><table>
+<thead><tr><th>Concept you read elsewhere</th><th>Package</th><th>Link</th></tr></thead>
+<tbody>
+<tr><td>“Caddy JSON → LogEntry”</td><td><code>pkg/parser</code></td><td><a href="reference/api.html#parser">API → parser</a></td></tr>
+<tr><td>“Top country/asn, GeoIP cache”</td><td><code>pkg/enrich</code></td><td><a href="reference/api.html#enrich">API → enrich</a></td></tr>
+<tr><td>“26 categories, MITRE, Sigma”</td><td><code>pkg/analysis</code></td><td><a href="reference/api.html#analysis">API → analysis</a>, <a href="reference/security-detection.html">Detection</a></td></tr>
+<tr><td>“8 feeds, CIDR trie, 7d cache”</td><td><code>pkg/blocklist</code></td><td><a href="reference/api.html#blocklist">API → blocklist</a></td></tr>
+<tr><td>“sliding window, audit, state”</td><td><code>pkg/guard</code> + <code>guard/firewall</code></td><td><a href="reference/api.html#guard">API → guard</a></td></tr>
+<tr><td>“file/docker/k8s/journalctl”</td><td><code>pkg/reader</code></td><td><a href="reference/api.html#reader">API → reader</a></td></tr>
+<tr><td>“table/html/json”</td><td><code>pkg/output</code></td><td><a href="reference/api.html#output">API → output</a></td></tr>
+<tr><td>“live dashboard”</td><td><code>pkg/tui</code></td><td><a href="tui-html.html">TUI &amp; Reports</a></td></tr>
+</tbody>
+</table></div>
+
+<h2 id="memory">Memory bounds</h2>
+<p><code>MaxCardinality 100k</code> per counter, IPs LRU 100k, histogram 1000 buckets (log10, 1µs–10s), GeoIP LRU 50k. No unbounded maps.</p>
+
+<h2 id="config-flow">Config flow</h2>
+<p><code>caddy-analyzer.json</code> (local → global) → <code>PersistentPreRunE applyTuning()</code> → CLI flag overrides. Guard adds <code>whitelist</code> + <code>--never-block</code> union. See <a href="guide/configuration.html">Configuration</a>.</p>
+
+<div class="callout callout-info"><div class="callout-label">See also</div><a href="reference/api.html">API / Packages</a> — import + usage per package. <a href="contributing.html">Contributing</a> — where to add a detection (<code>pkg/analysis/detect.go</code>), a feed (<code>pkg/blocklist</code>), or a firewall backend (<code>pkg/guard/firewall</code>).</div>
+      <footer class="footer">
+  <p>caddy-analyzer is open-source under <a href="https://github.com/lenny-ts/caddy-analyzer/blob/main/LICENSE">MIT</a> · <a href="https://github.com/lenny-ts/caddy-analyzer">GitHub</a> · <a href="changelog.html">Changelog</a></p>
+</footer>
+<button class="back-to-top" aria-label="Back to top">↑</button>
+
+    </div>
+  </main>
+  <nav class="doc-toc" aria-label="On this page"><div class="toc-label">On this page</div><a href="#data-flow" class="toc-link">Data flow</a><a href="#packages" class="toc-link">Packages — where concepts land</a><a href="#memory" class="toc-link">Memory bounds</a><a href="#config-flow" class="toc-link">Config flow</a></nav>
+</div>
+<script src="docs.min.js?v=36"></script>
+</body>
+</html>

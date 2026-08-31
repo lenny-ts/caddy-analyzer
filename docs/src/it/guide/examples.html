@@ -1,0 +1,40 @@
+<!-- fm: title=Esempi — caddy-analyzer | description=Casi reali: debug dei 5xx, caccia ai bot, confronto dei deploy, analisi forense con detect. | breadcrumb=Guida > Esempi -->
+<h1>Esempi</h1>
+<p>Attività reali, da copiare e incollare. Sostituisci <code>testdata/sample.log</code> con la tua sorgente: <a href="../sources.html">Sorgenti log</a>.</p>
+
+<h2 id="debug-5xx">Debug dei 5xx dopo un deploy</h2>
+<pre><code># which paths 500 most?
+caddy-analyze top path --5xx -t 20 testdata/sample.log
+# only errors from last hour, host-filtered
+caddy-analyze --5xx --from 1h --host api.example.com testdata/sample.log
+# compare before/after
+caddy-analyze diff /var/log/caddy/before.log /var/log/caddy/after.log -f csv -o diff.csv</code></pre>
+
+<h2 id="hunt-bots">Caccia a bot e scanner</h2>
+<pre><code>caddy-analyze --bots-only -t 20 testdata/sample.log
+caddy-analyze --no-bots --grep "wp-" testdata/sample.log
+caddy-analyze top ua --bots-only testdata/sample.log
+caddy-analyze top ip --no-bots --from 24h testdata/large.log</code></pre>
+
+<h2 id="geo">Geo — da dove arriva il traffico</h2>
+<pre><code>caddy-analyze top country -t 15 testdata/sample.log
+caddy-analyze --country IT --5xx testdata/sample.log
+caddy-analyze --exclude-country CN,RU --from 7d /var/log/caddy/access.log -f html -o week.html</code></pre>
+<p>Richiede GeoIP mmdb (scaricato automaticamente in <code>~/.config/caddy-analyzer/</code> al primo utilizzo; consulta <a href="configuration.html#caches">Configurazione → cache</a>).</p>
+
+<h2 id="forensics">Analisi forense con --detect</h2>
+<pre><code>caddy-analyze --detect testdata/sample.log
+caddy-analyze --detect --country US -f json -o suspicious.json testdata/sample.log
+caddy-analyze --detect -f html -o sec.html testdata/large.log && open sec.html
+# live
+caddy-analyze tail docker://caddy --detect</code></pre>
+<p>Ogni rilevamento ha tag MITRE; esporta Sigma: <code>caddy-analyze export-sigma rules.yml</code> (consulta <a href="../reference/security-detection.html">Rilevamento</a>).</p>
+
+<h2 id="perf">Endpoint lenti</h2>
+<pre><code>caddy-analyze --slow 500ms -t 20 testdata/sample.log
+caddy-analyze --max-latency 100ms --min-size 500kb testdata/sample.log
+caddy-analyze top path --slow 1s testdata/sample.log</code></pre>
+
+<h2 id="ops">Log operativi</h2>
+<pre><code>caddy-analyze --ops-only --level error,warn testdata/sample.log
+caddy-analyze --watch journalctl://caddy.service  # 8th tab = Operational</code></pre>

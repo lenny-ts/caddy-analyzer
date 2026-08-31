@@ -1,0 +1,79 @@
+<!-- fm: title=Riferimento CLI — caddy-analyzer | description=Tutti i flag e i sottocomandi: filtri globali, modalita solo root, guard, blocklist, top, tail, diff. | breadcrumb=Riferimento > Riferimento CLI -->
+<div class="cli-heading"><div><div class="hero-badge">Interfaccia a riga di comando</div><h1>Riferimento CLI</h1></div></div>
+<p>Punto di ingresso: <code>caddy-analyze [flags] [source...]</code> — le sorgenti sono risolte tramite <a href="../sources.html">Sorgenti log</a> o <a href="../guide/configuration.html">caddy-analyzer.json</a>. Di seguito: ogni flag, il suo ambito e se interagisce con il sistema.</p>
+
+<h2 id="global">Flag globali — ambito e root</h2>
+<p><span class="pill pill-all">tutti</span> = persistente in ogni sottocomando. <span class="pill pill-root">solo root</span> = solo nel comando radice (non in <code>tail</code> ecc.). Nessun flag richiede di per sé root; i sottocomandi <code>guard</code>/<code>block</code>/<code>unban</code> sì (consulta le rispettive pagine).</p>
+
+<h3>Persistenti — tutti i sottocomandi</h3>
+<div class="table-wrap"><table>
+<thead><tr><th>Flag</th><th>Breve</th><th>Predefinito</th><th>Ambito</th><th>Descrizione</th></tr></thead>
+<tbody>
+<tr><td><code>--from</code></td><td></td><td></td><td><span class="pill pill-all">tutti</span></td><td>Voci successive all'ora (RFC3339 o <code>5m</code>, <code>1h</code>, <code>2d</code>)</td></tr>
+<tr><td><code>--to</code></td><td></td><td></td><td><span class="pill pill-all">tutti</span></td><td>Voci precedenti all'ora (RFC3339)</td></tr>
+<tr><td><code>--status</code></td><td><code>-s</code></td><td></td><td><span class="pill pill-all">tutti</span></td><td>Filtra per codici di stato, ad es. <code>-s 200,404</code></td></tr>
+<tr><td><code>--method</code></td><td><code>-m</code></td><td></td><td><span class="pill pill-all">tutti</span></td><td>Filtra per metodo HTTP</td></tr>
+<tr><td><code>--path</code></td><td><code>-p</code></td><td></td><td><span class="pill pill-all">tutti</span></td><td>Glob del percorso (<code>/api/*</code> → regex)</td></tr>
+<tr><td><code>--host</code></td><td></td><td></td><td><span class="pill pill-all">tutti</span></td><td>Filtra per sottostringa Host</td></tr>
+<tr><td><code>--ip</code></td><td></td><td></td><td><span class="pill pill-all">tutti</span></td><td>IP client / CIDR</td></tr>
+<tr><td><code>--exclude-ip</code></td><td></td><td></td><td><span class="pill pill-all">tutti</span></td><td>Esclude IP / CIDR</td></tr>
+<tr><td><code>--country</code></td><td></td><td></td><td><span class="pill pill-all">tutti</span></td><td>Mantiene paesi (ISO o nome, richiede GeoIP)</td></tr>
+<tr><td><code>--exclude-country</code></td><td></td><td></td><td><span class="pill pill-all">tutti</span></td><td>Esclude paesi (richiede GeoIP)</td></tr>
+<tr><td><code>--asn</code></td><td></td><td></td><td><span class="pill pill-all">tutti</span></td><td>Mantiene ASN (richiede GeoIP)</td></tr>
+<tr><td><code>--exclude-asn</code></td><td></td><td></td><td><span class="pill pill-all">tutti</span></td><td>Esclude ASN</td></tr>
+<tr><td><code>--grep</code></td><td></td><td></td><td><span class="pill pill-all">tutti</span></td><td>Regex (fallback sottostringa) su URI/UA/IP</td></tr>
+<tr><td><code>--2xx / --3xx / --4xx / --5xx</code></td><td></td><td>false</td><td><span class="pill pill-all">tutti</span></td><td>Scorciatoia per classe di stato</td></tr>
+<tr><td><code>--errors-only</code></td><td><code>-e</code></td><td>false</td><td><span class="pill pill-all">tutti</span></td><td>Solo 5xx</td></tr>
+<tr><td><code>--slow</code></td><td></td><td></td><td><span class="pill pill-all">tutti</span></td><td>Più lento della durata</td></tr>
+<tr><td><code>--max-latency</code></td><td></td><td></td><td><span class="pill pill-all">tutti</span></td><td>Più veloce della durata</td></tr>
+<tr><td><code>--min-size / --max-size</code></td><td></td><td></td><td><span class="pill pill-all">tutti</span></td><td>Byte con suffisso k/mb/gb</td></tr>
+<tr><td><code>--no-bots / --bots-only</code></td><td></td><td>false</td><td><span class="pill pill-all">tutti</span></td><td>Classificatore di bot</td></tr>
+<tr><td><code>--level</code></td><td></td><td></td><td><span class="pill pill-all">tutti</span></td><td>Livello operativo (<code>error,warn,info,debug</code>)</td></tr>
+<tr><td><code>--ops-only</code></td><td></td><td>false</td><td><span class="pill pill-all">tutti</span></td><td>Solo eventi non HTTP</td></tr>
+<tr><td><code>--top</code></td><td><code>-t</code></td><td>10</td><td><span class="pill pill-all">tutti</span></td><td>Primi N (0 disabilita)</td></tr>
+<tr><td><code>--format</code></td><td><code>-f</code></td><td>table</td><td><span class="pill pill-all">tutti</span></td><td>Report radice: <code>table|json|csv|html</code>; <code>top</code>/<code>diff</code>: <code>table|json|csv</code></td></tr>
+<tr><td><code>--output</code></td><td><code>-o</code></td><td></td><td><span class="pill pill-all">tutti</span></td><td>Scrive in un file</td></tr>
+<tr><td><code>--compact</code></td><td><code>-c</code></td><td>false</td><td><span class="pill pill-all">tutti</span></td><td>Tabella compatta</td></tr>
+<tr><td><code>--defang</code></td><td></td><td>false</td><td><span class="pill pill-all">tutti</span></td><td><code>.</code>→<code>[.]</code> per la condivisione di IOC</td></tr>
+<tr><td><code>--trust-forwarded</code></td><td></td><td>false</td><td><span class="pill pill-all">tutti</span></td><td>Considera attendibile l'ultimo hop pubblico X-Forwarded-For</td></tr>
+<tr><td><code>--max-cardinality</code></td><td></td><td>100k</td><td><span class="pill pill-all">tutti</span></td><td>Limite per contatore (0 illimitato)</td></tr>
+<tr><td><code>--geo-cache-ttl</code></td><td></td><td>24h</td><td><span class="pill pill-all">tutti</span></td><td>TTL della cache GeoIP</td></tr>
+<tr><td><code>--geo-cache-size</code></td><td></td><td>50k</td><td><span class="pill pill-all">tutti</span></td><td>Dimensione della cache GeoIP</td></tr>
+<tr><td><code>--ua-rotation</code></td><td></td><td>10</td><td><span class="pill pill-all">tutti</span></td><td>Soglia di rotazione UA</td></tr>
+<tr><td><code>--namespace</code></td><td><code>-n</code></td><td></td><td><span class="pill pill-all">tutti</span></td><td>Namespace K8s</td></tr>
+<tr><td><code>--geoip-db</code></td><td></td><td></td><td><span class="pill pill-all">tutti</span></td><td>Percorso mmdb GeoIP (rilevamento automatico)</td></tr>
+<tr><td><code>--no-auto-download</code></td><td></td><td>false</td><td><span class="pill pill-all">tutti</span></td><td>Disabilita il download automatico di GeoIP</td></tr>
+</tbody>
+</table></div>
+
+<h3>Solo root</h3>
+<div class="table-wrap"><table>
+<thead><tr><th>Flag</th><th>Breve</th><th>Ambito</th><th>Descrizione</th></tr></thead>
+<tbody>
+<tr><td><code>--follow</code></td><td><code>-F</code></td><td><span class="pill pill-root">solo root</span></td><td>Segue i nuovi log (fan-in)</td></tr>
+<tr><td><code>--interval</code></td><td><code>-i</code></td><td><span class="pill pill-root">solo root</span></td><td>Riaggrega a ogni durata (ad es. <code>10s</code>)</td></tr>
+<tr><td><code>--watch</code></td><td><code>-w</code></td><td><span class="pill pill-root">solo root</span></td><td>Dashboard TUI live (8 schede)</td></tr>
+<tr><td><code>--detect</code></td><td><code>-d</code></td><td><span class="pill pill-root">solo root</span></td><td>Rilevamento minacce in 26 categorie</td></tr>
+<tr><td><code>--version</code></td><td><code>-v</code></td><td><span class="pill pill-root">solo root</span></td><td>Stampa la versione ed esce</td></tr>
+</tbody>
+</table></div>
+
+<div class="callout callout-info"><div class="callout-label">Root richiesta?</div>Nessun flag richiede root da solo. I <strong>sottocomandi</strong> <code>guard</code>, <code>block</code>, <code>unban</code> richiedono <code>sudo</code> perché modificano le regole del firewall — consulta le loro pagine per <span class="pill pill-danger">modifica il firewall</span> rispetto a <span class="pill pill-readonly">sola lettura</span>.</div>
+
+<h2 id="subcommands">Sottocomandi</h2>
+<div class="table-wrap"><table>
+<thead><tr><th>Comando</th><th>Ambito</th><th>Descrizione</th></tr></thead>
+<tbody>
+<tr><td><code>tail</code></td><td><span class="pill pill-readonly">sola lettura</span></td><td>Trasmette e colora (locale <code>--detect</code>)</td></tr>
+<tr><td><code>top</code></td><td><span class="pill pill-readonly">sola lettura</span></td><td>Ispettore classificato (9 dimensioni)</td></tr>
+<tr><td><code>diff</code></td><td><span class="pill pill-readonly">sola lettura</span></td><td>Confronta due log</td></tr>
+<tr><td><code>guard</code></td><td><span class="pill pill-danger">modifica il firewall</span></td><td>Blocco automatico tramite iptables/nftables/Docker</td></tr>
+<tr><td><code>block</code> / <code>unban</code></td><td><span class="pill pill-danger">modifica il firewall</span></td><td>Firewall manuale</td></tr>
+<tr><td><code>blocklist</code></td><td>scrive cache/config</td><td>8 feed, refresh/list/config/init</td></tr>
+<tr><td><code>config</code></td><td>scrive config</td><td>Salva la sorgente predefinita</td></tr>
+<tr><td><code>export-sigma</code></td><td>scrive file/stdout</td><td>23 regole Sigma</td></tr>
+<tr><td><code>update</code></td><td>sostituisce il binario</td><td>Autoaggiornamento (cosign + SHA256)</td></tr>
+<tr><td><code>whitelist</code></td><td>scrive allowlist</td><td>CIDR da non bloccare mai</td></tr>
+</tbody>
+</table></div>
+<p>Dettagli per sottocomando: consulta nella barra laterale <em>Guard</em>, <em>Blocklist</em>, <em>Block / Unban</em>, <em>Top</em>.</p>

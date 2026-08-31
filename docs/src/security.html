@@ -1,0 +1,39 @@
+<!-- fm: title=Threat Engine — caddy-analyzer | description=What the 26-category engine can and cannot do — limits, false positives, and where to dig deeper. | breadcrumb=Overview > Threat Engine -->
+<h1>Threat Engine</h1>
+<p>26 categories, dual-pass evasion resistance, MITRE-tagged. This page is the honest overview — what is detected, what is not, and where to read the details.</p>
+
+<h2 id="limits">What it does NOT do — limits and false positives</h2>
+<p>Credibility comes from declaring limits. Read this before trusting a report.</p>
+<div class="table-wrap"><table>
+<thead><tr><th>Limit</th><th>Why</th><th>What to do</th></tr></thead>
+<tbody>
+<tr><td>Pattern-based, not semantic</td><td>Looks for known payload substrings, does not execute code</td><td>Review grouped IPs — do not auto-block on low confidence</td></tr>
+<tr><td>Confidence filter</td><td>Default <code>--detect-confidence 8</code> in guard; some hits are 5–6</td><td>Raise to 9 for noisier apps; 0 disables only pattern-based blocks, not guard itself</td></tr>
+<tr><td>Legitimate paths can look malicious</td><td><code>?url=https://…</code>, <code>?code={{var}}</code>, <code>__proto__</code> in docs</td><td>Use <code>--never-block</code> / <code>whitelist</code> and check <code>-f html</code> before blocking</td></tr>
+<tr><td>Behavioral heuristics need state</td><td><code>ua_rotation</code>, <code>object_enumeration</code>, <code>beaconing</code> need ≥10 samples per IP/path</td><td>Run on ≥1h of traffic; single-request logs will not fire them</td></tr>
+<tr><td>Not a WAF</td><td>Offline/log-time detection, not inline request blocking</td><td>Use <code>guard</code> to block after detection; do not expect pre-request deny</td></tr>
+<tr><td>GeoIP/blocklist are best-effort</td><td>DB-IP lite + 8 feeds, 7d cache, network required for refresh</td><td>Pin <code>--geoip-db</code> and check <code>blocklist list</code> age</td></tr>
+</tbody>
+</table></div>
+<div class="callout callout-warning"><div class="callout-label">Do not lock yourself out</div>Every <code>guard</code> example that modifies firewall is marked <span class="pill pill-danger">modifies firewall</span>. On a remote host, always <code>--never-block YOUR_IP</code>. When in doubt, use read-only commands (<code>blocklist list</code>, <code>--detect -f html</code>) first.</div>
+
+<h2 id="what">What it does</h2>
+<ul>
+  <li><strong>Dual-pass engine</strong> — every URI is checked raw and URL-unescaped (split <code>?</code> + <code>PathUnescape</code>/<code>QueryUnescape</code> + manual <code>%</code> fallback) to catch <code>%2e%2e</code> and double-encode bypass. Guard runs the same <code>Detector</code> per window.</li>
+  <li><strong>26 categories</strong> — from <code>sql_injection</code> to <code>beaconing</code>, each tagged with verified MITRE ATT&amp;CK IDs.</li>
+  <li><strong>Grouped by IP</strong> — suspicious report shows top IPs with confidence, URI, and techniques.</li>
+  <li><strong>Exportable</strong> — 23 pattern categories as Sigma rules; 3 behavioral (<code>ua_rotation</code>, <code>object_enumeration</code>, <code>beaconing</code>) are stateful and not exported.</li>
+</ul>
+
+<h2 id="where">Where to go next</h2>
+<div class="doc-grid">
+  <a class="doc-card" href="reference/security-categories.html"><strong>26 Categories</strong><span>Confidence, description and a real fixture example per category — consistent triplet on every row.</span></a>
+  <a class="doc-card" href="reference/security-detection.html"><strong>MITRE, Sigma &amp; Evasion</strong><span>Verified ATT&amp;CK IDs, 23 Sigma rules, and how dual-pass/markers/literals resist bypass.</span></a>
+  <a class="doc-card" href="subcommands-guard.html"><strong>Guard</strong><span>When detection becomes a block — thresholds, backends, audit and state.</span></a>
+</div>
+
+<h2 id="quick-check">Quick check</h2>
+<pre><code>caddy-analyze --detect testdata/sample.log
+# should list 26 categories firing (68 lines, all TEST-NET)
+caddy-analyze --detect -f html -o report.html testdata/large.log && open report.html
+caddy-analyze tail docker://caddy --detect  # live, severity-colored</code></pre>

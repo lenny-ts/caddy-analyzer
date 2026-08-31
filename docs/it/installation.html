@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Installazione — caddy-analyzer</title>
+  <meta name="description" content="5 modi per installare caddy-analyzer, con passaggio di verifica per ciascuno.">
+  <meta name="theme-color" content="#09090B">
+  <link rel="icon" href="../caddy-analyzer-logo.png" type="image/png">
+  <link rel="canonical" href="https://lenny-ts.github.io/caddy-analyzer/it/installation.html">
+  <link rel="alternate" hreflang="x-default" href="https://lenny-ts.github.io/caddy-analyzer/installation.html">
+  <link rel="alternate" hreflang="en" href="https://lenny-ts.github.io/caddy-analyzer/installation.html">
+  <link rel="alternate" hreflang="it" href="https://lenny-ts.github.io/caddy-analyzer/it/installation.html">
+  <script>try{var t=localStorage.getItem('caddy-docs-theme');if(t==='light')document.documentElement.setAttribute('data-theme','light');}catch(e){}</script>
+  <meta name="color-scheme" content="dark light">
+  <link rel="stylesheet" href="../styles.min.css?v=36">
+</head>
+<body>
+<header class="site-header">
+  <a href="../it/index.html" class="logo">
+    <img src="../caddy-analyzer-logo.png" alt="" class="site-logo">
+    <span>caddy-analyzer</span>
+  </a>
+  <nav aria-label="Navigazione principale">
+    <a href="../it/installation.html" data-nav="installation.html" class="active">Installazione</a>
+    <a href="../it/sources.html" data-nav="sources.html">Sorgenti log</a>
+    <a href="../it/reference/cli.html" data-nav="cli.html">Riferimento CLI</a>
+    <a href="../it/security.html" data-nav="security.html">Motore minacce</a>
+    <a href="../it/tui-html.html" data-nav="tui-html.html">Report TUI e HTML</a>
+  </nav>
+  <div class="header-actions">
+    <a href="https://github.com/lenny-ts/caddy-analyzer" style="color:var(--text-sec);font-size:0.85rem;" rel="noopener">GitHub</a>
+    <div class="language-switch" role="group" aria-label="Lingua"><a class="lang-option" href="../installation.html" hreflang="en" lang="en">EN</a><span class="lang-option active" aria-current="page">IT</span></div>
+    <button class="theme-toggle" type="button" aria-label="Switch to light theme">
+      <span class="theme-icon theme-sun" aria-hidden="true">☀</span>
+      <span class="theme-icon theme-moon" aria-hidden="true">☾</span>
+    </button>
+  </div>
+</header>
+<div class="scroll-progress" aria-hidden="true"></div>
+
+<div class="docs-layout">
+   <aside class="doc-sidebar" aria-label="Navigazione della pagina">
+  <div class="sidebar-label">Documentazione</div>
+  <a href="../it/index.html" class="sidebar-link" data-page="index.html">Panoramica</a>
+  <a href="../it/quickstart.html" class="sidebar-link" data-page="quickstart.html">Avvio rapido</a>
+  <a href="../it/installation.html" class="sidebar-link active" data-page="installation.html">Installazione</a>
+  <a href="../it/sources.html" class="sidebar-link" data-page="sources.html">Sorgenti log</a>
+  <div class="sidebar-sep"></div>
+  <div class="sidebar-label">Guida</div>
+  <a href="../it/guide/configuration.html" class="sidebar-link" data-page="configuration.html">Configurazione</a>
+  <a href="../it/guide/usage.html" class="sidebar-link" data-page="usage.html">Utilizzo</a>
+  <a href="../it/guide/examples.html" class="sidebar-link" data-page="examples.html">Esempi</a>
+  <a href="../it/guide/troubleshooting.html" class="sidebar-link" data-page="troubleshooting.html">Risoluzione problemi</a>
+  <div class="sidebar-sep"></div>
+  <div class="sidebar-label">Riferimento</div>
+  <a href="../it/reference/cli.html" class="sidebar-link" data-page="cli.html">Riferimento CLI</a>
+  <a href="../it/reference/security-categories.html" class="sidebar-link sub" data-page="security-categories.html">— Categorie</a>
+  <a href="../it/reference/security-detection.html" class="sidebar-link sub" data-page="security-detection.html">— Rilevamento</a>
+  <a href="../it/subcommands-guard.html" class="sidebar-link sub" data-page="subcommands-guard.html">— Guard</a>
+  <a href="../it/subcommands-blocklist.html" class="sidebar-link sub" data-page="subcommands-blocklist.html">— Blocklist</a>
+  <a href="../it/subcommands-block.html" class="sidebar-link sub" data-page="subcommands-block.html">— Block / Unban</a>
+  <a href="../it/subcommands-top.html" class="sidebar-link sub" data-page="subcommands-top.html">— Top</a>
+  <a href="../it/reference/api.html" class="sidebar-link" data-page="api.html">API / Pacchetti</a>
+  <div class="sidebar-sep"></div>
+  <a href="../it/security.html" class="sidebar-link" data-page="security.html">Motore minacce</a>
+  <a href="../it/architecture.html" class="sidebar-link" data-page="architecture.html">Architettura</a>
+  <a href="../it/tui-html.html" class="sidebar-link" data-page="tui-html.html">Report TUI e HTML</a>
+  <a href="../it/contributing.html" class="sidebar-link" data-page="contributing.html">Contribuire</a>
+  <a href="../it/faq.html" class="sidebar-link" data-page="faq.html">FAQ</a>
+  <a href="../it/changelog.html" class="sidebar-link" data-page="changelog.html">Registro modifiche</a>
+</aside>
+
+  <main class="wrap" id="main">
+    <div class="doc-content">
+      <nav class="breadcrumb" aria-label="Breadcrumb"><a href="../it/index.html">Panoramica</a><span class="sep">/</span><span>Installazione</span></nav>
+      <div class="page-meta"><a href="https://github.com/lenny-ts/caddy-analyzer/releases">v0.6.1</a> · aggiornata <time datetime="2026-08-31">2026-08-31</time> · <a href="https://github.com/lenny-ts/caddy-analyzer">GitHub</a></div>
+      <h1>Installazione</h1>
+<p>Requisiti: <strong>Go 1.25+</strong> solo se compili dai sorgenti. Tutti gli altri metodi forniscono un binario statico (CGO_ENABLED=0) per Linux / macOS / Windows su amd64, arm64, arm. Verifica ogni metodo subito dopo l'installazione.</p>
+
+<div class="callout callout-info"><div class="callout-label">Verifica rapida (tutti i metodi)</div><code>caddy-analyze --version</code> dovrebbe stampare <code>v0.6.1</code> (o una versione successiva). Se vedi <code>command not found</code>, verifica PATH o riapri il terminale.</div>
+
+<h2 id="linux-mac">Linux / macOS — install.sh</h2>
+<p>Rileva SO/architettura, scarica tar.gz + <code>checksums.txt</code>, verifica SHA256 e cosign facoltativo.</p>
+<pre><code>curl -sSfL https://raw.githubusercontent.com/lenny-ts/caddy-analyzer/main/install.sh | bash</code></pre>
+<h3 id="verify-linux">Verifica</h3>
+<pre><code>caddy-analyze --version
+which caddy-analyze
+# expected: /usr/local/bin/caddy-analyze  and  v0.6.1</code></pre>
+<p>Se <code>/usr/local/bin</code> non è scrivibile, lo script usa <code>sudo mv</code>. L'installer installa attualmente in <code>/usr/local/bin</code>; usa l'archivio della release o <code>go install</code> se ti serve una posizione utente.</p>
+
+<h2 id="windows">Windows — install.ps1</h2>
+<pre><code>iwr -useb https://raw.githubusercontent.com/lenny-ts/caddy-analyzer/main/install.ps1 | iex</code></pre>
+<h3 id="verify-windows">Verifica</h3>
+<pre><code>caddy-analyze --version
+# close and re-open PowerShell if PATH was updated
+Get-Command caddy-analyze | Format-List
+# expected: Source  C:\Users\YOU\AppData\Local\caddy-analyze\caddy-analyze.exe</code></pre>
+<div class="callout callout-warning"><div class="callout-label">Nota</div>Richiede PowerShell 5.1+. Lo script antepone <code>%LOCALAPPDATA%\caddy-analyze</code> al PATH utente: riapri il terminale perché venga applicato.</div>
+
+<h2 id="go">Toolchain Go</h2>
+<pre><code>go install github.com/lenny-ts/caddy-analyzer/cmd/caddy-analyze@latest</code></pre>
+<h3 id="verify-go">Verifica</h3>
+<pre><code>caddy-analyze --version
+# if "command not found", add Go bin to PATH:
+export PATH="$HOME/go/bin:$PATH"
+go env GOPATH
+# expected: .../go/bin/caddy-analyze</code></pre>
+
+<h2 id="docker">Docker</h2>
+<p>Go non richiesto. Immagine: <code>ghcr.io/lenny-ts/caddy-analyzer</code> (Alpine, utente non-root <code>caddy</code>).</p>
+<pre><code>docker pull ghcr.io/lenny-ts/caddy-analyzer:latest
+# analyze a file
+docker run --rm -v /var/log/caddy:/logs ghcr.io/lenny-ts/caddy-analyzer /logs/access.log
+# stream from Docker
+docker run --rm -v /var/run/docker.sock:/var/run/docker.sock ghcr.io/lenny-ts/caddy-analyzer docker://caddy</code></pre>
+<h3 id="verify-docker">Verifica</h3>
+<pre><code>docker run --rm ghcr.io/lenny-ts/caddy-analyzer --version
+docker images ghcr.io/lenny-ts/caddy-analyzer --format "{{.Tag}} {{.Size}}"</code></pre>
+
+<h2 id="binaries">Binari precompilati</h2>
+<p>Scarica da <a href="https://github.com/lenny-ts/caddy-analyzer/releases">GitHub Releases</a>. Ogni <code>*.tar.gz</code> (o <code>.zip</code> su Windows) contiene <code>caddy-analyze</code> + <code>checksums.txt</code> + cosign <code>.sig/.pem</code>.</p>
+<pre><code># example Linux amd64 — replace v0.6.1 with latest
+curl -sSfL https://github.com/lenny-ts/caddy-analyzer/releases/download/v0.6.1/caddy-analyzer_v0.6.1_linux_amd64.tar.gz -o /tmp/caddy.tgz
+curl -sSfL https://github.com/lenny-ts/caddy-analyzer/releases/download/v0.6.1/checksums.txt -o /tmp/checksums.txt
+grep caddy-analyzer_v0.6.1_linux_amd64.tar.gz /tmp/checksums.txt | (cd /tmp && sha256sum -c)
+tar -xzf /tmp/caddy.tgz -C /tmp && sudo mv /tmp/caddy-analyze /usr/local/bin/</code></pre>
+<h3 id="verify-binaries">Verifica</h3>
+<pre><code>caddy-analyze --version
+ls -l /usr/local/bin/caddy-analyze
+# optional cosign: cosign verify-blob --certificate-identity ... --signature checksums.txt.sig checksums.txt</code></pre>
+
+<h2 id="systemd">Systemd (demone guard)</h2>
+<p>Per usare <a href="subcommands-guard.html">guard</a> come servizio. Richiede root per iptables.</p>
+<pre><code>sudo tee /etc/systemd/system/caddy-guard.service >/dev/null &lt;&lt;'EOF'
+[Unit]
+Description=caddy-analyzer Security Guard Daemon
+After=network.target caddy.service
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/caddy-analyze guard --limit 50 --window 1m /var/log/caddy/access.log
+Restart=always
+RestartSec=5
+[Install]
+WantedBy=multi-user.target
+EOF
+sudo systemctl daemon-reload
+sudo systemctl enable --now caddy-guard</code></pre>
+<h3 id="verify-systemd">Verifica</h3>
+<pre><code>systemctl status caddy-guard --no-pager
+journalctl -u caddy-guard -n 20 --no-pager
+# should show "guard started" and no "permission denied" on /var/log/caddy/access.log</code></pre>
+
+<h2 id="update">Aggiornamento</h2>
+<pre><code>caddy-analyze update --check   # check without installing
+caddy-analyze update           # install latest (cosign + SHA256 verified)
+caddy-analyze update --version v0.6.1 --force  # pin / downgrade</code></pre>
+
+<h2 id="troubleshoot">Risoluzione dei problemi</h2>
+<ul>
+  <li><code>curl: command not found</code> → <code>sudo apt-get install curl</code> oppure usa il download del binario.</li>
+  <li><code>permission denied</code> sul log → <code>sudo caddy-analyze …</code> oppure <code>sudo usermod -aG caddy $USER</code>, poi effettua nuovamente l'accesso.</li>
+  <li>Proxy aziendale → imposta <code>https_proxy</code> prima di curl.</li>
+</ul>
+      <footer class="footer">
+  <p>caddy-analyzer è open-source sotto licenza <a href="https://github.com/lenny-ts/caddy-analyzer/blob/main/LICENSE">MIT</a> · <a href="https://github.com/lenny-ts/caddy-analyzer">GitHub</a> · <a href="../it/changelog.html">Registro modifiche</a></p>
+</footer>
+<button class="back-to-top" aria-label="Back to top">↑</button>
+
+    </div>
+  </main>
+  <nav class="doc-toc" aria-label="In questa pagina"><div class="toc-label">In questa pagina</div><a href="#linux-mac" class="toc-link">Linux / macOS — install.sh</a><a href="#verify-linux" class="toc-link h3">Verifica</a><a href="#windows" class="toc-link">Windows — install.ps1</a><a href="#verify-windows" class="toc-link h3">Verifica</a><a href="#go" class="toc-link">Toolchain Go</a><a href="#verify-go" class="toc-link h3">Verifica</a><a href="#docker" class="toc-link">Docker</a><a href="#verify-docker" class="toc-link h3">Verifica</a><a href="#binaries" class="toc-link">Binari precompilati</a><a href="#verify-binaries" class="toc-link h3">Verifica</a><a href="#systemd" class="toc-link">Systemd (demone guard)</a><a href="#verify-systemd" class="toc-link h3">Verifica</a><a href="#update" class="toc-link">Aggiornamento</a><a href="#troubleshoot" class="toc-link">Risoluzione dei problemi</a></nav>
+</div>
+<script src="../docs.min.js?v=36"></script>
+</body>
+</html>

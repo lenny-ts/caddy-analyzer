@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Risoluzione dei problemi — caddy-analyzer</title>
+  <meta name="description" content="Risolvi problemi con permission denied, docker.sock, kubectl, journalctl, GeoIP e iptables.">
+  <meta name="theme-color" content="#09090B">
+  <link rel="icon" href="../../caddy-analyzer-logo.png" type="image/png">
+  <link rel="canonical" href="https://lenny-ts.github.io/caddy-analyzer/it/guide/troubleshooting.html">
+  <link rel="alternate" hreflang="x-default" href="https://lenny-ts.github.io/caddy-analyzer/guide/troubleshooting.html">
+  <link rel="alternate" hreflang="en" href="https://lenny-ts.github.io/caddy-analyzer/guide/troubleshooting.html">
+  <link rel="alternate" hreflang="it" href="https://lenny-ts.github.io/caddy-analyzer/it/guide/troubleshooting.html">
+  <script>try{var t=localStorage.getItem('caddy-docs-theme');if(t==='light')document.documentElement.setAttribute('data-theme','light');}catch(e){}</script>
+  <meta name="color-scheme" content="dark light">
+  <link rel="stylesheet" href="../../styles.min.css?v=36">
+</head>
+<body>
+<header class="site-header">
+  <a href="../../it/index.html" class="logo">
+    <img src="../../caddy-analyzer-logo.png" alt="" class="site-logo">
+    <span>caddy-analyzer</span>
+  </a>
+  <nav aria-label="Navigazione principale">
+    <a href="../../it/installation.html" data-nav="installation.html">Installazione</a>
+    <a href="../../it/sources.html" data-nav="sources.html">Sorgenti log</a>
+    <a href="../../it/reference/cli.html" data-nav="cli.html">Riferimento CLI</a>
+    <a href="../../it/security.html" data-nav="security.html">Motore minacce</a>
+    <a href="../../it/tui-html.html" data-nav="tui-html.html">Report TUI e HTML</a>
+  </nav>
+  <div class="header-actions">
+    <a href="https://github.com/lenny-ts/caddy-analyzer" style="color:var(--text-sec);font-size:0.85rem;" rel="noopener">GitHub</a>
+    <div class="language-switch" role="group" aria-label="Lingua"><a class="lang-option" href="../../guide/troubleshooting.html" hreflang="en" lang="en">EN</a><span class="lang-option active" aria-current="page">IT</span></div>
+    <button class="theme-toggle" type="button" aria-label="Switch to light theme">
+      <span class="theme-icon theme-sun" aria-hidden="true">☀</span>
+      <span class="theme-icon theme-moon" aria-hidden="true">☾</span>
+    </button>
+  </div>
+</header>
+<div class="scroll-progress" aria-hidden="true"></div>
+
+<div class="docs-layout">
+   <aside class="doc-sidebar" aria-label="Navigazione della pagina">
+  <div class="sidebar-label">Documentazione</div>
+  <a href="../../it/index.html" class="sidebar-link" data-page="index.html">Panoramica</a>
+  <a href="../../it/quickstart.html" class="sidebar-link" data-page="quickstart.html">Avvio rapido</a>
+  <a href="../../it/installation.html" class="sidebar-link" data-page="installation.html">Installazione</a>
+  <a href="../../it/sources.html" class="sidebar-link" data-page="sources.html">Sorgenti log</a>
+  <div class="sidebar-sep"></div>
+  <div class="sidebar-label">Guida</div>
+  <a href="../../it/guide/configuration.html" class="sidebar-link" data-page="configuration.html">Configurazione</a>
+  <a href="../../it/guide/usage.html" class="sidebar-link" data-page="usage.html">Utilizzo</a>
+  <a href="../../it/guide/examples.html" class="sidebar-link" data-page="examples.html">Esempi</a>
+  <a href="../../it/guide/troubleshooting.html" class="sidebar-link active" data-page="troubleshooting.html">Risoluzione problemi</a>
+  <div class="sidebar-sep"></div>
+  <div class="sidebar-label">Riferimento</div>
+  <a href="../../it/reference/cli.html" class="sidebar-link" data-page="cli.html">Riferimento CLI</a>
+  <a href="../../it/reference/security-categories.html" class="sidebar-link sub" data-page="security-categories.html">— Categorie</a>
+  <a href="../../it/reference/security-detection.html" class="sidebar-link sub" data-page="security-detection.html">— Rilevamento</a>
+  <a href="../../it/subcommands-guard.html" class="sidebar-link sub" data-page="subcommands-guard.html">— Guard</a>
+  <a href="../../it/subcommands-blocklist.html" class="sidebar-link sub" data-page="subcommands-blocklist.html">— Blocklist</a>
+  <a href="../../it/subcommands-block.html" class="sidebar-link sub" data-page="subcommands-block.html">— Block / Unban</a>
+  <a href="../../it/subcommands-top.html" class="sidebar-link sub" data-page="subcommands-top.html">— Top</a>
+  <a href="../../it/reference/api.html" class="sidebar-link" data-page="api.html">API / Pacchetti</a>
+  <div class="sidebar-sep"></div>
+  <a href="../../it/security.html" class="sidebar-link" data-page="security.html">Motore minacce</a>
+  <a href="../../it/architecture.html" class="sidebar-link" data-page="architecture.html">Architettura</a>
+  <a href="../../it/tui-html.html" class="sidebar-link" data-page="tui-html.html">Report TUI e HTML</a>
+  <a href="../../it/contributing.html" class="sidebar-link" data-page="contributing.html">Contribuire</a>
+  <a href="../../it/faq.html" class="sidebar-link" data-page="faq.html">FAQ</a>
+  <a href="../../it/changelog.html" class="sidebar-link" data-page="changelog.html">Registro modifiche</a>
+</aside>
+
+  <main class="wrap" id="main">
+    <div class="doc-content">
+      <nav class="breadcrumb" aria-label="Breadcrumb"><a href="../../it/guide/configuration.html">Guida</a><span class="sep">/</span><span>Risoluzione dei problemi</span></nav>
+      <div class="page-meta"><a href="https://github.com/lenny-ts/caddy-analyzer/releases">v0.6.1</a> · aggiornata <time datetime="2026-08-31">2026-08-31</time> · <a href="https://github.com/lenny-ts/caddy-analyzer">GitHub</a></div>
+      <h1>Risoluzione dei problemi</h1>
+
+<h2 id="permission-denied">permission denied durante la lettura di /var/log/caddy/access.log</h2>
+<p>Caddy scrive come <code>caddy:caddy 0600</code>.</p>
+<pre><code>sudo caddy-analyze /var/log/caddy/access.log
+# or persistently
+sudo usermod -aG caddy $USER
+# re-login, then
+caddy-analyze /var/log/caddy/access.log</code></pre>
+
+<h2 id="docker-sock">Impossibile connettersi al demone Docker / docker.sock: permission denied</h2>
+<pre><code>sudo usermod -aG docker $USER  # re-login
+# or
+sudo caddy-analyze docker://caddy
+# if guard must block host traffic too:
+sudo caddy-analyze guard --firewall-backend hybrid docker://caddy</code></pre>
+
+<h2 id="k8s">k8s:// — pod inesistente / impossibile elencare la risorsa</h2>
+<pre><code>kubectl config current-context
+kubectl get pods -n production | grep caddy
+kubectl auth can-i get pods/log -n production
+# fix namespace
+caddy-analyze k8s://caddy-xxx -n production
+caddy-analyze config k8s://caddy-xxx -n production  # remember</code></pre>
+
+<h2 id="journalctl">journalctl:// — Nessun file journal</h2>
+<pre><code>systemctl status caddy  # is it caddy.service?
+journalctl -u caddy.service --no-pager | head
+sudo usermod -aG systemd-journal $USER  # re-login
+# or
+sudo caddy-analyze journalctl://caddy.service</code></pre>
+
+<h2 id="geoip">GeoIP — country/asn vuoti o download non riuscito</h2>
+<p>Download automatico dal mirror P3TERX a <code>~/.config/caddy-analyzer/GeoLite2-*.mmdb</code> al primo utilizzo.</p>
+<pre><code>ls ~/.config/caddy-analyzer/*.mmdb
+# behind proxy
+https_proxy=http://proxy:8080 caddy-analyze top country testdata/sample.log
+# custom path
+caddy-analyze --geoip-db /usr/share/GeoIP/GeoLite2-Country.mmdb top country testdata/sample.log
+# tuning (see Configuration)
+caddy-analyze --geo-cache-ttl 48h --geo-cache-size 100000 top country testdata/sample.log</code></pre>
+
+<h2 id="iptables">guard — iptables: permission denied / Nessuna chain/target</h2>
+<p>Guard modifica il firewall, quindi deve essere eseguito come root.</p>
+<pre><code>sudo caddy-analyze guard /var/log/caddy/access.log
+# timeout on huge ruleset
+sudo caddy-analyze guard --iptables-timeout 30s /var/log/caddy/access.log
+# Docker host needs DOCKER-USER
+sudo caddy-analyze guard --firewall-backend hybrid docker://caddy</code></pre>
+
+<h2 id="blocklist">Aggiornamento blocklist lento / non riuscito</h2>
+<pre><code>caddy-analyze blocklist list
+# behind proxy
+https_proxy=http://proxy:8080 caddy-analyze blocklist refresh
+# custom cache
+caddy-analyze blocklist refresh --cache-dir /tmp/bl
+# skip defaults
+caddy-analyze blocklist refresh --no-default-blocklists --blocklist-config my.json</code></pre>
+
+<h2 id="no-output">Nessun output / report vuoto</h2>
+<p>Controlla i filtri: <code>--from</code> nel futuro, mancata corrispondenza CIDR di <code>--ip</code>, <code>--country</code> senza GeoIP. Rimuovi gradualmente i filtri.</p>
+<pre><code>caddy-analyze testdata/sample.log            # no filter → must show 68 lines
+caddy-analyze --from 1h testdata/sample.log  # if 0, log is older than 1h
+caddy-analyze --country IT testdata/sample.log  # if 0, GeoIP missing</code></pre>
+
+<h2 id="still-stuck">Problema non risolto?</h2>
+<p>Apri una issue includendo: <code>caddy-analyze --version</code>, il comando completo e le prime 5 righe del log (redigi gli IP). <a href="https://github.com/lenny-ts/caddy-analyzer/issues">GitHub Issues</a></p>
+      <footer class="footer">
+  <p>caddy-analyzer è open-source sotto licenza <a href="https://github.com/lenny-ts/caddy-analyzer/blob/main/LICENSE">MIT</a> · <a href="https://github.com/lenny-ts/caddy-analyzer">GitHub</a> · <a href="../../it/changelog.html">Registro modifiche</a></p>
+</footer>
+<button class="back-to-top" aria-label="Back to top">↑</button>
+
+    </div>
+  </main>
+  <nav class="doc-toc" aria-label="In questa pagina"><div class="toc-label">In questa pagina</div><a href="#permission-denied" class="toc-link">permission denied durante la lettura di /var/log/caddy/access.log</a><a href="#docker-sock" class="toc-link">Impossibile connettersi al demone Docker / docker.sock: permission denied</a><a href="#k8s" class="toc-link">k8s:// — pod inesistente / impossibile elencare la risorsa</a><a href="#journalctl" class="toc-link">journalctl:// — Nessun file journal</a><a href="#geoip" class="toc-link">GeoIP — country/asn vuoti o download non riuscito</a><a href="#iptables" class="toc-link">guard — iptables: permission denied / Nessuna chain/target</a><a href="#blocklist" class="toc-link">Aggiornamento blocklist lento / non riuscito</a><a href="#no-output" class="toc-link">Nessun output / report vuoto</a><a href="#still-stuck" class="toc-link">Problema non risolto?</a></nav>
+</div>
+<script src="../../docs.min.js?v=36"></script>
+</body>
+</html>

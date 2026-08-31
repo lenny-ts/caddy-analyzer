@@ -1,0 +1,66 @@
+<!-- fm: title=Contribuire — caddy-analyzer | description=Configurazione, test/lint, convenzione dei commit e dove aggiungere rilevamenti e feed. | breadcrumb=Panoramica > Contribuire -->
+<h1>Contribuire</h1>
+<p>Leggi prima <a href="architecture.html">Architettura</a>: mostra dove si trovano parser, guard, enrich e blocklist nel flusso dei dati. Per le firme dei pacchetti, consulta <a href="reference/api.html">API / Pacchetti</a>.</p>
+
+<h2 id="setup">Configurazione</h2>
+<pre><code>git clone https://github.com/lenny-ts/caddy-analyzer.git && cd caddy-analyzer
+go version # 1.25+</code></pre>
+
+<h2 id="test-lint">Test e lint — comandi esatti (come in CI)</h2>
+<pre><code># full suite (what CI runs)
+go vet ./...
+go test -race -v ./...
+go test -race -coverprofile=coverage.out ./... &amp;&amp; go tool cover -func=coverage.out | tail
+# coverage gate is 55% (CI enforces &lt;55 → error)
+
+# fmt
+gofmt -l .
+# should be empty; fix with:
+gofmt -w .</code></pre>
+<pre><code># lint (golangci-lint v2, 17 linters, see .golangci.yml)
+golangci-lint run
+
+# security / vuln
+govulncheck ./...
+gosec -exclude G204,G302,G304,G401,G501,G505 ./...
+
+# gitleaks (secrets)
+gitleaks detect --source .</code></pre>
+
+<h3>Testa solo il modulo modificato</h3>
+<p>Riscontro piu rapido: esegui il pacchetto, non l'intera suite:</p>
+<pre><code>go test -race ./pkg/analysis -run TestDetector -count=1
+go test -race ./pkg/guard -run TestGuard -count=1
+go test -race ./pkg/enrich -count=1
+go test -race ./pkg/blocklist -count=1
+go test -race ./cmd -run TestResolveSources -count=1</code></pre>
+<p>Oppure un singolo file (quando ne modifichi uno):</p>
+<pre><code>go test -race ./pkg/parser -run TestParse -count=1 -v</code></pre>
+
+<h2 id="where">Dove aggiungere elementi</h2>
+<div class="table-wrap"><table>
+<thead><tr><th>Cosa</th><th>Dove</th><th>Nota</th></tr></thead>
+<tbody>
+<tr><td>Nuova categoria di rilevamento</td><td><code>pkg/analysis/detect.go</code></td><td>Aggiungi pattern + ID MITRE, aggiungi il test in <code>detect_test.go</code>, assicurati che <code>TestPatternUniqueness</code> passi</td></tr>
+<tr><td>Feed blocklist</td><td><code>pkg/blocklist/blocklist.go</code> + test</td><td>Implementa fetch/parse di <code>Source</code>, rispetta <code>cacheTTL 7d</code></td></tr>
+<tr><td>Backend firewall</td><td><code>pkg/guard/firewall/</code></td><td>Implementa l'interfaccia <code>Backend</code>, copri <code>Detect()</code></td></tr>
+<tr><td>Flag CLI</td><td><code>cmd/root.go</code> + <code>cmd/tuning.go</code></td><td>Persistente oppure solo root, gestisci <code>applyTuning</code></td></tr>
+<tr><td>Formato di output</td><td><code>pkg/output/*</code></td><td>Table/JSON/CSV/HTML — mantieni <code>defang</code> e <code>csvSafe</code></td></tr>
+</tbody>
+</table></div>
+
+<h2 id="commit">Convenzione dei commit</h2>
+<p><strong>Riga singola, imperativo, 35–62 caratteri.</strong> Nessun corpo, nessun prefisso <code>type:</code>, nessun prefisso di versione.</p>
+<pre><code>Add GeoIP filter for ASN
+Fix guard state persistence across restarts
+Update blocklist cache TTL handling</code></pre>
+<p>Non valido: <code>feat: add ...</code>, <code>v0.6.1: fix</code> o corpo su piu righe. Consulta <code>AGENTS.md</code>. Il rilascio avviene tramite tag <code>v*</code> → GoReleaser + Syft + cosign (gestisci tu merge + tag + push).</p>
+
+<h2 id="pr">Checklist PR</h2>
+<ul>
+  <li><code>go vet ./... && go test -race ./... && golangci-lint run</code> completati con successo</li>
+  <li>Test per il nuovo codice, documentazione aggiornata con <code>node tools/build-docs.js && bash tools/minify.sh</code> se hai modificato <code>docs/src/</code></li>
+  <li>Messaggio di commit di 35–62 caratteri, imperativo</li>
+</ul>
+
+<div class="callout callout-info"><div class="callout-label">Vedi anche</div><a href="architecture.html">Architettura</a> — flusso dei dati e mappa dei pacchetti. <a href="reference/api.html">API / Pacchetti</a> — importazione e uso per pacchetto.</div>

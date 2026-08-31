@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Motore delle minacce — caddy-analyzer</title>
+  <meta name="description" content="Cosa il motore a 26 categorie puo e non puo fare: limiti, falsi positivi e dove approfondire.">
+  <meta name="theme-color" content="#09090B">
+  <link rel="icon" href="../caddy-analyzer-logo.png" type="image/png">
+  <link rel="canonical" href="https://lenny-ts.github.io/caddy-analyzer/it/security.html">
+  <link rel="alternate" hreflang="x-default" href="https://lenny-ts.github.io/caddy-analyzer/security.html">
+  <link rel="alternate" hreflang="en" href="https://lenny-ts.github.io/caddy-analyzer/security.html">
+  <link rel="alternate" hreflang="it" href="https://lenny-ts.github.io/caddy-analyzer/it/security.html">
+  <script>try{var t=localStorage.getItem('caddy-docs-theme');if(t==='light')document.documentElement.setAttribute('data-theme','light');}catch(e){}</script>
+  <meta name="color-scheme" content="dark light">
+  <link rel="stylesheet" href="../styles.min.css?v=36">
+</head>
+<body>
+<header class="site-header">
+  <a href="../it/index.html" class="logo">
+    <img src="../caddy-analyzer-logo.png" alt="" class="site-logo">
+    <span>caddy-analyzer</span>
+  </a>
+  <nav aria-label="Navigazione principale">
+    <a href="../it/installation.html" data-nav="installation.html">Installazione</a>
+    <a href="../it/sources.html" data-nav="sources.html">Sorgenti log</a>
+    <a href="../it/reference/cli.html" data-nav="cli.html">Riferimento CLI</a>
+    <a href="../it/security.html" data-nav="security.html" class="active">Motore minacce</a>
+    <a href="../it/tui-html.html" data-nav="tui-html.html">Report TUI e HTML</a>
+  </nav>
+  <div class="header-actions">
+    <a href="https://github.com/lenny-ts/caddy-analyzer" style="color:var(--text-sec);font-size:0.85rem;" rel="noopener">GitHub</a>
+    <div class="language-switch" role="group" aria-label="Lingua"><a class="lang-option" href="../security.html" hreflang="en" lang="en">EN</a><span class="lang-option active" aria-current="page">IT</span></div>
+    <button class="theme-toggle" type="button" aria-label="Switch to light theme">
+      <span class="theme-icon theme-sun" aria-hidden="true">☀</span>
+      <span class="theme-icon theme-moon" aria-hidden="true">☾</span>
+    </button>
+  </div>
+</header>
+<div class="scroll-progress" aria-hidden="true"></div>
+
+<div class="docs-layout">
+   <aside class="doc-sidebar" aria-label="Navigazione della pagina">
+  <div class="sidebar-label">Documentazione</div>
+  <a href="../it/index.html" class="sidebar-link" data-page="index.html">Panoramica</a>
+  <a href="../it/quickstart.html" class="sidebar-link" data-page="quickstart.html">Avvio rapido</a>
+  <a href="../it/installation.html" class="sidebar-link" data-page="installation.html">Installazione</a>
+  <a href="../it/sources.html" class="sidebar-link" data-page="sources.html">Sorgenti log</a>
+  <div class="sidebar-sep"></div>
+  <div class="sidebar-label">Guida</div>
+  <a href="../it/guide/configuration.html" class="sidebar-link" data-page="configuration.html">Configurazione</a>
+  <a href="../it/guide/usage.html" class="sidebar-link" data-page="usage.html">Utilizzo</a>
+  <a href="../it/guide/examples.html" class="sidebar-link" data-page="examples.html">Esempi</a>
+  <a href="../it/guide/troubleshooting.html" class="sidebar-link" data-page="troubleshooting.html">Risoluzione problemi</a>
+  <div class="sidebar-sep"></div>
+  <div class="sidebar-label">Riferimento</div>
+  <a href="../it/reference/cli.html" class="sidebar-link" data-page="cli.html">Riferimento CLI</a>
+  <a href="../it/reference/security-categories.html" class="sidebar-link sub" data-page="security-categories.html">— Categorie</a>
+  <a href="../it/reference/security-detection.html" class="sidebar-link sub" data-page="security-detection.html">— Rilevamento</a>
+  <a href="../it/subcommands-guard.html" class="sidebar-link sub" data-page="subcommands-guard.html">— Guard</a>
+  <a href="../it/subcommands-blocklist.html" class="sidebar-link sub" data-page="subcommands-blocklist.html">— Blocklist</a>
+  <a href="../it/subcommands-block.html" class="sidebar-link sub" data-page="subcommands-block.html">— Block / Unban</a>
+  <a href="../it/subcommands-top.html" class="sidebar-link sub" data-page="subcommands-top.html">— Top</a>
+  <a href="../it/reference/api.html" class="sidebar-link" data-page="api.html">API / Pacchetti</a>
+  <div class="sidebar-sep"></div>
+  <a href="../it/security.html" class="sidebar-link active" data-page="security.html">Motore minacce</a>
+  <a href="../it/architecture.html" class="sidebar-link" data-page="architecture.html">Architettura</a>
+  <a href="../it/tui-html.html" class="sidebar-link" data-page="tui-html.html">Report TUI e HTML</a>
+  <a href="../it/contributing.html" class="sidebar-link" data-page="contributing.html">Contribuire</a>
+  <a href="../it/faq.html" class="sidebar-link" data-page="faq.html">FAQ</a>
+  <a href="../it/changelog.html" class="sidebar-link" data-page="changelog.html">Registro modifiche</a>
+</aside>
+
+  <main class="wrap" id="main">
+    <div class="doc-content">
+      <nav class="breadcrumb" aria-label="Breadcrumb"><a href="../it/index.html">Panoramica</a><span class="sep">/</span><span>Motore delle minacce</span></nav>
+      <div class="page-meta"><a href="https://github.com/lenny-ts/caddy-analyzer/releases">v0.6.1</a> · aggiornata <time datetime="2026-08-31">2026-08-31</time> · <a href="https://github.com/lenny-ts/caddy-analyzer">GitHub</a></div>
+      <h1>Motore delle minacce</h1>
+<p>26 categorie, resistenza all'evasione a doppio passaggio, tag MITRE. Questa pagina offre una panoramica sincera: cosa viene rilevato, cosa no e dove leggere i dettagli.</p>
+
+<h2 id="limits">Cosa NON fa: limiti e falsi positivi</h2>
+<p>La credibilita deriva dal dichiarare i limiti. Leggi questa sezione prima di fidarti di un report.</p>
+<div class="table-wrap"><table>
+<thead><tr><th>Limite</th><th>Perche</th><th>Cosa fare</th></tr></thead>
+<tbody>
+<tr><td>Basato su pattern, non semantico</td><td>Cerca sottostringhe di payload note, non esegue codice</td><td>Esamina gli IP raggruppati: non bloccare automaticamente con confidenza bassa</td></tr>
+<tr><td>Filtro di confidenza</td><td>Il valore predefinito di guard è <code>--detect-confidence 8</code>; alcuni hit sono 5–6</td><td>Aumenta a 9 per app più rumorose; 0 disabilita solo i blocchi da pattern, non guard</td></tr>
+<tr><td>I percorsi legittimi possono sembrare dannosi</td><td><code>?url=https://…</code>, <code>?code={{var}}</code>, <code>__proto__</code> nella documentazione</td><td>Usa <code>--never-block</code> / <code>whitelist</code> e controlla <code>-f html</code> prima di bloccare</td></tr>
+<tr><td>Le euristiche comportamentali richiedono stato</td><td><code>ua_rotation</code>, <code>object_enumeration</code>, <code>beaconing</code> richiedono ≥10 campioni per IP/percorso</td><td>Esegui su ≥1h di traffico; i log con una singola richiesta non le attivano</td></tr>
+<tr><td>Non e un WAF</td><td>Rilevamento offline/al momento del log, non blocco inline delle richieste</td><td>Usa <code>guard</code> per bloccare dopo il rilevamento; non aspettarti un deny prima della richiesta</td></tr>
+<tr><td>GeoIP/blocklist sono best-effort</td><td>DB-IP lite + 8 feed, cache 7g, rete necessaria per l'aggiornamento</td><td>Fissa <code>--geoip-db</code> e controlla l'eta di <code>blocklist list</code></td></tr>
+</tbody>
+</table></div>
+<div class="callout callout-warning"><div class="callout-label">Non bloccarti fuori</div>Ogni esempio di <code>guard</code> che modifica il firewall e contrassegnato con <span class="pill pill-danger">modifica il firewall</span>. Su un host remoto, usa sempre <code>--never-block YOUR_IP</code>. In caso di dubbi, usa prima i comandi in sola lettura (<code>blocklist list</code>, <code>--detect -f html</code>).</div>
+
+<h2 id="what">Cosa fa</h2>
+<ul>
+  <li><strong>Motore a doppio passaggio</strong> — ogni URI viene controllato sia grezzo sia dopo URL-unescape (split <code>?</code> + <code>PathUnescape</code>/<code>QueryUnescape</code> + fallback manuale <code>%</code>) per rilevare bypass <code>%2e%2e</code> e doppia codifica. Guard esegue lo stesso <code>Detector</code> per finestra.</li>
+  <li><strong>26 categorie</strong> — da <code>sql_injection</code> a <code>beaconing</code>, ognuna etichettata con ID MITRE ATT&amp;CK verificati.</li>
+  <li><strong>Raggruppato per IP</strong> — il report dei sospetti mostra gli IP principali con confidenza, URI e tecniche.</li>
+  <li><strong>Esportabile</strong> — 23 categorie basate su pattern come regole Sigma; le 3 comportamentali (<code>ua_rotation</code>, <code>object_enumeration</code>, <code>beaconing</code>) sono stateful e non vengono esportate.</li>
+</ul>
+
+<h2 id="where">Dove proseguire</h2>
+<div class="doc-grid">
+  <a class="doc-card" href="reference/security-categories.html"><strong>26 categorie</strong><span>Confidenza, descrizione e un esempio reale di fixture per categoria: una tripla coerente in ogni riga.</span></a>
+  <a class="doc-card" href="reference/security-detection.html"><strong>MITRE, Sigma ed evasione</strong><span>ID ATT&amp;CK verificati, 23 regole Sigma e come doppio passaggio/marker/literal resistono ai bypass.</span></a>
+  <a class="doc-card" href="subcommands-guard.html"><strong>Guard</strong><span>Quando il rilevamento diventa un blocco: soglie, backend, audit e stato.</span></a>
+</div>
+
+<h2 id="quick-check">Verifica rapida</h2>
+<pre><code>caddy-analyze --detect testdata/sample.log
+# should list 26 categories firing (68 lines, all TEST-NET)
+caddy-analyze --detect -f html -o report.html testdata/large.log && open report.html
+caddy-analyze tail docker://caddy --detect  # live, severity-colored</code></pre>
+      <footer class="footer">
+  <p>caddy-analyzer è open-source sotto licenza <a href="https://github.com/lenny-ts/caddy-analyzer/blob/main/LICENSE">MIT</a> · <a href="https://github.com/lenny-ts/caddy-analyzer">GitHub</a> · <a href="../it/changelog.html">Registro modifiche</a></p>
+</footer>
+<button class="back-to-top" aria-label="Back to top">↑</button>
+
+    </div>
+  </main>
+  <nav class="doc-toc" aria-label="In questa pagina"><div class="toc-label">In questa pagina</div><a href="#limits" class="toc-link">Cosa NON fa: limiti e falsi positivi</a><a href="#what" class="toc-link">Cosa fa</a><a href="#where" class="toc-link">Dove proseguire</a><a href="#quick-check" class="toc-link">Verifica rapida</a></nav>
+</div>
+<script src="../docs.min.js?v=36"></script>
+</body>
+</html>

