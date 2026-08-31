@@ -4,6 +4,7 @@
 'use strict';
 const fs = require('fs');
 const path = require('path');
+const { execFileSync } = require('child_process');
 
 const ROOT = path.resolve(__dirname, '..');
 const SRC = path.join(ROOT, 'docs', 'src');
@@ -16,6 +17,21 @@ const LANGUAGES = [
 ];
 function read(p) { return fs.readFileSync(p, 'utf8'); }
 function exists(p) { try { fs.accessSync(p); return true; } catch { return false; } }
+
+let cachedVersion;
+function latestVersion() {
+  if (cachedVersion) return cachedVersion;
+  try {
+    cachedVersion = execFileSync('git', ['describe', '--tags', '--abbrev=0', '--match', 'v*'], {
+      cwd: ROOT,
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'ignore'],
+    }).trim() || 'Unreleased';
+  } catch {
+    cachedVersion = 'Unreleased';
+  }
+  return cachedVersion;
+}
 
 function loadPartials() {
   const h = read(path.join(SRC, '_partials', 'header.html'));
@@ -74,6 +90,60 @@ function escapeHtml(s) {
   return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
+function inlineMarkdown(s) {
+  const code = [];
+  s = escapeHtml(s).replace(/`([^`]+)`/g, (_, value) => {
+    code.push(`<code>${value}</code>`);
+    return `\u0000${code.length - 1}\u0000`;
+  });
+  s = s.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2">$1</a>');
+  s = s.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+  return s.replace(/\u0000(\d+)\u0000/g, (_, index) => code[index]);
+}
+
+function changelogHtml() {
+  const lines = read(path.join(ROOT, 'CHANGELOG.md')).split(/\r?\n/);
+  const firstSection = lines.findIndex(line => /^##\s+/.test(line));
+  if (firstSection === -1) throw new Error('CHANGELOG.md has no release sections');
+
+  const html = [];
+  let paragraph = [];
+  let list = [];
+  const flushParagraph = () => {
+    if (paragraph.length) html.push(`<p>${inlineMarkdown(paragraph.join(' '))}</p>`);
+    paragraph = [];
+  };
+  const flushList = () => {
+    if (list.length) html.push(`<ul>${list.map(item => `<li>${inlineMarkdown(item)}</li>`).join('')}</ul>`);
+    list = [];
+  };
+
+  for (const line of lines.slice(firstSection)) {
+    const heading = line.match(/^(#{2,4})\s+(.+)$/);
+    if (heading) {
+      flushParagraph();
+      flushList();
+      const release = heading[2].match(/^\[([^\]]+)\]\s+-\s+(.+)$/);
+      const text = release ? `${release[1]} — ${release[2]}` : heading[2].replace(/^\[([^\]]+)\]$/, '$1');
+      const tag = `h${heading[1].length}`;
+      const id = tag === 'h2' ? ` id="${slugify(text)}"` : '';
+      html.push(`<${tag}${id}>${inlineMarkdown(text)}</${tag}>`);
+    } else if (/^-\s+/.test(line)) {
+      flushParagraph();
+      list.push(line.replace(/^-\s+/, ''));
+    } else if (line.trim()) {
+      flushList();
+      paragraph.push(line.trim());
+    } else {
+      flushParagraph();
+      flushList();
+    }
+  }
+  flushParagraph();
+  flushList();
+  return html.join('\n');
+}
+
 function breadcrumbHtml(breadcrumb) {
   if (!breadcrumb) return '';
   // breadcrumb: [{label, href}, ...] last is current
@@ -91,7 +161,8 @@ function breadcrumbHtml(breadcrumb) {
 function pageMetaHtml(date, ui) {
   // date from git or fallback
   const d = date || new Date().toISOString().slice(0, 10);
-  return `<div class="page-meta"><a href="https://github.com/lenny-ts/caddy-analyzer/releases">v0.6.1</a> · ${ui.updated} <time datetime="${d}">${d}</time> · <a href="https://github.com/lenny-ts/caddy-analyzer">GitHub</a></div>`;
+  const version = escapeHtml(latestVersion());
+  return `<div class="page-meta"><a href="https://github.com/lenny-ts/caddy-analyzer/releases">${version}</a> · ${ui.updated} <time datetime="${d}">${d}</time> · <a href="https://github.com/lenny-ts/caddy-analyzer">GitHub</a></div>`;
 }
 
 function hreflangTags(outRel, lang) {
@@ -177,6 +248,12 @@ function buildPage(srcPath, partials) {
       } else if (k === 'date') fm.date = v;
       else if (k === 'body-class') fm.bodyClass = v ? ` class="${v}"` : '';
     }
+  }
+
+  // Keep the published English changelog in sync with the repository source.
+  if (srcRel === 'changelog.html') {
+    const introEnd = raw.indexOf('<h2');
+    raw = `${introEnd === -1 ? raw : raw.slice(0, introEnd)}${changelogHtml()}`;
   }
 
   const headings = extractHeadings(raw);

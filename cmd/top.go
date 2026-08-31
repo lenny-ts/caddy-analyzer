@@ -113,6 +113,7 @@ func runTopCmd(cmd *cobra.Command, args []string) error {
 				continue
 			}
 			if le, ok := entry.(*types.LogEntry); ok {
+				applyForwarded(le, filters)
 				enrichGeoIP(le, geoip)
 				engine.Process(le)
 			}

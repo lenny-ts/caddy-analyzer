@@ -64,6 +64,17 @@ func TestAcceptEntryRewritesForwardedIPBeforeFilter(t *testing.T) {
 	}
 }
 
+func TestTopAndTailRewriteForwardedIP(t *testing.T) {
+	entry := &types.LogEntry{
+		RemoteIP:     "10.0.0.1",
+		ForwardedFor: []string{"203.0.113.9"},
+	}
+	applyForwarded(entry, types.Filters{TrustForwarded: true})
+	if entry.RemoteIP != "203.0.113.9" {
+		t.Fatalf("RemoteIP = %q, want rewritten client address", entry.RemoteIP)
+	}
+}
+
 type countingGeo struct {
 	hits []string
 }
