@@ -39,17 +39,23 @@
     var btn = document.querySelector(".theme-toggle");
     if (!btn) return;
     function isLight() { return document.documentElement.getAttribute("data-theme") === "light"; }
-    function sync() { btn.textContent = isLight() ? "☾" : "☀"; btn.setAttribute("aria-label", isLight() ? "Switch to dark theme" : "Switch to light theme"); }
+    function sync() { btn.setAttribute("aria-label", isLight() ? "Switch to dark theme" : "Switch to light theme"); }
     sync();
     btn.addEventListener("click", function () {
-      if (isLight()) {
-        document.documentElement.removeAttribute("data-theme");
-        try { localStorage.setItem("caddy-docs-theme", "dark"); } catch (e2) {}
-      } else {
-        document.documentElement.setAttribute("data-theme", "light");
-        try { localStorage.setItem("caddy-docs-theme", "light"); } catch (e3) {}
-      }
-      sync();
+      var apply = function () {
+        if (isLight()) {
+          document.documentElement.removeAttribute("data-theme");
+          try { localStorage.setItem("caddy-docs-theme", "dark"); } catch (e2) {}
+        } else {
+          document.documentElement.setAttribute("data-theme", "light");
+          try { localStorage.setItem("caddy-docs-theme", "light"); } catch (e3) {}
+        }
+        sync();
+      };
+      document.documentElement.classList.add("theme-transition");
+      if (document.startViewTransition) document.startViewTransition(apply);
+      else apply();
+      window.setTimeout(function () { document.documentElement.classList.remove("theme-transition"); }, 420);
     });
   })();
 

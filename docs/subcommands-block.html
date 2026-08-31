@@ -29,8 +29,11 @@
   </nav>
   <div class="header-actions">
     <a href="https://github.com/lenny-ts/caddy-analyzer" style="color:var(--text-sec);font-size:0.85rem;" rel="noopener">GitHub</a>
-    <span style="font-size:0.80rem;color:var(--text);font-weight:600;">EN</span><span style="color:var(--border)">|</span><span style="font-size:0.80rem;color:var(--text-muted);" title="Italian version coming soon">IT</span>
-    <button class="theme-toggle" aria-label="Toggle theme"></button>
+    <div class="language-switch" role="group" aria-label="Language"><span class="lang-option active" aria-current="page">EN</span><span class="lang-option disabled" title="Italian translation coming soon" aria-disabled="true">IT</span></div>
+    <button class="theme-toggle" type="button" aria-label="Switch to light theme">
+      <span class="theme-icon theme-sun" aria-hidden="true">☀</span>
+      <span class="theme-icon theme-moon" aria-hidden="true">☾</span>
+    </button>
   </div>
 </header>
 <div class="scroll-progress" aria-hidden="true"></div>

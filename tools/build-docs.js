@@ -115,26 +115,20 @@ function hreflangTags(outRel, lang) {
 function langSwitcher(outRel, lang) {
   // outRel as above, lang = 'en' | 'it'
   const isIt = lang === 'it';
-  const base = isIt ? '../' : '';
   // counterpart
   const counterpartRel = isIt ? outRel.slice(3) : 'it/' + outRel;
   const counterpartExists = exists(path.join(SRC, counterpartRel)) || exists(path.join(OUT, counterpartRel));
+  const currentDir = path.posix.dirname(outRel);
+  const counterpartHref = path.posix.relative(currentDir, counterpartRel) || path.posix.basename(counterpartRel);
+  const enHref = path.posix.relative(currentDir, isIt ? counterpartRel : outRel) || path.posix.basename(outRel);
+  const active = (label) => `<span class="lang-option active" aria-current="page">${label}</span>`;
+  const link = (label, href, code) => `<a class="lang-option" href="${href}" hreflang="${code}" lang="${code}">${label}</a>`;
+  const unavailable = `<span class="lang-option disabled" title="Italian translation coming soon" aria-disabled="true">IT</span>`;
   if (counterpartExists) {
-    const href = isIt ? `../${outRel.slice(3)}` : `it/${outRel}`;
-    // from EN: href="it/index.html", from IT: href="../index.html"
-    if (isIt) {
-      return `<a href="../${outRel.slice(3)}" hreflang="en" lang="en" style="font-size:0.80rem;color:var(--text-sec);">EN</a><span style="color:var(--border)">|</span><span style="font-size:0.80rem;color:var(--text);font-weight:600;">IT</span>`;
-    } else {
-      return `<span style="font-size:0.80rem;color:var(--text);font-weight:600;">EN</span><span style="color:var(--border)">|</span><a href="it/${outRel}" hreflang="it" lang="it" style="font-size:0.80rem;color:var(--text-sec);">IT</a>`;
-    }
-  } else {
-    // no broken link — show disabled IT with title
-    if (isIt) {
-      return `<a href="../${outRel.slice(3)}" hreflang="en" lang="en" style="font-size:0.80rem;color:var(--text-sec);">EN</a><span style="color:var(--border)">|</span><span style="font-size:0.80rem;color:var(--text-muted);" title="Italian version coming soon">IT</span>`;
-    } else {
-      return `<span style="font-size:0.80rem;color:var(--text);font-weight:600;">EN</span><span style="color:var(--border)">|</span><span style="font-size:0.80rem;color:var(--text-muted);" title="Italian version coming soon">IT</span>`;
-    }
+    return `<div class="language-switch" role="group" aria-label="Language">${isIt ? link('EN', enHref, 'en') : active('EN')}${link('IT', counterpartHref, 'it')}</div>`;
   }
+  // Keep unavailable translations visibly disabled instead of creating a 404 link.
+  return `<div class="language-switch" role="group" aria-label="Language">${isIt ? link('EN', enHref, 'en') : active('EN')}${unavailable}</div>`;
 }
 
 function buildPage(srcPath, partials) {

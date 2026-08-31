@@ -81,8 +81,20 @@ h4{font-size:0.95rem;margin:1.25rem 0 0.4rem}
 .site-header nav a:hover{color:var(--text)}
 .site-header nav a.active{color:var(--text);border-bottom-color:var(--accent)}
 .header-actions{margin-left:auto;display:flex;align-items:center;gap:10px}
-.theme-toggle{width:32px;height:32px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text-sec);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:14px;transition:border-color .15s,color .15s,background .15s}
+.language-switch{display:inline-flex;align-items:center;padding:2px;border:1px solid var(--border);border-radius:7px;background:var(--surface);gap:1px}
+.lang-option{padding:3px 7px;border-radius:5px;color:var(--text-muted);font-size:0.72rem;font-weight:600;line-height:1.2;letter-spacing:.03em}
+.lang-option:hover{color:var(--text);background:var(--surface-hover)}
+.lang-option.active{color:var(--text);background:var(--bg);box-shadow:0 1px 3px rgba(0,0,0,.18)}
+.lang-option.disabled{cursor:not-allowed;opacity:.42}
+.theme-toggle{position:relative;width:34px;height:32px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text-sec);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:15px;overflow:hidden;transition:border-color .15s,color .15s,background .15s,transform .2s}
+.theme-toggle:hover{transform:translateY(-1px)}
+.theme-icon{position:absolute;transition:transform .3s ease,opacity .2s ease}
+.theme-moon{opacity:0;transform:translateY(12px) rotate(-35deg)}
+.theme-sun{opacity:1;transform:translateY(0) rotate(0)}
+[data-theme="light"] .theme-sun{opacity:0;transform:translateY(-12px) rotate(35deg)}
+[data-theme="light"] .theme-moon{opacity:1;transform:translateY(0) rotate(0)}
 .theme-toggle:hover{border-color:var(--border-strong);color:var(--text);background:var(--surface-hover)}
+html.theme-transition body,html.theme-transition body *{transition:background-color .35s ease,color .35s ease,border-color .35s ease,box-shadow .35s ease}
 
 /* Three column layout — sidebar flush left, content centered between sidebar and TOC */
 .docs-layout{display:grid;grid-template-columns:var(--sidebar-w) minmax(0,1fr) var(--toc-w);width:100%;max-width:none;margin:0;min-height:calc(100vh - var(--header-h))}
@@ -221,5 +233,11 @@ tr:hover td{background:var(--surface)}
 .heading-anchor{margin-left:8px;font-weight:400;color:var(--text-muted);opacity:0;transition:opacity .12s;font-size:0.9em;text-decoration:none}
 h2:hover .heading-anchor,h3:hover .heading-anchor{opacity:1}
 .heading-anchor:hover{color:var(--accent)}
+
+@media(prefers-reduced-motion:reduce){
+  html{scroll-behavior:auto}
+  .theme-toggle,.theme-icon{transition:none}
+  .theme-transition *{transition:none!important}
+}
 
 @media print{.site-header,.doc-sidebar,.doc-toc,.back-to-top,.scroll-progress,.sidebar-toggle{display:none!important}.docs-layout{display:block}.doc-content{max-width:none;padding:0}body{background:#fff;color:#000}}
