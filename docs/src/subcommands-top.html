@@ -1,4 +1,4 @@
-<!-- fm: title=top — caddy-analyzer | description=Ranked inspector: 9 dimensions including country/asn with GeoIP. | breadcrumb=Reference > top -->
+<!-- fm: title=top — caddy-analyzer | description=Ranked inspector: 10 dimensions including country/city/asn with GeoIP. | breadcrumb=Reference > top -->
 <h1>top</h1>
 <p>Ranked inspector. <span class="pill pill-readonly">read-only</span> — never modifies the system.</p>
 
@@ -29,6 +29,7 @@ caddy-analyze top -b &lt;dimension&gt; [source...]   # --by alias</code></pre>
 <tr><td><code>host</code></td><td></td><td>Top hosts</td></tr>
 <tr><td><code>bandwidth</code></td><td></td><td>Top by response size</td></tr>
 <tr><td><code>country</code></td><td>yes</td><td>Top countries (human-readable names)</td></tr>
+<tr><td><code>city</code></td><td>yes, city MMDB</td><td>Top client cities</td></tr>
 <tr><td><code>asn</code></td><td>yes</td><td>Top ASNs</td></tr>
 </tbody>
 </table></div>

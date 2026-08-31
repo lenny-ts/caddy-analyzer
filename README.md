@@ -79,7 +79,11 @@ caddy-analyze --detect
 # Top-N metric inspector
 caddy-analyze top ip
 caddy-analyze top country
+caddy-analyze top city
 caddy-analyze top asn
+
+# Parallel parsing while preserving input order
+caddy-analyze --workers 4 --detect /var/log/caddy/access.log
 
 # Real-time streaming with filters
 caddy-analyze tail --ip 10.0.0.0/8 --no-bots docker://my-caddy
@@ -135,13 +139,14 @@ Caddy v2 uses a **structured JSON log format** that differs from the Common/Comb
 | **Security** | 26 attack categories: SQLi, NoSQLi, XSS, SSTI, SSRF, RCE, path traversal/LFI, LFI wrapper abuse, GraphQL introspection, Log4j/JNDI, XXE/XInclude, open redirect, LDAP injection, XPath injection, CRLF injection, prototype pollution, SSI injection, UA rotation, JWT abuse, object enumeration (BOLA/IDOR), beaconing (C2), sensitive file probes, WordPress probes, CGI probes, admin probes, scanner tools |
 | **Detection Accuracy** | Dual-pass engine: URL-unescaped + raw URI matching catches multibyte-encoded and double-encoded bypass attempts. Confidence scoring (1-10) per detection. LRU IP eviction (100K cap) bounds memory on huge logs |
 | **Firewall** | `guard` daemon auto-blocks malicious IPs via `iptables` with configurable thresholds, ban duration, audit logging, state persistence (survives restarts), IP allowlist, `block`/`unban` state sync, 8 default blocklist feeds (Spamhaus, FireHOL, CINS, Tor, ET, AbuseIPDB) with CIDR-trie lookup, and `--country-block` GeoIP filtering |
-| **Threat Intel** | Offline GeoIP enrichment (MaxMind GeoLite2 / DB-IP mmdb, no API key) with auto-download. `top country` / `top asn` dimensions. Country/ASN sections in the default report. Auto-discovery in cwd, `~/.config/caddy-analyzer/`, `/var/lib/caddy-analyzer/`, `/usr/share/GeoIP/` |
+| **Threat Intel** | Offline GeoIP enrichment (MaxMind GeoLite2 / DB-IP mmdb, no API key) with auto-download. City databases are discovered locally and never auto-downloaded. `top country` / `top city` / `top asn` dimensions. Country, city, coordinates, and heatmap sections in HTML reports. Auto-discovery in cwd, `~/.config/caddy-analyzer/`, `/var/lib/caddy-analyzer/`, `/usr/share/GeoIP/` |
 | **Traffic Analysis** | Classifies human users vs crawlers (Googlebot, Bingbot, Yandex, DuckDuckBot, GPTBot, ClaudeBot, Bytespider, CCBot, Amazonbot, and others) and automated scrapers |
 | **Diff Engine** | Side-by-side comparison of two log files detecting 5xx spikes, RPS shifts, and latency regressions |
 | **TUI Dashboard** | 8-tab Bubbletea/Lipgloss interface with live streaming, security alerts, top metrics, GeoIP country/ASN, and operational (non-HTTP) events |
 | **HTML Reports** | Standalone dark-mode single-file HTML reports for sharing with your team |
 | **Data Sources** | Local files, stdin, Docker (`docker://`), Kubernetes (`k8s://`), systemd journalctl (`journalctl://`) |
 | **Filtering** | Entry-level filters auto-switch to color-coded log listings. Supports CIDR, status classes, methods, path globs, and GeoIP country/ASN |
+| **Performance** | `--workers N` parallelizes parsing while preserving input order for stateful detection and aggregation. `0` uses the available CPU count |
 
 ---
 
@@ -238,7 +243,7 @@ caddy-analyze [flags] [source...]
 
 Subcommands:
   tail                         Stream and colorize logs in real time
-  top <dimension>              Top-N metric inspector (path, ip, ua, status, method, host, bandwidth, country, asn)
+  top <dimension>              Top-N metric inspector (path, ip, ua, status, method, host, bandwidth, country, city, asn)
   diff <baseline> <target>     Compare two log files
   guard                        Auto-block malicious IPs via iptables
   blocklist <action>           Manage blocklist feeds (refresh, list, config, init)
@@ -261,6 +266,7 @@ Subcommands:
 | `--output` | `-o` | `""` | Write report to file |
 | `--watch` | `-w` | `false` | Launch 8-tab interactive TUI dashboard (Summary, Realtime, Security, Top IPs/Paths, User Agents, Geo, Operational) |
 | `--top` | `-t` | `10` | Max top entries in tables (0 disables) |
+| `--workers` | | `0` | Parallel parsing workers. `0` uses the available CPU count |
 | `--from` | | `""` | Time filter start (RFC3339 or relative: `5m`, `1h`, `2d`) |
 | `--to` | | `""` | Time filter end (RFC3339) |
 | `--interval` | `-i` | `""` | Periodic aggregation |

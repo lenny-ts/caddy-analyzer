@@ -21,7 +21,6 @@ import (
 	"github.com/lenny-ts/caddy-analyzer/pkg/config"
 	"github.com/lenny-ts/caddy-analyzer/pkg/enrich"
 	"github.com/lenny-ts/caddy-analyzer/pkg/output"
-	"github.com/lenny-ts/caddy-analyzer/pkg/parser"
 	"github.com/lenny-ts/caddy-analyzer/pkg/progress"
 	"github.com/lenny-ts/caddy-analyzer/pkg/reader"
 	"github.com/lenny-ts/caddy-analyzer/pkg/tui"
@@ -35,6 +34,7 @@ var (
 	flagMethod         string
 	flagPath           string
 	flagTop            int
+	flagWorkers        int
 	flagFormat         string
 	flagFollow         bool
 	flagK8sNS          string
@@ -90,7 +90,7 @@ Sources:
 
 Subcommands:
   tail [source...]       Colorized real-time log viewer
-  top <dimension>        Quick top-N metric inspector (path, ip, ua, status, method, host, bandwidth, country, asn)
+  top <dimension>        Quick top-N metric inspector (path, ip, ua, status, method, host, bandwidth, country, city, asn)
   diff <log1> <log2>     Compare two log files for RPS shifts, 5xx spikes, and latency changes
 
 Filtering (activate colored log listing instead of report):
@@ -158,6 +158,7 @@ func init() {
 	flags.StringVarP(&flagMethod, "method", "m", "", "Filter by HTTP method")
 	flags.StringVarP(&flagPath, "path", "p", "", "Filter by path (glob: /api/*)")
 	flags.IntVarP(&flagTop, "top", "t", 10, "Show top N (0 to disable)")
+	flags.IntVar(&flagWorkers, "workers", 0, "Parallel parsing workers (0 = number of available CPUs)")
 	flags.StringVarP(&flagFormat, "format", "f", "table", "Output format: table, json, csv, html")
 	flags.StringVarP(&flagOutput, "output", "o", "", "Write report to file instead of stdout")
 	flags.BoolVarP(&flag2xx, "2xx", "", false, "Filter 2xx status codes")
@@ -270,6 +271,9 @@ func runAnalysis(cmd *cobra.Command, args []string) error {
 }
 
 func validateFlags() error {
+	if flagWorkers < 0 {
+		return fmt.Errorf("--workers must be 0 or greater")
+	}
 	if flagWatch && flagFollow {
 		return fmt.Errorf("--watch and --follow are mutually exclusive")
 	}
@@ -320,22 +324,21 @@ func runOnceMode(ctx context.Context, sources []types.LogSource, filters types.F
 			fmt.Fprintf(os.Stderr, "error reading %s: %v\n", r.Name(), err)
 			continue
 		}
-		for line := range lines {
-			entry, err := parser.Parse(line)
+		processParsedLines(ctx, lines, configuredWorkers(), func(entry types.Entry, err error) {
 			if err != nil {
 				parseErrors++
 				bar.Add(1)
-				continue
+				return
 			}
 			if entry == nil {
 				bar.Add(1)
-				continue
+				return
 			}
 			switch e := entry.(type) {
 			case *types.LogEntry:
 				if filters.OpsOnly {
 					bar.Add(1)
-					continue
+					return
 				}
 				applyForwarded(e, filters)
 				geoFiltered := geoFiltersActive(filters)
@@ -345,7 +348,7 @@ func runOnceMode(ctx context.Context, sources []types.LogSource, filters types.F
 				}
 				if !analysis.MatchEntry(e, filters) {
 					bar.Add(1)
-					continue
+					return
 				}
 				if !geoFiltered {
 					enrichGeoIP(e, geoip)
@@ -358,7 +361,7 @@ func runOnceMode(ctx context.Context, sources []types.LogSource, filters types.F
 			case *types.OperationalEntry:
 				if !analysis.MatchOperational(e, filters) {
 					bar.Add(1)
-					continue
+					return
 				}
 				opEngine.Process(e)
 				if showListing {
@@ -366,7 +369,7 @@ func runOnceMode(ctx context.Context, sources []types.LogSource, filters types.F
 				}
 			}
 			bar.Add(1)
-		}
+		})
 	}
 
 	bar.Done()
@@ -662,10 +665,9 @@ func runFollowMode(ctx context.Context, sources []types.LogSource, filters types
 		}
 	}
 
-	for line := range fanInFollow(ctx, sources) {
-		entry, err := parser.Parse(line)
+	processParsedLines(ctx, fanInFollow(ctx, sources), configuredWorkers(), func(entry types.Entry, err error) {
 		if err != nil || entry == nil {
-			continue
+			return
 		}
 		switch e := entry.(type) {
 		case *types.LogEntry:
@@ -685,7 +687,7 @@ func runFollowMode(ctx context.Context, sources []types.LogSource, filters types
 			emitReport()
 			resetEngine()
 		}
-	}
+	})
 	return nil
 }
 
@@ -740,20 +742,20 @@ func runIntervalMode(ctx context.Context, sources []types.LogSource, filters typ
 			fmt.Fprintf(os.Stderr, "error reading %s: %v\n", r.Name(), err)
 			continue
 		}
-		for line := range lines {
-			entry, err := parser.Parse(line)
-			if err != nil || entry == nil {
-				continue
+		var processErr error
+		processParsedLines(ctx, lines, configuredWorkers(), func(entry types.Entry, err error) {
+			if processErr != nil || err != nil || entry == nil {
+				return
 			}
 			switch e := entry.(type) {
 			case *types.LogEntry:
 				if filters.OpsOnly {
-					continue
+					return
 				}
 				var accepted *types.LogEntry
 				takeEntry(e, filters, geoip, func(le *types.LogEntry) { accepted = le })
 				if accepted == nil {
-					continue
+					return
 				}
 				bucket := accepted.Timestamp.Truncate(interval)
 				if initial {
@@ -763,7 +765,8 @@ func runIntervalMode(ctx context.Context, sources []types.LogSource, filters typ
 				}
 				if bucket != current {
 					if err := reportFn(engine, opEngine, current); err != nil {
-						return err
+						processErr = err
+						return
 					}
 					resetEngines()
 					current = bucket
@@ -771,7 +774,7 @@ func runIntervalMode(ctx context.Context, sources []types.LogSource, filters typ
 				engine.Process(accepted)
 			case *types.OperationalEntry:
 				if !analysis.MatchOperational(e, filters) {
-					continue
+					return
 				}
 				bucket := e.Timestamp.Truncate(interval)
 				if initial {
@@ -781,13 +784,17 @@ func runIntervalMode(ctx context.Context, sources []types.LogSource, filters typ
 				}
 				if bucket != current {
 					if err := reportFn(engine, opEngine, current); err != nil {
-						return err
+						processErr = err
+						return
 					}
 					resetEngines()
 					current = bucket
 				}
 				opEngine.Process(e)
 			}
+		})
+		if processErr != nil {
+			return processErr
 		}
 	}
 	if engine != nil && (engine.Count() > 0 || (opEngine != nil && opEngine.Stats().TotalEvents > 0)) {

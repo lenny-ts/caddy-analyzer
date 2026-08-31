@@ -555,6 +555,15 @@ func (r *Report) printTable() error {
 			_, _ = fmt.Fprintf(w, "%s:\n", title)
 			printTopNWithBar(w, renameItems(analysis.TopN(s.CountryCounts, r.top), s.CountryNames), total, useColor)
 		}
+		if r.sections.City && len(s.CityCounts) > 0 {
+			_, _ = fmt.Fprintf(w, "\n")
+			title := fmt.Sprintf("Top %d Cities", r.top)
+			if useColor {
+				title = styleLabel.Render(title)
+			}
+			_, _ = fmt.Fprintf(w, "%s:\n", title)
+			printTopNWithBar(w, analysis.TopN(s.CityCounts, r.top), total, useColor)
+		}
 		if r.sections.ASN && len(s.ASNCounts) > 0 {
 			_, _ = fmt.Fprintf(w, "\n")
 			title := fmt.Sprintf("Top %d Autonomous Systems", r.top)
@@ -807,6 +816,10 @@ func (r *Report) printJSON() error {
 		if r.sections.Country && len(s.CountryCounts) > 0 {
 			data["top_countries"] = analysis.TopN(s.CountryCounts, r.top)
 		}
+		if r.sections.City && len(s.CityCounts) > 0 {
+			data["top_cities"] = analysis.TopN(s.CityCounts, r.top)
+			data["city_locations"] = s.CityLocations
+		}
 		if r.sections.ASN && len(s.ASNCounts) > 0 {
 			data["top_asns"] = analysis.TopN(s.ASNCounts, r.top)
 		}
@@ -896,6 +909,12 @@ func (r *Report) printCSV() error {
 		if r.sections.Country && len(s.CountryCounts) > 0 {
 			writeSection([]string{"top_countries:country", "count"})
 			for _, item := range analysis.TopN(s.CountryCounts, r.top) {
+				writePair(item.Key, fmt.Sprintf("%d", item.Count))
+			}
+		}
+		if r.sections.City && len(s.CityCounts) > 0 {
+			writeSection([]string{"top_cities:city", "count"})
+			for _, item := range analysis.TopN(s.CityCounts, r.top) {
 				writePair(item.Key, fmt.Sprintf("%d", item.Count))
 			}
 		}

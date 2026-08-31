@@ -14,7 +14,6 @@ import (
 
 	"github.com/lenny-ts/caddy-analyzer/pkg/analysis"
 	"github.com/lenny-ts/caddy-analyzer/pkg/output"
-	"github.com/lenny-ts/caddy-analyzer/pkg/parser"
 	"github.com/lenny-ts/caddy-analyzer/pkg/progress"
 	"github.com/lenny-ts/caddy-analyzer/pkg/reader"
 	"github.com/lenny-ts/caddy-analyzer/pkg/types"
@@ -24,7 +23,7 @@ var flagTopBy string
 
 var topCmd = &cobra.Command{
 	Use:   "top [dimension] [source...]",
-	Short: "Quickly display top-N metrics for a specific dimension (path, ip, ua, status, method, host, bandwidth, country, asn)",
+	Short: "Quickly display top-N metrics for a specific dimension (path, ip, ua, status, method, host, bandwidth, country, city, asn)",
 	Long: `Quickly inspect the top N requests for a specific dimension without generating a full analysis report.
 
 Dimensions:
@@ -36,11 +35,12 @@ Dimensions:
   host        Top request domain hosts
   bandwidth   Top paths sorted by total byte bandwidth transferred
   country     Top client countries (requires GeoIP mmdb)
+  city        Top client cities (requires a city GeoIP mmdb)
   asn         Top client autonomous systems (requires GeoIP mmdb)
 
 Useful Flags:
   -t, --top <N>      Number of top entries to display (default: 10)
-  -b, --by <dim>     Specify dimension via flag (path, ip, ua, status, method, host, bandwidth, country, asn)
+  -b, --by <dim>     Specify dimension via flag (path, ip, ua, status, method, host, bandwidth, country, city, asn)
   --5xx              Filter only 5xx server error requests
   --slow <duration>  Filter requests taking longer than duration (e.g. 500ms, 1s)
   --no-bots          Exclude search engine crawlers and automated bots
@@ -59,7 +59,7 @@ Examples:
 }
 
 func init() {
-	topCmd.Flags().StringVarP(&flagTopBy, "by", "b", "", "Dimension to group by (path, ip, ua, status, method, host, bandwidth, country, asn)")
+	topCmd.Flags().StringVarP(&flagTopBy, "by", "b", "", "Dimension to group by (path, ip, ua, status, method, host, bandwidth, country, city, asn)")
 	rootCmd.AddCommand(topCmd)
 }
 
@@ -106,11 +106,10 @@ func runTopCmd(cmd *cobra.Command, args []string) error {
 		if err != nil {
 			continue
 		}
-		for line := range lines {
-			entry, err := parser.Parse(line)
+		processParsedLines(ctx, lines, configuredWorkers(), func(entry types.Entry, err error) {
 			if err != nil || entry == nil {
 				bar.Add(1)
-				continue
+				return
 			}
 			if le, ok := entry.(*types.LogEntry); ok {
 				applyForwarded(le, filters)
@@ -118,7 +117,7 @@ func runTopCmd(cmd *cobra.Command, args []string) error {
 				engine.Process(le)
 			}
 			bar.Add(1)
-		}
+		})
 	}
 
 	bar.Done()
@@ -133,7 +132,7 @@ func runTopCmd(cmd *cobra.Command, args []string) error {
 
 	dim := strings.ToLower(dimension)
 	if _, ok := topFieldForDimension(dim); !ok {
-		return fmt.Errorf("unknown dimension: %s (supported: path, ip, ua, status, method, host, bandwidth, country, asn)", dim)
+		return fmt.Errorf("unknown dimension: %s (supported: path, ip, ua, status, method, host, bandwidth, country, city, asn)", dim)
 	}
 
 	var w io.Writer = os.Stdout
@@ -198,6 +197,8 @@ func topFieldForDimension(dim string) (types.TopField, bool) {
 		return types.TopHost, true
 	case "country", "countries":
 		return types.TopCountry, true
+	case "city", "cities":
+		return types.TopCity, true
 	case "asn":
 		return types.TopASN, true
 	case "bandwidth", "bytes":
@@ -229,6 +230,8 @@ func topItems(dim string, s *types.Stats, n int) []types.CountItem {
 		return analysis.TopN(s.HostCounts, n)
 	case "country", "countries":
 		return analysis.TopN(s.CountryCounts, n)
+	case "city", "cities":
+		return analysis.TopN(s.CityCounts, n)
 	case "asn":
 		return analysis.TopN(s.ASNCounts, n)
 	}
@@ -253,6 +256,8 @@ func topTitle(dim string) string {
 		return "Hosts"
 	case "country", "countries":
 		return "Countries"
+	case "city", "cities":
+		return "Cities"
 	case "asn":
 		return "Autonomous Systems"
 	}
@@ -279,7 +284,7 @@ func writeTopCSV(w io.Writer, items []types.CountItem) error {
 
 func isSupportedDimension(s string) bool {
 	switch strings.ToLower(s) {
-	case "path", "paths", "ip", "ips", "ua", "useragent", "user-agent", "status", "method", "methods", "host", "hosts", "bandwidth", "bytes", "country", "countries", "asn":
+	case "path", "paths", "ip", "ips", "ua", "useragent", "user-agent", "status", "method", "methods", "host", "hosts", "bandwidth", "bytes", "country", "countries", "city", "cities", "asn":
 		return true
 	}
 	return false

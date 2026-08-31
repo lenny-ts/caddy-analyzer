@@ -87,6 +87,7 @@ output.Report(stats, output.FormatTable, false /*defang*/, nil)
 output.Report(stats, output.FormatHTML, true, os.Stdout) // standalone dark HTML</code></pre>
 
 <h2 id="types">types — shared structs</h2>
+<p><code>types.GeoInfo</code> includes optional <code>City</code>, <code>Latitude</code>, <code>Longitude</code>, and <code>Timezone</code>. City MMDBs are discovered locally via <code>enrich.FindCityDB</code>; they are not auto-downloaded.</p>
 <pre><code>import "github.com/lenny-ts/caddy-analyzer/pkg/types"
 
 var f types.Filters // --ip, --country, --asn, --grep, --level, --ops-only, Top, Format, ...
