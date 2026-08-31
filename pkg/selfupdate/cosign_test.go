@@ -8,6 +8,14 @@ import (
 	"testing"
 )
 
+func TestCosignChecksumsURL(t *testing.T) {
+	want := "https://github.com/sigstore/cosign/releases/download/v3.1.3/cosign_checksums.txt"
+	got := cosignReleaseURL("v3.1.3") + "/" + cosignChecksums
+	if got != want {
+		t.Fatalf("cosign checksums URL = %q, want %q", got, want)
+	}
+}
+
 func sha256Hex(t *testing.T, path string) string {
 	t.Helper()
 	data, err := os.ReadFile(path)

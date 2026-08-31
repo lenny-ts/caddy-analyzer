@@ -19,7 +19,7 @@ import (
 const (
 	cosignRepo      = "sigstore/cosign"
 	cosignBinary    = "cosign"
-	cosignChecksums = "cosign-checksums.txt"
+	cosignChecksums = "cosign_checksums.txt"
 )
 
 // EnsureCosign finds or downloads cosign. If cosign is already in PATH,
@@ -119,7 +119,7 @@ func downloadCosign(ctx context.Context, client *http.Client, tag, dir string) (
 	checksumName := cosignChecksums
 
 	// Build download URLs.
-	baseURL := fmt.Sprintf("https://github.com/%s/releases/download/%s", cosignRepo, tag)
+	baseURL := cosignReleaseURL(tag)
 	binURL := baseURL + "/" + binName
 	checksumURL := baseURL + "/" + checksumName
 
@@ -136,6 +136,10 @@ func downloadCosign(ctx context.Context, client *http.Client, tag, dir string) (
 	}
 
 	return binPath, checksumPath, nil
+}
+
+func cosignReleaseURL(tag string) string {
+	return fmt.Sprintf("https://github.com/%s/releases/download/%s", cosignRepo, tag)
 }
 
 // downloadFile downloads a URL to a local file.
