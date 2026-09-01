@@ -94,6 +94,10 @@ jobs:
             --output-certificate checksums.txt.pem \
             checksums.txt
 
+      - name: Keep bootstrap release compatible with older updaters
+        if: github.ref_name == 'v0.7.1'
+        run: rm -f dist/checksums.txt.bundle
+
       - name: Upload SBOM and signatures
         uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2.6.2
         with:
