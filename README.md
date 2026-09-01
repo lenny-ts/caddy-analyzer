@@ -459,6 +459,14 @@ go test ./...
 PRs and issues are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md).
 
 
+## Contributors
+
+<p align="center">
+  <a href="https://github.com/lenny-ts/caddy-analyzer/graphs/contributors">
+    <img src="https://contrib.rocks/image?repo=lenny-ts/caddy-analyzer" alt="Contributors" />
+  </a>
+</p>
+
 ## License
 
 MIT License — see [LICENSE](LICENSE) for details.

@@ -18,6 +18,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **O(1) detector LRU updates (#68)**: replace linear IP recency updates with a map-backed linked list.
 - **Single-pass progress analysis (#66)**: remove the full-file pre-scan that doubled I/O for large logs.
 - **Container deployment examples (#72)**: add a hardened Docker Compose demo and an opt-in, non-root Helm chart.
+- **Shared source fan-in (#65)**: centralize watch and guard stream coordination with consistent cancellation and error policies.
+- **Contributors section (#82)**: add an automatically updated contributor list to the README.
 
 ### Security
 - Remote notification failures never block firewall decisions, and webhook credentials are excluded from diagnostics.

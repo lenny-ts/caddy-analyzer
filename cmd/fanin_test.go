@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/lenny-ts/caddy-analyzer/pkg/reader"
 	"github.com/lenny-ts/caddy-analyzer/pkg/types"
 )
 
@@ -107,5 +108,30 @@ func TestFanInFollowBadSourceSkipped(t *testing.T) {
 
 	if !got["g1"] || !got["g2"] {
 		t.Errorf("expected g1 and g2 from the good source; got %v", got)
+	}
+}
+
+type errorFollowReader struct{}
+
+func (errorFollowReader) Name() string { return "broken" }
+
+func (errorFollowReader) Read(context.Context) (<-chan string, error) {
+	return nil, os.ErrNotExist
+}
+
+var _ reader.LogReader = errorFollowReader{}
+
+func TestFanInFollowErrorPolicyStopsAndCleansUp(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	_, err := fanInFollowReaders(ctx, []reader.LogReader{errorFollowReader{}}, func(name string, err error) error {
+		if name != "broken" {
+			t.Errorf("unexpected reader name %q", name)
+		}
+		return err
+	})
+	if err == nil {
+		t.Fatal("expected source error")
 	}
 }

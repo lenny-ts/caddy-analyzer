@@ -624,26 +624,35 @@ func enrichGeoIP(entry *types.LogEntry, g *enrich.GeoIP) {
 	entry.Geo = info
 }
 
-// fanInFollow opens every source in follow mode and multiplexes their lines
-// into a single channel. Per-source read errors are logged to stderr and the
-// offending source is skipped, so one bad source does not silence the rest.
-// The returned channel is closed when every reader has finished (follow readers
-// finish on context cancellation). This fixes the multi-source bug where the
-// previous sequential `for _, src := range sources { for line := range lines {} }`
-// blocked on the first source forever, since follow readers only close their
-// channel on ctx.Done().
-func fanInFollow(ctx context.Context, sources []types.LogSource) <-chan string {
-	out := make(chan string, 10000)
-	var wg sync.WaitGroup
+// fanInFollowWithPolicy opens every source in follow mode and multiplexes its
+// lines into one channel. Returning a non-nil error from onError stops setup;
+// returning nil skips the bad source and continues with the remaining ones.
+func fanInFollowWithPolicy(ctx context.Context, sources []types.LogSource, onError func(string, error) error) (chan string, error) {
+	readers := make([]reader.LogReader, 0, len(sources))
 	for _, src := range sources {
-		r := reader.FromSourceFollow(src)
+		readers = append(readers, reader.FromSourceFollow(src))
+	}
+	return fanInFollowReaders(ctx, readers, onError)
+}
+
+func fanInFollowReaders(ctx context.Context, readers []reader.LogReader, onError func(string, error) error) (chan string, error) {
+	out := make(chan string, 10000)
+	ctx, cancel := context.WithCancel(ctx)
+	var wg sync.WaitGroup
+	for _, r := range readers {
 		lines, err := r.Read(ctx)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "error reading %s: %v\n", r.Name(), err)
+			if onError != nil {
+				if callbackErr := onError(r.Name(), err); callbackErr != nil {
+					cancel()
+					wg.Wait()
+					return nil, callbackErr
+				}
+			}
 			continue
 		}
 		wg.Add(1)
-		go func() {
+		go func(lines <-chan string) {
 			defer wg.Done()
 			for l := range lines {
 				select {
@@ -652,13 +661,24 @@ func fanInFollow(ctx context.Context, sources []types.LogSource) <-chan string {
 					return
 				}
 			}
-		}()
+		}(lines)
 	}
 	go func() {
 		wg.Wait()
+		cancel()
 		close(out)
 	}()
-	return out
+	return out, nil
+}
+
+// fanInFollow keeps the follow/tail behavior of logging and skipping bad
+// sources while sharing the reader lifecycle with watch and guard.
+func fanInFollow(ctx context.Context, sources []types.LogSource) <-chan string {
+	lines, _ := fanInFollowWithPolicy(ctx, sources, func(name string, err error) error {
+		fmt.Fprintf(os.Stderr, "error reading %s: %v\n", name, err)
+		return nil
+	})
+	return lines
 }
 
 func runFollowMode(ctx context.Context, sources []types.LogSource, filters types.Filters) error {
@@ -882,30 +902,14 @@ func runWatch(ctx context.Context, sources []types.LogSource) error {
 		}
 	}
 
-	linesCh := make(chan string, 10000)
-	var wg sync.WaitGroup
-	for _, src := range sources {
-		r := reader.FromSourceFollow(src)
-		lines, err := r.Read(ctx)
-		if err != nil {
-			return err
-		}
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			for l := range lines {
-				select {
-				case linesCh <- l:
-				case <-ctx.Done():
-					return
-				}
-			}
-		}()
+	watchCtx, cancel := context.WithCancel(ctx)
+	defer cancel()
+	linesCh, err := fanInFollowWithPolicy(watchCtx, sources, func(_ string, err error) error {
+		return err
+	})
+	if err != nil {
+		return err
 	}
-	go func() {
-		wg.Wait()
-		close(linesCh)
-	}()
 
 	geoip := newGeoIPEnricherAsync()
 	if geoip != nil {
@@ -913,7 +917,7 @@ func runWatch(ctx context.Context, sources []types.LogSource) error {
 	}
 
 	p := tea.NewProgram(tui.NewModelWithGeoIPAndPatterns(linesCh, geoip, customPatterns), tea.WithAltScreen())
-	_, err := p.Run()
+	_, err = p.Run()
 	return err
 }
 

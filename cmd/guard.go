@@ -7,7 +7,6 @@ import (
 	"os"
 	"os/signal"
 	"strings"
-	"sync"
 	"syscall"
 	"time"
 
@@ -18,7 +17,6 @@ import (
 	"github.com/lenny-ts/caddy-analyzer/pkg/enrich"
 	"github.com/lenny-ts/caddy-analyzer/pkg/guard"
 	"github.com/lenny-ts/caddy-analyzer/pkg/guard/firewall"
-	"github.com/lenny-ts/caddy-analyzer/pkg/reader"
 )
 
 var (
@@ -152,30 +150,12 @@ func runGuard(cmd *cobra.Command, args []string) error {
 	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer cancel()
 
-	linesCh := make(chan string, 10000)
-	var wg sync.WaitGroup
-	for _, src := range sources {
-		r := reader.FromSourceFollow(src)
-		lines, err := r.Read(ctx)
-		if err != nil {
-			return fmt.Errorf("reading %s: %w", r.Name(), err)
-		}
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			for l := range lines {
-				select {
-				case linesCh <- l:
-				case <-ctx.Done():
-					return
-				}
-			}
-		}()
+	linesCh, err := fanInFollowWithPolicy(ctx, sources, func(name string, err error) error {
+		return fmt.Errorf("reading %s: %w", name, err)
+	})
+	if err != nil {
+		return err
 	}
-	go func() {
-		wg.Wait()
-		close(linesCh)
-	}()
 
 	guardNotify.auditLog = guardAuditLog
 	dispatcher, err := guardNotify.dispatcher()
