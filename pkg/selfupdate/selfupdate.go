@@ -172,11 +172,22 @@ func resolveTarget(installDir string) (target, destDir string, err error) {
 	return exe, filepath.Dir(exe), nil
 }
 
-// downloadArtifacts fetches checksums.txt and its .pem/.sig sidecars plus
-// the platform archive into dir. It returns the parsed manifest and the
-// staged archive path.
+// downloadArtifacts fetches checksums.txt and its signature material plus the
+// platform archive into dir. New releases use a bundle; legacy releases use
+// the .pem/.sig sidecars.
 func downloadArtifacts(ctx context.Context, client *http.Client, rel *Release, dir string) (map[string]string, string, error) {
-	for _, name := range [...]string{"checksums.txt", "checksums.txt.pem", "checksums.txt.sig"} {
+	checksums, err := FindAsset(rel, "checksums.txt")
+	if err != nil {
+		return nil, "", fmt.Errorf("release %s lacks verification material: %w", rel.Tag, err)
+	}
+	if _, err := fetchNamed(ctx, client, *checksums, dir); err != nil {
+		return nil, "", err
+	}
+	verificationAssets := []string{"checksums.txt.pem", "checksums.txt.sig"}
+	if _, err := FindAsset(rel, "checksums.txt.bundle"); err == nil {
+		verificationAssets = []string{"checksums.txt.bundle", "trusted_root.json"}
+	}
+	for _, name := range verificationAssets {
 		a, err := FindAsset(rel, name)
 		if err != nil {
 			return nil, "", fmt.Errorf("release %s lacks verification material: %w", rel.Tag, err)

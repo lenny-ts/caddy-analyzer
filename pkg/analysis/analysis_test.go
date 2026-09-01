@@ -25,6 +25,27 @@ func TestEngineAggregatesCityWithoutSchemaKnowledge(t *testing.T) {
 	}
 }
 
+func TestLRUCacheEvictsLeastRecentlyUsed(t *testing.T) {
+	c := newLRUCache[string](2)
+	created := 0
+	makeValue := func(value string) func() string {
+		return func() string { created++; return value }
+	}
+	c.getOrCreate("a", makeValue("a"))
+	c.getOrCreate("b", makeValue("b"))
+	c.getOrCreate("a", makeValue("unexpected"))
+	c.getOrCreate("c", makeValue("c"))
+	if got := c.getOrCreate("a", makeValue("unexpected")); got != "a" {
+		t.Fatalf("recent entry was evicted: %q", got)
+	}
+	if got := c.getOrCreate("b", makeValue("b2")); got != "b2" {
+		t.Fatalf("least recent entry was retained: %q", got)
+	}
+	if created != 4 {
+		t.Fatalf("create calls = %d, want 4", created)
+	}
+}
+
 func TestEngineProcessing(t *testing.T) {
 	engine := New(types.Filters{})
 

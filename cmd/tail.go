@@ -100,8 +100,7 @@ func runTail(cmd *cobra.Command, args []string) error {
 
 	var det *analysis.Detector
 	if tailDetect {
-		det = analysis.NewDetector()
-		det.SetUARotationThreshold(flagUARotation)
+		det = newDetector()
 	}
 
 	// Only spin up GeoIP when geo-based filters need it: enriching before

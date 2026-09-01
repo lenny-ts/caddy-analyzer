@@ -57,21 +57,26 @@ func certIdentityRegexp(repo string) string {
 const oidcIssuer = "https://token.actions.githubusercontent.com"
 
 // VerifyChecksumsSignature runs `cosign verify-blob` on the downloaded
-// checksums manifest using its certificate and signature sidecars. Any
-// failure (missing files, bad signature, wrong identity) returns an error
-// and the caller must NOT proceed with the replacement.
+// checksums manifest. New releases use a Sigstore bundle and trusted root;
+// older releases are verified using certificate and signature sidecars.
 func VerifyChecksumsSignature(ctx context.Context, runner CommandRunner, cosignPath, dir, repo string) error {
 	if runner == nil {
 		runner = ExecRunner{}
 	}
-	args := []string{
-		"verify-blob",
-		"--certificate", filepath.Join(dir, "checksums.txt.pem"),
-		"--signature", filepath.Join(dir, "checksums.txt.sig"),
-		"--certificate-identity-regexp", certIdentityRegexp(repo),
-		"--certificate-oidc-issuer", oidcIssuer,
-		filepath.Join(dir, "checksums.txt"),
+	bundle := filepath.Join(dir, "checksums.txt.bundle")
+	args := []string{"verify-blob"}
+	if _, err := os.Stat(bundle); err == nil {
+		trustedRoot := filepath.Join(dir, "trusted_root.json")
+		if _, err := os.Stat(trustedRoot); err != nil {
+			return fmt.Errorf("cosign bundle is present but trusted root is unavailable: %w", err)
+		}
+		args = append(args, "--bundle", bundle, "--trusted-root", trustedRoot)
+	} else if !os.IsNotExist(err) {
+		return fmt.Errorf("inspect cosign bundle: %w", err)
+	} else {
+		args = append(args, "--certificate", filepath.Join(dir, "checksums.txt.pem"), "--signature", filepath.Join(dir, "checksums.txt.sig"))
 	}
+	args = append(args, "--certificate-identity-regexp", certIdentityRegexp(repo), "--certificate-oidc-issuer", oidcIssuer, filepath.Join(dir, "checksums.txt"))
 	if err := runner.Run(ctx, cosignPath, args...); err != nil {
 		return fmt.Errorf("cosign verification FAILED: the download will not be installed (%w)", err)
 	}

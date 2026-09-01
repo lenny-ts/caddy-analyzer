@@ -15,6 +15,8 @@ caddy-analyze unban --list        # audit — read-only</code></pre>
 <thead><tr><th>Flag</th><th>Short</th><th>Default</th><th>Description</th></tr></thead>
 <tbody>
 <tr><td><code>--audit-log</code></td><td></td><td><code>/var/log/caddy-analyzer-audit.jsonl</code></td><td>Audit log path (empty disables)</td></tr>
+<tr><td><code>--audit-syslog</code></td><td></td><td></td><td>Forward audit events to syslog UDP</td></tr>
+<tr><td><code>--webhook-url</code> / <code>--audit-webhook</code></td><td></td><td></td><td>Forward audit events to a generic or provider webhook</td></tr>
 <tr><td><code>--state-file</code></td><td></td><td><code>/var/lib/caddy-analyzer/blocked.json</code></td><td>Guard state sync (empty disables)</td></tr>
 <tr><td><code>--all</code></td><td><code>-A</code></td><td>false</td><td>unban: all currently blocked IPs</td></tr>
 <tr><td><code>--list</code></td><td><code>-l</code></td><td>false</td><td>unban: list without removing (<span class="pill pill-readonly">read-only</span>)</td></tr>

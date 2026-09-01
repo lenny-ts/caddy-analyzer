@@ -1,6 +1,7 @@
 package output
 
 import (
+	"context"
 	"encoding/csv"
 	"encoding/json"
 	"fmt"
@@ -20,10 +21,13 @@ import (
 type Format string
 
 const (
-	FormatTable Format = "table"
-	FormatJSON  Format = "json"
-	FormatCSV   Format = "csv"
-	FormatHTML  Format = "html"
+	FormatTable         Format = "table"
+	FormatJSON          Format = "json"
+	FormatCSV           Format = "csv"
+	FormatHTML          Format = "html"
+	FormatElasticsearch Format = "elasticsearch"
+	FormatOpenSearch    Format = "opensearch"
+	FormatLoki          Format = "loki"
 )
 
 var (
@@ -53,22 +57,33 @@ func ParseFormat(s string) Format {
 		return FormatCSV
 	case "html":
 		return FormatHTML
+	case "elasticsearch", "es":
+		return FormatElasticsearch
+	case "opensearch", "os":
+		return FormatOpenSearch
+	case "loki":
+		return FormatLoki
 	default:
 		return FormatTable
 	}
 }
 
 type Report struct {
-	engine   *analysis.Engine
-	opStats  *types.OperationalStats
-	format   Format
-	top      int
-	sections types.TopSections
-	writer   io.Writer
-	detect   bool
-	defang   bool
-	filters  types.Filters
+	engine        *analysis.Engine
+	opStats       *types.OperationalStats
+	format        Format
+	top           int
+	sections      types.TopSections
+	writer        io.Writer
+	detect        bool
+	defang        bool
+	filters       types.Filters
+	exporter      RemoteExporter
+	remoteContext context.Context
 }
+
+func (r *Report) SetRemoteExporter(e RemoteExporter)   { r.exporter = e }
+func (r *Report) SetRemoteContext(ctx context.Context) { r.remoteContext = ctx }
 
 func NewReport(engine *analysis.Engine, format Format, top int) *Report {
 	return &Report{
@@ -229,6 +244,19 @@ func (r *Report) Print() error {
 		}()
 	}
 	switch r.format {
+	case FormatElasticsearch, FormatOpenSearch, FormatLoki:
+		if r.exporter == nil {
+			return fmt.Errorf("format %q requires a remote exporter", r.format)
+		}
+		data, err := json.Marshal(r.reportData())
+		if err != nil {
+			return fmt.Errorf("encode remote report: %w", err)
+		}
+		ctx := r.remoteContext
+		if ctx == nil {
+			ctx = context.Background()
+		}
+		return r.exporter.Export(ctx, []json.RawMessage{data})
 	case FormatJSON:
 		return r.printJSON()
 	case FormatCSV:
@@ -750,6 +778,13 @@ func printTopNWithBar(w io.Writer, items []types.CountItem, total int64, useColo
 }
 
 func (r *Report) printJSON() error {
+	data := r.reportData()
+	enc := json.NewEncoder(r.writer)
+	enc.SetIndent("", "  ")
+	return enc.Encode(data)
+}
+
+func (r *Report) reportData() map[string]interface{} {
 	s := r.engine.Stats()
 	total := s.TotalRequests
 
@@ -835,9 +870,7 @@ func (r *Report) printJSON() error {
 		}
 	}
 
-	enc := json.NewEncoder(r.writer)
-	enc.SetIndent("", "  ")
-	return enc.Encode(data)
+	return data
 }
 
 func (r *Report) printCSV() error {

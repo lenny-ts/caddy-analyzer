@@ -56,6 +56,8 @@ func TestSelectAsset(t *testing.T) {
 		{Name: "checksums.txt", URL: "sums"},
 		{Name: "checksums.txt.pem", URL: "pem"},
 		{Name: "checksums.txt.sig", URL: "sig"},
+		{Name: "checksums.txt.bundle", URL: "bundle"},
+		{Name: "trusted_root.json", URL: "root"},
 	}}
 
 	got, err := SelectAsset(rel.Assets, "linux", "amd64")
@@ -143,9 +145,14 @@ func (r *recordingRunner) Run(_ context.Context, name string, args ...string) er
 }
 
 func TestVerifyChecksumsSignatureBuildsCosignCommand(t *testing.T) {
-	dir := "/tmp/stage"
+	dir := t.TempDir()
 	repo := DefaultRepo
 	runner := &recordingRunner{}
+	for _, name := range []string{"checksums.txt.pem", "checksums.txt.sig"} {
+		if err := os.WriteFile(filepath.Join(dir, name), []byte("fixture"), 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
 
 	if err := VerifyChecksumsSignature(context.Background(), runner, "cosign", dir, repo); err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -189,6 +196,38 @@ func TestVerifyChecksumsSignatureBuildsCosignCommand(t *testing.T) {
 	bad := "https://github.com/attacker/forked-analyzer/.github/workflows/release.yml@refs/tags/v0.5.0"
 	if re.MatchString(bad) {
 		t.Errorf("identity regexp %q must reject foreign repos (%q)", call[idIdx], bad)
+	}
+}
+
+func TestVerifyChecksumsSignatureUsesBundleAndTrustedRoot(t *testing.T) {
+	dir := t.TempDir()
+	for _, name := range []string{"checksums.txt.bundle", "trusted_root.json"} {
+		if err := os.WriteFile(filepath.Join(dir, name), []byte("fixture"), 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	runner := &recordingRunner{}
+	if err := VerifyChecksumsSignature(context.Background(), runner, "cosign", dir, DefaultRepo); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	call := strings.Join(runner.calls[0], "\x00")
+	for _, want := range []string{"--bundle", filepath.Join(dir, "checksums.txt.bundle"), "--trusted-root", filepath.Join(dir, "trusted_root.json")} {
+		if !strings.Contains(call, want) {
+			t.Errorf("cosign args missing %q; got %v", want, runner.calls[0])
+		}
+	}
+	if strings.Contains(call, "checksums.txt.pem") || strings.Contains(call, "checksums.txt.sig") {
+		t.Errorf("bundle verification unexpectedly used legacy sidecars: %v", runner.calls[0])
+	}
+}
+
+func TestVerifyChecksumsSignatureRejectsIncompleteBundle(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "checksums.txt.bundle"), []byte("fixture"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := VerifyChecksumsSignature(context.Background(), &recordingRunner{}, "cosign", dir, DefaultRepo); err == nil {
+		t.Fatal("bundle without trusted root must fail closed")
 	}
 }
 

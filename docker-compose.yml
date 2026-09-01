@@ -1,0 +1,21 @@
+services:
+  caddy-analyzer:
+    build:
+      context: .
+      args:
+        VERSION: demo
+    command: ["tail", "--detect"]
+    working_dir: /etc/caddy-analyzer
+    volumes:
+      - ./testdata:/logs:ro
+      - ./deploy/demo/caddy-analyzer.json:/etc/caddy-analyzer/caddy-analyzer.json:ro
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,nodev
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    init: true
+    stdin_open: false
+    tty: false

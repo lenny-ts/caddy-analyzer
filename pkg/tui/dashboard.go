@@ -84,7 +84,11 @@ func NewModel(linesCh chan string) Model {
 // the given GeoIP enricher before it reaches the analysis engine. Pass nil
 // to disable GeoIP (equivalent to NewModel).
 func NewModelWithGeoIP(linesCh chan string, g *enrich.GeoIP) Model {
-	det := analysis.NewDetector()
+	return NewModelWithGeoIPAndPatterns(linesCh, g, nil)
+}
+
+func NewModelWithGeoIPAndPatterns(linesCh chan string, g *enrich.GeoIP, custom []analysis.DetectionPattern) Model {
+	det := analysis.NewDetectorWithPatterns(custom)
 	eng := analysis.New(types.Filters{})
 	eng.SetDetector(det)
 	opEng := analysis.NewOperationalEngine(types.Filters{})

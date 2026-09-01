@@ -97,6 +97,10 @@ caddy-analyze -f html -o report.html --detect
 # Compare two log files for regressions
 caddy-analyze diff before.log after.log
 
+# Save a reusable baseline, then fail on regressions above 5%
+caddy-analyze baseline save --output baseline.json production.log
+caddy-analyze --against baseline.json --threshold 5 production.log
+
 # Launch interactive TUI dashboard
 caddy-analyze --watch
 
@@ -108,6 +112,15 @@ caddy-analyze blocklist init --no-default-blocklists --blocklist-config mylist.t
 # Real-time guard with blocklist + country-block
 sudo caddy-analyze guard --country-block CN,RU,IR docker://my-caddy
 ```
+
+The baseline is a versioned JSON file containing the analyzed HTTP and
+operational aggregates plus creation time, tool version, sources, filters,
+and detection metadata. `--against` applies the current filters and exits
+with status 1 when 5xx errors, average latency, or operational errors rise,
+or requests-per-second falls, by more than `--threshold` percent. Newly
+failing HTTP paths also fail the comparison. `--format table|json|csv` is
+supported for comparison output; malformed files, unsupported schema versions,
+directories, and symlinks are rejected.
 
 ---
 
@@ -142,6 +155,7 @@ Caddy v2 uses a **structured JSON log format** that differs from the Common/Comb
 | **Threat Intel** | Offline GeoIP enrichment (MaxMind GeoLite2 / DB-IP mmdb, no API key) with auto-download of Country, ASN, and City databases. `top country` / `top city` / `top asn` dimensions. Country, city, coordinates, and heatmap sections in HTML reports. Auto-discovery in cwd, `~/.config/caddy-analyzer/`, `/var/lib/caddy-analyzer/`, `/usr/share/GeoIP/` |
 | **Traffic Analysis** | Classifies human users vs crawlers (Googlebot, Bingbot, Yandex, DuckDuckBot, GPTBot, ClaudeBot, Bytespider, CCBot, Amazonbot, and others) and automated scrapers |
 | **Diff Engine** | Side-by-side comparison of two log files detecting 5xx spikes, RPS shifts, and latency regressions |
+| **Baselines** | Versioned JSON snapshots via `baseline save`; `--against` compares HTTP and operational statistics and returns a non-zero exit status when a regression exceeds `--threshold` |
 | **TUI Dashboard** | 8-tab Bubbletea/Lipgloss interface with live streaming, security alerts, top metrics, GeoIP country/ASN, and operational (non-HTTP) events |
 | **HTML Reports** | Standalone dark-mode single-file HTML reports for sharing with your team |
 | **Data Sources** | Local files, stdin, Docker (`docker://`), Kubernetes (`k8s://`), systemd journalctl (`journalctl://`) |
@@ -219,6 +233,28 @@ caddy-analyze update --version v0.6.1    # pin an exact release
 sudo caddy-analyze update                # when the binary is in a root-owned path
 ```
 
+### Local Docker and Kubernetes demos
+
+The repository includes a safe, file-based Compose demo. It mounts the sample
+logs read-only, drops all capabilities, and does not mount the Docker socket:
+
+```bash
+docker compose up --build
+```
+
+The Helm chart is under [`deploy/helm/caddy-analyzer`](deploy/helm/caddy-analyzer)
+and reads a log file from a PVC when `logVolume.existingClaim` is set. Its
+default `emptyDir` is intentionally empty; configure a PVC or an explicit
+host path before deploying against real logs. The chart creates no Service,
+ServiceAccount, or RBAC objects because the analyzer is a CLI and does not
+call the Kubernetes API.
+
+The analyzer has no HTTP health endpoint. Helm's optional liveness probe only
+checks that the process is alive, not that a log exists or that analysis is
+progressing. Docker socket access is disabled by default; enabling
+`dockerSocket.enabled` is an explicit, trusted-local-demo opt-in and grants
+control over the Docker daemon.
+
 ---
 
 ## Documentation
@@ -259,11 +295,25 @@ Subcommands:
 <details>
 <summary><strong>Flags Reference</strong></summary>
 
+Remote formats send one aggregated report document per emitted report, not the
+individual access-log entries. Elasticsearch and OpenSearch use the Bulk API;
+Loki receives the same JSON report as one log line. In `--follow` and
+`--interval`, each window is flushed synchronously, and a failed push is
+returned as a command error.
+
 | Flag | Short | Default | Description |
 |---|---|---|---|
 | `--detect` | `-d` | `false` | Enable security threat detection |
-| `--format` | `-f` | `table` | Output format: `table`, `json`, `csv`, `html` |
+| `--format` | `-f` | `table` | Output format: `table`, `json`, `csv`, `html`, `elasticsearch`, `opensearch`, `loki` |
 | `--output` | `-o` | `""` | Write report to file |
+| `--remote-url` | | `""` | HTTP endpoint for Elasticsearch/OpenSearch bulk or Loki push |
+| `--remote-index` | | `caddy-analyzer` | Elasticsearch/OpenSearch index |
+| `--remote-user/password` | | `""` | HTTP Basic authentication |
+| `--remote-token` | | `""` | HTTP Bearer token authentication |
+| `--remote-batch-size` | | `100` | Aggregated documents per request |
+| `--remote-retries` | | `3` | Retries after the first request |
+| `--remote-backoff` | | `250ms` | Initial exponential retry delay |
+| `--remote-timeout` | | `10s` | HTTP request timeout |
 | `--watch` | `-w` | `false` | Launch 8-tab interactive TUI dashboard (Summary, Realtime, Security, Top IPs/Paths, User Agents, Geo, Operational) |
 | `--top` | `-t` | `10` | Max top entries in tables (0 disables) |
 | `--workers` | | `0` | Parallel parsing workers. `0` uses the available CPU count |
@@ -302,6 +352,11 @@ Subcommands:
 | `--max-size` | | `""` | Filter responses at most this size (bytes, or `k`/`mb`/`gb` suffix) |
 | `--namespace` | `-n` | `""` | Kubernetes pod namespace |
 | `--audit-log` | | `/var/log/caddy-analyzer-audit.jsonl` | JSON-lines audit log of block/unblock/anomaly actions (guard/block/unban). Empty to disable |
+| `--audit-syslog` | | `""` | Send audit events to a syslog UDP address (guard/block/unban) |
+| `--webhook-url` | | `""` | Asynchronous notification endpoint; use with `--webhook-provider` (`generic`, `slack`, `discord`, `pagerduty`) |
+| `--pagerduty-routing-key` | | `""` | PagerDuty Events API routing key; never included in diagnostics |
+| `--audit-timeout` / `--audit-retries` | | `5s` / `2` | Per-delivery timeout and bounded retries (maximum 5) |
+| `--audit-rate-limit` | | `0` | Minimum interval between notifications for the same IP; `0` disables |
 | `--state-file` | | `/var/lib/caddy-analyzer/blocked.json` | Persist blocked-IP state across restarts (guard/block/unban). Empty to disable |
 | `--never-block` | | `""` | Comma-separated IPs/CIDRs that should never be blocked (guard) |
 | `--never-block-file` | | `""` | File with IPs/CIDRs (one per line, `#` comments) to never block (guard) |
@@ -403,6 +458,14 @@ go test ./...
 
 PRs and issues are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md).
 
+
+## Contributors
+
+<p align="center">
+  <a href="https://github.com/lenny-ts/caddy-analyzer/graphs/contributors">
+    <img src="https://contrib.rocks/image?repo=lenny-ts/caddy-analyzer" alt="Contributors" />
+  </a>
+</p>
 
 ## License
 

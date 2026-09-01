@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"bufio"
 	"context"
 	"fmt"
 	"io"
@@ -68,11 +67,24 @@ var (
 	flagDefang         bool
 	flagGeoIPDB        string
 	flagNoAutoDL       bool
+	flagAgainst        string
+	flagThreshold      float64
+	flagRemoteURL      string
+	flagRemoteIndex    string
+	flagRemoteUser     string
+	flagRemotePassword string
+	flagRemoteToken    string
+	flagRemoteBatch    int
+	flagRemoteRetries  int
+	flagRemoteBackoff  time.Duration
+	flagRemoteTimeout  time.Duration
 	flagLevel          []string
 	flagOpsOnly        bool
+	flagCustomPatterns []string
+	customPatterns     []analysis.DetectionPattern
 )
 
-var Version = "0.6.0-dev"
+var Version = "0.7.0-dev"
 
 var rootCmd = &cobra.Command{
 	Use:          "caddy-analyze [flags] [source...]",
@@ -92,6 +104,7 @@ Subcommands:
   tail [source...]       Colorized real-time log viewer
   top <dimension>        Quick top-N metric inspector (path, ip, ua, status, method, host, bandwidth, country, city, asn)
   diff <log1> <log2>     Compare two log files for RPS shifts, 5xx spikes, and latency changes
+  baseline save <source...> Save a versioned JSON baseline with --output
 
 Filtering (activate colored log listing instead of report):
   --ip <ip/CIDR>         Filter by client IP or subnet
@@ -109,6 +122,7 @@ Filtering (activate colored log listing instead of report):
   -e, --errors-only      Filter server errors only
   --no-bots / --bots-only Filter by traffic type
   --grep <pattern>   Search across URI, User-Agent, IP
+  --custom-patterns <file.json>  Load custom detection rules (repeatable)
 
 Config (auto-detected):
   ./caddy-analyzer.json        Local config
@@ -135,6 +149,9 @@ Examples:
 			// tuning simply falls back to defaults rather than blocking a run.
 			cfg = nil
 		}
+		if err := loadCustomPatterns(); err != nil {
+			return err
+		}
 		f := cmd.Flags()
 		return applyTuning(cfg,
 			f.Changed("geo-cache-ttl"),
@@ -159,8 +176,17 @@ func init() {
 	flags.StringVarP(&flagPath, "path", "p", "", "Filter by path (glob: /api/*)")
 	flags.IntVarP(&flagTop, "top", "t", 10, "Show top N (0 to disable)")
 	flags.IntVar(&flagWorkers, "workers", 0, "Parallel parsing workers (0 = number of available CPUs)")
-	flags.StringVarP(&flagFormat, "format", "f", "table", "Output format: table, json, csv, html")
+	flags.StringVarP(&flagFormat, "format", "f", "table", "Output format: table, json, csv, html, elasticsearch, opensearch, loki")
 	flags.StringVarP(&flagOutput, "output", "o", "", "Write report to file instead of stdout")
+	flags.StringVar(&flagRemoteURL, "remote-url", "", "HTTP endpoint for elasticsearch/opensearch/Loki output")
+	flags.StringVar(&flagRemoteIndex, "remote-index", "caddy-analyzer", "Elasticsearch/OpenSearch index")
+	flags.StringVar(&flagRemoteUser, "remote-user", "", "Remote HTTP basic-auth username")
+	flags.StringVar(&flagRemotePassword, "remote-password", "", "Remote HTTP basic-auth password")
+	flags.StringVar(&flagRemoteToken, "remote-token", "", "Remote HTTP bearer token")
+	flags.IntVar(&flagRemoteBatch, "remote-batch-size", 100, "Remote documents per HTTP request")
+	flags.IntVar(&flagRemoteRetries, "remote-retries", 3, "Remote HTTP retries after the first attempt")
+	flags.DurationVar(&flagRemoteBackoff, "remote-backoff", 250*time.Millisecond, "Initial remote retry backoff")
+	flags.DurationVar(&flagRemoteTimeout, "remote-timeout", 10*time.Second, "Remote HTTP request timeout")
 	flags.BoolVarP(&flag2xx, "2xx", "", false, "Filter 2xx status codes")
 	flags.BoolVarP(&flag3xx, "3xx", "", false, "Filter 3xx status codes")
 	flags.BoolVarP(&flag4xx, "4xx", "", false, "Filter 4xx status codes")
@@ -187,12 +213,15 @@ func init() {
 	flags.StringVar(&flagHost, "host", "", "Filter by request host (substring match, case-insensitive)")
 	flags.StringArrayVar(&flagLevel, "level", nil, "Filter operational logs by level (error, warn, info, debug). Repeatable")
 	flags.BoolVarP(&flagOpsOnly, "ops-only", "", false, "Show only operational (non-HTTP) log events")
+	flags.StringArrayVar(&flagCustomPatterns, "custom-patterns", nil, "Load custom detection patterns from JSON (repeatable)")
 	flags.StringVar(&flagMaxLatency, "max-latency", "", "Filter requests faster than duration (e.g. 500ms, 1s). Counterpart to --slow")
 	flags.StringVar(&flagMinSize, "min-size", "", "Filter responses at least this size (bytes, or k/mb/gb suffix e.g. 1mb)")
 	flags.StringVar(&flagMaxSize, "max-size", "", "Filter responses at most this size (bytes, or k/mb/gb suffix e.g. 512kb)")
 	flags.BoolVarP(&flagDefang, "defang", "", false, "Defang IPs in output (replace . with [.]) for safe sharing")
 	flags.StringVarP(&flagGeoIPDB, "geoip-db", "", "", "Path to GeoIP mmdb file (DB-IP or MaxMind). Auto-discovers if empty")
 	flags.BoolVarP(&flagNoAutoDL, "no-auto-download", "", false, "Disable automatic download of DB-IP lite mmdb on first run")
+	flags.StringVar(&flagAgainst, "against", "", "Compare the current analysis with a baseline JSON file")
+	flags.Float64Var(&flagThreshold, "threshold", 20, "Regression threshold percentage (default 20; non-zero exit when exceeded)")
 	rootCmd.PersistentFlags().StringVarP(&flagK8sNS, "namespace", "n", "", "Kubernetes namespace")
 
 	rootFlags := rootCmd.Flags()
@@ -228,6 +257,25 @@ func addHiddenCompletionCmd() {
 	rootCmd.AddCommand(c)
 }
 
+func loadCustomPatterns() error {
+	customPatterns = nil
+	for _, path := range flagCustomPatterns {
+		patterns, err := analysis.LoadCustomPatterns(path)
+		if err != nil {
+			return err
+		}
+		customPatterns = append(customPatterns, patterns...)
+		fmt.Fprintf(os.Stderr, "loaded %d custom detection patterns from %s\n", len(patterns), path)
+	}
+	return nil
+}
+
+func newDetector() *analysis.Detector {
+	det := analysis.NewDetectorWithPatterns(customPatterns)
+	det.SetUARotationThreshold(flagUARotation)
+	return det
+}
+
 func runAnalysis(cmd *cobra.Command, args []string) error {
 	if err := validateFlags(); err != nil {
 		return err
@@ -236,6 +284,11 @@ func runAnalysis(cmd *cobra.Command, args []string) error {
 	sources, err := resolveSources(args)
 	if err != nil {
 		return err
+	}
+	if flagAgainst != "" {
+		ctx, cancel := ctxForCommand()
+		defer cancel()
+		return runAgainst(ctx, sources)
 	}
 
 	filters, err := buildFilters()
@@ -270,6 +323,10 @@ func runAnalysis(cmd *cobra.Command, args []string) error {
 	return runOnceMode(ctx, sources, filters)
 }
 
+func ctxForCommand() (context.Context, context.CancelFunc) {
+	return signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+}
+
 func validateFlags() error {
 	if flagWorkers < 0 {
 		return fmt.Errorf("--workers must be 0 or greater")
@@ -286,20 +343,41 @@ func validateFlags() error {
 	if flagNoBots && flagBotsOnly {
 		return fmt.Errorf("--no-bots and --bots-only are mutually exclusive")
 	}
+	if flagThreshold < 0 {
+		return fmt.Errorf("--threshold must not be negative")
+	}
 	switch strings.ToLower(flagFormat) {
-	case "table", "json", "csv", "html":
+	case "table", "json", "csv", "html", "elasticsearch", "es", "opensearch", "os", "loki":
 	default:
-		return fmt.Errorf("unsupported --format %q (supported: table, json, csv, html)", flagFormat)
+		return fmt.Errorf("unsupported --format %q (supported: table, json, csv, html, elasticsearch, opensearch, loki)", flagFormat)
+	}
+	remoteFormat := output.ParseFormat(flagFormat)
+	if (remoteFormat == output.FormatElasticsearch || remoteFormat == output.FormatOpenSearch || remoteFormat == output.FormatLoki) && flagRemoteURL == "" {
+		return fmt.Errorf("--remote-url is required for remote format %q", flagFormat)
+	}
+	if flagRemoteBatch <= 0 || flagRemoteRetries < 0 || flagRemoteBackoff < 0 || flagRemoteTimeout <= 0 {
+		return fmt.Errorf("remote batching, retry and timeout values are invalid")
 	}
 	return nil
+}
+
+func newRemoteExporter() (output.RemoteExporter, error) {
+	cfg := output.RemoteConfig{URL: flagRemoteURL, Index: flagRemoteIndex, Username: flagRemoteUser, Password: flagRemotePassword, Token: flagRemoteToken, BatchSize: flagRemoteBatch, Retries: flagRemoteRetries, Backoff: flagRemoteBackoff, Timeout: flagRemoteTimeout}
+	switch output.ParseFormat(flagFormat) {
+	case output.FormatElasticsearch, output.FormatOpenSearch:
+		return output.NewElasticsearchExporter(cfg)
+	case output.FormatLoki:
+		return output.NewLokiExporter(cfg)
+	default:
+		return nil, nil
+	}
 }
 
 func runOnceMode(ctx context.Context, sources []types.LogSource, filters types.Filters) error {
 	engine := analysis.New(filters)
 	opEngine := analysis.NewOperationalEngine(filters)
 	if flagDetect {
-		det := analysis.NewDetector()
-		det.SetUARotationThreshold(flagUARotation)
+		det := newDetector()
 		engine.SetDetector(det)
 	}
 	engine.Stats().MaxCardinality = flagMaxCard
@@ -314,8 +392,7 @@ func runOnceMode(ctx context.Context, sources []types.LogSource, filters types.F
 		defer func() { _ = geoip.Close() }()
 	}
 
-	totalLines := countTotalLines(sources)
-	bar := progress.New(os.Stderr, totalLines, "Analyzing")
+	bar := progress.New(os.Stderr, 0, "Analyzing")
 
 	for _, src := range sources {
 		r := reader.FromSource(src)
@@ -393,6 +470,12 @@ func runOnceMode(ctx context.Context, sources []types.LogSource, filters types.F
 	report.SetDefang(flagDefang)
 	report.SetFilters(filters)
 	report.SetOperationalStats(opEngine.Stats())
+	remote, err := newRemoteExporter()
+	if err != nil {
+		return err
+	}
+	report.SetRemoteExporter(remote)
+	report.SetRemoteContext(ctx)
 	if flagOutput != "" {
 		f, err := createOutputFile(flagOutput)
 		if err != nil {
@@ -541,51 +624,35 @@ func enrichGeoIP(entry *types.LogEntry, g *enrich.GeoIP) {
 	entry.Geo = info
 }
 
-// countTotalLines counts the total number of lines across all local file
-// sources. For non-file sources (stdin, docker, k8s, journalctl), returns 0
-// (indeterminate progress). This is a fast pre-scan (~70K lines/sec) used
-// only to set up the progress bar — the actual parsing happens in the main loop.
-func countTotalLines(sources []types.LogSource) int64 {
-	var total int64
+// fanInFollowWithPolicy opens every source in follow mode and multiplexes its
+// lines into one channel. Returning a non-nil error from onError stops setup;
+// returning nil skips the bad source and continues with the remaining ones.
+func fanInFollowWithPolicy(ctx context.Context, sources []types.LogSource, onError func(string, error) error) (chan string, error) {
+	readers := make([]reader.LogReader, 0, len(sources))
 	for _, src := range sources {
-		if src.Type != types.SourceFile {
-			return 0
-		}
-		f, err := os.Open(src.Path)
-		if err != nil {
-			return 0
-		}
-		scanner := bufio.NewScanner(f)
-		scanner.Buffer(make([]byte, 0, 64*1024), 1024*1024)
-		for scanner.Scan() {
-			total++
-		}
-		_ = scanner.Err()
-		_ = f.Close()
+		readers = append(readers, reader.FromSourceFollow(src))
 	}
-	return total
+	return fanInFollowReaders(ctx, readers, onError)
 }
 
-// fanInFollow opens every source in follow mode and multiplexes their lines
-// into a single channel. Per-source read errors are logged to stderr and the
-// offending source is skipped, so one bad source does not silence the rest.
-// The returned channel is closed when every reader has finished (follow readers
-// finish on context cancellation). This fixes the multi-source bug where the
-// previous sequential `for _, src := range sources { for line := range lines {} }`
-// blocked on the first source forever, since follow readers only close their
-// channel on ctx.Done().
-func fanInFollow(ctx context.Context, sources []types.LogSource) <-chan string {
+func fanInFollowReaders(ctx context.Context, readers []reader.LogReader, onError func(string, error) error) (chan string, error) {
 	out := make(chan string, 10000)
+	ctx, cancel := context.WithCancel(ctx)
 	var wg sync.WaitGroup
-	for _, src := range sources {
-		r := reader.FromSourceFollow(src)
+	for _, r := range readers {
 		lines, err := r.Read(ctx)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "error reading %s: %v\n", r.Name(), err)
+			if onError != nil {
+				if callbackErr := onError(r.Name(), err); callbackErr != nil {
+					cancel()
+					wg.Wait()
+					return nil, callbackErr
+				}
+			}
 			continue
 		}
 		wg.Add(1)
-		go func() {
+		go func(lines <-chan string) {
 			defer wg.Done()
 			for l := range lines {
 				select {
@@ -594,13 +661,24 @@ func fanInFollow(ctx context.Context, sources []types.LogSource) <-chan string {
 					return
 				}
 			}
-		}()
+		}(lines)
 	}
 	go func() {
 		wg.Wait()
+		cancel()
 		close(out)
 	}()
-	return out
+	return out, nil
+}
+
+// fanInFollow keeps the follow/tail behavior of logging and skipping bad
+// sources while sharing the reader lifecycle with watch and guard.
+func fanInFollow(ctx context.Context, sources []types.LogSource) <-chan string {
+	lines, _ := fanInFollowWithPolicy(ctx, sources, func(name string, err error) error {
+		fmt.Fprintf(os.Stderr, "error reading %s: %v\n", name, err)
+		return nil
+	})
+	return lines
 }
 
 func runFollowMode(ctx context.Context, sources []types.LogSource, filters types.Filters) error {
@@ -613,12 +691,15 @@ func runFollowMode(ctx context.Context, sources []types.LogSource, filters types
 	engine := analysis.New(filters)
 	opEngine := analysis.NewOperationalEngine(filters)
 	if flagDetect {
-		det := analysis.NewDetector()
-		det.SetUARotationThreshold(flagUARotation)
+		det := newDetector()
 		engine.SetDetector(det)
 	}
 	engine.Stats().MaxCardinality = flagMaxCard
 	windowStart := time.Now()
+	remote, err := newRemoteExporter()
+	if err != nil {
+		return err
+	}
 
 	geoip := newGeoIPEnricher()
 	if geoip != nil {
@@ -639,8 +720,7 @@ func runFollowMode(ctx context.Context, sources []types.LogSource, filters types
 		engine = analysis.New(filters)
 		opEngine = analysis.NewOperationalEngine(filters)
 		if flagDetect {
-			det := analysis.NewDetector()
-			det.SetUARotationThreshold(flagUARotation)
+			det := newDetector()
 			engine.SetDetector(det)
 		}
 		engine.Stats().MaxCardinality = flagMaxCard
@@ -650,9 +730,7 @@ func runFollowMode(ctx context.Context, sources []types.LogSource, filters types
 	// emitReport finalizes the current window and prints it. It takes no
 	// arguments on purpose: resetEngine reassigns engine and opEngine, so a
 	// closure over the variables always reads whichever engine is live now.
-	// A print failure is reported and swallowed, as before, so one bad write
-	// does not end the follow session.
-	emitReport := func() {
+	emitReport := func() error {
 		engine.Finalize()
 		report := output.NewReportWithSections(engine, output.ParseFormat(flagFormat), flagTop, sections)
 		report.SetDetect(flagDetect)
@@ -660,10 +738,11 @@ func runFollowMode(ctx context.Context, sources []types.LogSource, filters types
 		report.SetFilters(filters)
 		report.SetOperationalStats(opEngine.Stats())
 		report.SetWriter(w)
-		if err := report.Print(); err != nil {
-			fmt.Fprintf(os.Stderr, "write report: %v\n", err)
-		}
+		report.SetRemoteExporter(remote)
+		report.SetRemoteContext(ctx)
+		return report.Print()
 	}
+	var reportErr error
 
 	processParsedLines(ctx, fanInFollow(ctx, sources), configuredWorkers(), func(entry types.Entry, err error) {
 		if err != nil || entry == nil {
@@ -677,18 +756,21 @@ func runFollowMode(ctx context.Context, sources []types.LogSource, filters types
 		case *types.OperationalEntry:
 			opEngine.Process(e)
 		}
+		if reportErr != nil {
+			return
+		}
 		if time.Since(last) > 5*time.Second {
-			emitReport()
+			reportErr = emitReport()
 			if time.Since(windowStart) > window {
 				resetEngine()
 			}
 			last = time.Now()
 		} else if time.Since(windowStart) > window {
-			emitReport()
+			reportErr = emitReport()
 			resetEngine()
 		}
 	})
-	return nil
+	return reportErr
 }
 
 func runIntervalMode(ctx context.Context, sources []types.LogSource, filters types.Filters, interval time.Duration) error {
@@ -712,16 +794,24 @@ func runIntervalMode(ctx context.Context, sources []types.LogSource, filters typ
 		defer func() { _ = f.Close() }()
 		w = f
 	}
+	remote, err := newRemoteExporter()
+	if err != nil {
+		return err
+	}
 
 	reportFn := func(e *analysis.Engine, op *analysis.OperationalEngine, t time.Time) error {
 		e.Finalize()
-		fmt.Fprintf(w, "\n--- %s ---\n", t.Format(time.RFC3339))
+		if remote == nil {
+			fmt.Fprintf(w, "\n--- %s ---\n", t.Format(time.RFC3339))
+		}
 		report := output.NewReportWithSections(e, output.ParseFormat(flagFormat), flagTop, sections)
 		report.SetDetect(flagDetect)
 		report.SetDefang(flagDefang)
 		report.SetFilters(filters)
 		report.SetOperationalStats(op.Stats())
 		report.SetWriter(w)
+		report.SetRemoteExporter(remote)
+		report.SetRemoteContext(ctx)
 		return report.Print()
 	}
 
@@ -729,8 +819,7 @@ func runIntervalMode(ctx context.Context, sources []types.LogSource, filters typ
 		engine = analysis.New(filters)
 		opEngine = analysis.NewOperationalEngine(filters)
 		if flagDetect {
-			det := analysis.NewDetector()
-			det.SetUARotationThreshold(flagUARotation)
+			det := newDetector()
 			engine.SetDetector(det)
 		}
 	}
@@ -813,38 +902,22 @@ func runWatch(ctx context.Context, sources []types.LogSource) error {
 		}
 	}
 
-	linesCh := make(chan string, 10000)
-	var wg sync.WaitGroup
-	for _, src := range sources {
-		r := reader.FromSourceFollow(src)
-		lines, err := r.Read(ctx)
-		if err != nil {
-			return err
-		}
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			for l := range lines {
-				select {
-				case linesCh <- l:
-				case <-ctx.Done():
-					return
-				}
-			}
-		}()
+	watchCtx, cancel := context.WithCancel(ctx)
+	defer cancel()
+	linesCh, err := fanInFollowWithPolicy(watchCtx, sources, func(_ string, err error) error {
+		return err
+	})
+	if err != nil {
+		return err
 	}
-	go func() {
-		wg.Wait()
-		close(linesCh)
-	}()
 
 	geoip := newGeoIPEnricherAsync()
 	if geoip != nil {
 		defer func() { _ = geoip.Close() }()
 	}
 
-	p := tea.NewProgram(tui.NewModelWithGeoIP(linesCh, geoip), tea.WithAltScreen())
-	_, err := p.Run()
+	p := tea.NewProgram(tui.NewModelWithGeoIPAndPatterns(linesCh, geoip, customPatterns), tea.WithAltScreen())
+	_, err = p.Run()
 	return err
 }
 

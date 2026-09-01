@@ -97,16 +97,18 @@ func (h *durationHistogram) percentile(p float64) float64 {
 }
 
 type LogEntry struct {
-	Timestamp     time.Time
-	Level         string
-	Logger        string
-	Method        string
-	URI           string
-	Host          string
-	RemoteAddr    string
-	RemoteIP      string
-	Proto         string
-	UserAgent     string
+	Timestamp  time.Time
+	Level      string
+	Logger     string
+	Method     string
+	URI        string
+	Host       string
+	RemoteAddr string
+	RemoteIP   string
+	Proto      string
+	UserAgent  string
+	// Headers contains request headers when the parser provides them.
+	Headers       map[string][]string
 	Referer       string
 	RefererDomain string
 	Status        int

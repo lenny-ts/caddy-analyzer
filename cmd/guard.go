@@ -7,19 +7,16 @@ import (
 	"os"
 	"os/signal"
 	"strings"
-	"sync"
 	"syscall"
 	"time"
 
 	"github.com/spf13/cobra"
 
-	"github.com/lenny-ts/caddy-analyzer/pkg/audit"
 	"github.com/lenny-ts/caddy-analyzer/pkg/blocklist"
 	"github.com/lenny-ts/caddy-analyzer/pkg/config"
 	"github.com/lenny-ts/caddy-analyzer/pkg/enrich"
 	"github.com/lenny-ts/caddy-analyzer/pkg/guard"
 	"github.com/lenny-ts/caddy-analyzer/pkg/guard/firewall"
-	"github.com/lenny-ts/caddy-analyzer/pkg/reader"
 )
 
 var (
@@ -43,6 +40,8 @@ var (
 	guardGeoIPDB           string
 	guardNoAutoDL          bool
 	guardFirewallBackend   string
+	guardDryRun            bool
+	guardNotify            auditNotifyFlags
 )
 
 const minBlocklistRefresh = 1 * time.Hour
@@ -59,6 +58,7 @@ func init() {
 	guardCmd.Flags().IntVarP(&guardNotFoundLimit, "notfound-limit", "", 50, "Max not found (404) before blocking (0 disables)")
 	guardCmd.Flags().IntVarP(&guardDetectConfidence, "detect-confidence", "", 8, "Min confidence (1-10) for pattern-detection blocking; 0 disables")
 	guardCmd.Flags().StringVarP(&guardAuditLog, "audit-log", "", "/var/log/caddy-analyzer-audit.jsonl", "Audit log path (empty to disable)")
+	guardNotify.addRest(guardCmd)
 	guardCmd.Flags().StringVarP(&guardStateFile, "state-file", "", "/var/lib/caddy-analyzer/blocked.json", "State file for crash recovery (empty to disable)")
 	guardCmd.Flags().StringSliceVarP(&guardNeverBlock, "never-block", "", nil, "IPs/CIDRs that will never be blocked (e.g. 10.0.0.0/8,192.168.1.1)")
 	guardCmd.Flags().StringVarP(&guardNeverBlockFile, "never-block-file", "", "", "File with IPs/CIDRs to never block (one per line, # comments allowed)")
@@ -74,6 +74,8 @@ func init() {
 	guardCmd.Flags().StringVarP(&blocklistCacheDir, "cache-dir", "", defaultBlocklistCacheDir(), "Directory for cached blocklist files")
 	guardCmd.Flags().StringVarP(&guardFirewallBackend, "firewall-backend", "", "auto",
 		"Firewall backend: auto, iptables, docker, nftables, hybrid (auto-detects Docker/nftables)")
+	guardCmd.Flags().BoolVar(&guardDryRun, "dry-run", false,
+		"Evaluate and report blocks without changing the firewall or state file")
 	rootCmd.AddCommand(guardCmd)
 }
 
@@ -136,7 +138,7 @@ func runGuard(cmd *cobra.Command, args []string) error {
 	// protection is active while it is not. Fail loud at startup instead.
 	// Checked after flag validation so unit tests on invalid flags do not
 	// depend on the host's euid.
-	if os.Geteuid() != 0 {
+	if os.Geteuid() != 0 && !guardDryRun {
 		return fmt.Errorf("guard requires root: run with sudo (iptables needs CAP_NET_ADMIN)")
 	}
 
@@ -148,43 +150,19 @@ func runGuard(cmd *cobra.Command, args []string) error {
 	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer cancel()
 
-	linesCh := make(chan string, 10000)
-	var wg sync.WaitGroup
-	for _, src := range sources {
-		r := reader.FromSourceFollow(src)
-		lines, err := r.Read(ctx)
-		if err != nil {
-			return fmt.Errorf("reading %s: %w", r.Name(), err)
-		}
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			for l := range lines {
-				select {
-				case linesCh <- l:
-				case <-ctx.Done():
-					return
-				}
-			}
-		}()
+	linesCh, err := fanInFollowWithPolicy(ctx, sources, func(name string, err error) error {
+		return fmt.Errorf("reading %s: %w", name, err)
+	})
+	if err != nil {
+		return err
 	}
-	go func() {
-		wg.Wait()
-		close(linesCh)
-	}()
 
-	var onAudit func(action, ip, reason, duration string)
-	if guardAuditLog != "" {
-		al, err := audit.New(guardAuditLog)
-		if err != nil {
-			return fmt.Errorf("audit log: %w", err)
-		}
-		al.SetErrorHandler(func(err error) {
-			fmt.Fprintf(os.Stderr, "audit error: %v\n", err)
-		})
-		defer func() { _ = al.Close() }()
-		onAudit = al.Log
+	guardNotify.auditLog = guardAuditLog
+	dispatcher, err := guardNotify.dispatcher()
+	if err != nil {
+		return err
 	}
+	defer func() { _ = dispatcher.Close() }()
 
 	neverBlock := guardNeverBlock
 	// Load the whitelist file (managed by `caddy-analyze whitelist`).
@@ -317,7 +295,7 @@ func runGuard(cmd *cobra.Command, args []string) error {
 		BlockDuration:       duration,
 		DetectionConfidence: guardDetectConfidence,
 		IPValidator:         validateIP,
-		OnAudit:             onAudit,
+		OnAudit:             dispatcher.Log,
 		OnError: func(err error) {
 			fmt.Fprintf(os.Stderr, "guard error: %v\n", err)
 		},
@@ -327,12 +305,14 @@ func runGuard(cmd *cobra.Command, args []string) error {
 		SubnetLimit:         guardSubnetLimit,
 		AnomalyFactor:       guardAnomalyFactor,
 		UARotationThreshold: guardUARotation,
+		CustomPatterns:      customPatterns,
 		CredStuffingLimit:   guardCredStuffingLimit,
 		BlocklistMgr:        blMgr,
 		BlocklistRefresh:    blocklistRefresh,
 		CountryBlock:        guardCountryBlock,
 		GeoIP:               geoip,
 		FirewallBackend:     fwBackend,
+		DryRun:              guardDryRun,
 	})
 
 	durMsg := duration.String()
@@ -345,7 +325,11 @@ func runGuard(cmd *cobra.Command, args []string) error {
 		}
 		return fmt.Sprintf("%s: >%d", label, v)
 	}
-	fmt.Fprintf(os.Stderr, "Guard active — %s | %s | %s / %s | block: %s\n",
+	mode := "active"
+	if guardDryRun {
+		mode = "dry-run"
+	}
+	fmt.Fprintf(os.Stderr, "Guard %s — %s | %s | %s / %s | block: %s\n", mode,
 		thr("auth", guardAuthLimit), thr("404", guardNotFoundLimit), thr("total", guardLimit), guardWindow, durMsg)
 	fmt.Fprintf(os.Stderr, "Firewall backend: %s\n", fwBackend.Name())
 	if guardDetectConfidence > 0 {
@@ -391,11 +375,19 @@ func runGuard(cmd *cobra.Command, args []string) error {
 	g.FlushState()
 
 	fmt.Fprintln(os.Stderr, "Guard stopped.")
-	if n := g.Count(); n > 0 {
-		fmt.Fprintf(os.Stderr, "IPs blocked this session: %d\n", n)
+	if n := g.SessionBlocks(); n > 0 {
+		label := "IPs blocked this session"
+		if guardDryRun {
+			label = "IPs that would be blocked this session"
+		}
+		fmt.Fprintf(os.Stderr, "%s: %d\n", label, n)
 	}
 	if n := g.BlocklistHits(); n > 0 {
-		fmt.Fprintf(os.Stderr, "IPs blocked via blocklist/country-block: %d\n", n)
+		label := "IPs blocked via blocklist/country-block"
+		if guardDryRun {
+			label = "IPs that would be blocked via blocklist/country-block"
+		}
+		fmt.Fprintf(os.Stderr, "%s: %d\n", label, n)
 	}
 	return nil
 }

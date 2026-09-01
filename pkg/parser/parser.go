@@ -83,16 +83,22 @@ func buildHTTPEntry(raw *rawLog, line string) *types.LogEntry {
 		entry.RemoteAddr = raw.Request.RemoteAddr
 		entry.RemoteIP = raw.Request.RemoteIP
 		entry.Proto = normalizeProto(raw.Request.Proto)
+		if len(raw.Request.Headers) > 0 {
+			entry.Headers = make(map[string][]string, len(raw.Request.Headers))
+			for name, values := range raw.Request.Headers {
+				entry.Headers[name] = append([]string(nil), values...)
+			}
+		}
 
-		if ua, ok := raw.Request.Headers["User-Agent"]; ok && len(ua) > 0 {
+		if ua, ok := requestHeader(raw.Request.Headers, "User-Agent"); ok && len(ua) > 0 {
 			entry.UserAgent = ua[0]
 			classifyUserAgent(entry)
 		}
-		if ref, ok := raw.Request.Headers["Referer"]; ok && len(ref) > 0 {
+		if ref, ok := requestHeader(raw.Request.Headers, "Referer"); ok && len(ref) > 0 {
 			entry.Referer = ref[0]
 			entry.RefererDomain = extractDomain(ref[0])
 		}
-		if xff, ok := raw.Request.Headers["X-Forwarded-For"]; ok && len(xff) > 0 {
+		if xff, ok := requestHeader(raw.Request.Headers, "X-Forwarded-For"); ok && len(xff) > 0 {
 			for _, h := range xff {
 				for _, hop := range strings.Split(h, ",") {
 					hop = strings.TrimSpace(hop)
@@ -102,10 +108,10 @@ func buildHTTPEntry(raw *rawLog, line string) *types.LogEntry {
 				}
 			}
 		}
-		if xri, ok := raw.Request.Headers["X-Real-Ip"]; ok && len(xri) > 0 {
+		if xri, ok := requestHeader(raw.Request.Headers, "X-Real-Ip"); ok && len(xri) > 0 {
 			entry.RealIP = strings.TrimSpace(xri[0])
 		}
-		if auth, ok := raw.Request.Headers["Authorization"]; ok && len(auth) > 0 {
+		if auth, ok := requestHeader(raw.Request.Headers, "Authorization"); ok && len(auth) > 0 {
 			a := auth[0]
 			if len(a) > 500 {
 				a = a[:500]
@@ -147,6 +153,15 @@ func buildHTTPEntry(raw *rawLog, line string) *types.LogEntry {
 	entry.Duration = parseDuration(raw.Duration, raw.LatencyS, raw.Latency)
 
 	return entry
+}
+
+func requestHeader(headers map[string][]string, name string) ([]string, bool) {
+	for key, values := range headers {
+		if strings.EqualFold(key, name) {
+			return values, true
+		}
+	}
+	return nil, false
 }
 
 func buildOperationalEntry(raw *rawLog, line string) *types.OperationalEntry {

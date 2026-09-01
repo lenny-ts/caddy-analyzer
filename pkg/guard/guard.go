@@ -208,6 +208,7 @@ type Config struct {
 	AnomalyFactor       float64
 	UARotationThreshold int
 	CredStuffingLimit   int
+	CustomPatterns      []analysis.DetectionPattern
 	// Blocker is an optional firewall blocker. If nil, the real
 	// iptables blocker is used. Tests should provide a fake blocker
 	// so that loadState cleanup hits the fake, not real iptables.
@@ -230,6 +231,9 @@ type Config struct {
 	// CountryBlock is non-empty and GeoIP is nil, country-block is
 	// silently disabled.
 	GeoIP GeoIPLookuper
+	// DryRun evaluates all detection paths and emits would_block audit events,
+	// but never calls the firewall backend or writes state.
+	DryRun bool
 }
 
 type expiryEntry struct {
@@ -282,6 +286,9 @@ type Guard struct {
 	// blocklistHits counts IPs blocked via blocklist or country-block
 	// for stats reporting.
 	blocklistHits atomic.Int64
+	// sessionBlocks counts successful block decisions in this run, including
+	// simulated decisions in dry-run mode.
+	sessionBlocks atomic.Int64
 	// pendingBlock is set by checkImmediateBlock and consumed by Run to
 	// log the ban in terminal output.
 	pendingBlock *Candidate
@@ -502,7 +509,7 @@ func New(cfg Config) *Guard {
 	g := &Guard{
 		blocked:        make(map[string]bool),
 		blockedSubnets: make([]*net.IPNet, 0),
-		detector:       analysis.NewDetector(),
+		detector:       analysis.NewDetectorWithPatterns(cfg.CustomPatterns),
 		engine:         analysis.New(types.Filters{}),
 		blocker:        blocker,
 		cfg:            cfg,
@@ -521,15 +528,17 @@ func New(cfg Config) *Guard {
 	}
 	// Ensure firewall chain exists and validate before loading state.
 	// The firewall.Backend interface includes EnsureChain and Validate.
-	if cb, ok := blocker.(interface {
-		EnsureChain() error
-		Validate() error
-	}); ok {
-		if err := cb.EnsureChain(); err != nil && cfg.OnError != nil {
-			cfg.OnError(fmt.Errorf("firewall setup: %w", err))
-		}
-		if err := cb.Validate(); err != nil && cfg.OnError != nil {
-			cfg.OnError(fmt.Errorf("firewall validation: %w", err))
+	if !cfg.DryRun {
+		if cb, ok := blocker.(interface {
+			EnsureChain() error
+			Validate() error
+		}); ok {
+			if err := cb.EnsureChain(); err != nil && cfg.OnError != nil {
+				cfg.OnError(fmt.Errorf("firewall setup: %w", err))
+			}
+			if err := cb.Validate(); err != nil && cfg.OnError != nil {
+				cfg.OnError(fmt.Errorf("firewall validation: %w", err))
+			}
 		}
 	}
 	g.loadState()
@@ -629,30 +638,42 @@ func (g *Guard) loadState() {
 			g.blocked[e.IP] = true
 			// Recreate the firewall rule — iptables rules may have been
 			// flushed while we were down (reboot, iptables -F, etc.).
-			if err := g.blocker.Block(e.IP); err != nil && g.cfg.OnError != nil {
-				g.cfg.OnError(fmt.Errorf("restore permanent block %s: %w", e.IP, err))
+			if !g.cfg.DryRun {
+				if err := g.blocker.Block(e.IP); err != nil && g.cfg.OnError != nil {
+					g.cfg.OnError(fmt.Errorf("restore permanent block %s: %w", e.IP, err))
+				}
 			}
 		case g.cfg.BlockDuration <= 0:
 			// Temporary blocks recorded under a previous run: running in
 			// permanent mode now; preserve them as permanent to avoid
 			// silently dropping firewall protection while we were down.
 			g.blocked[e.IP] = true
-			if err := g.blocker.Block(e.IP); err != nil && g.cfg.OnError != nil {
-				g.cfg.OnError(fmt.Errorf("restore block %s: %w", e.IP, err))
+			if !g.cfg.DryRun {
+				if err := g.blocker.Block(e.IP); err != nil && g.cfg.OnError != nil {
+					g.cfg.OnError(fmt.Errorf("restore block %s: %w", e.IP, err))
+				}
 			}
 		case e.When.Before(now):
 			// Ban expired while the daemon was down: clean up the rule.
-			if err := g.blocker.Unblock(e.IP); err != nil && g.cfg.OnError != nil {
-				g.cfg.OnError(fmt.Errorf("unblock expired %s: %w", e.IP, err))
+			if !g.cfg.DryRun {
+				if err := g.blocker.Unblock(e.IP); err != nil && g.cfg.OnError != nil {
+					g.cfg.OnError(fmt.Errorf("unblock expired %s: %w", e.IP, err))
+				}
 			}
 			if g.cfg.OnAudit != nil {
-				g.cfg.OnAudit("unblock", e.IP, "expired during downtime", g.cfg.BlockDuration.String())
+				action := "unblock"
+				if g.cfg.DryRun {
+					action = "would_unblock"
+				}
+				g.cfg.OnAudit(action, e.IP, "expired during downtime", g.cfg.BlockDuration.String())
 			}
 		default:
 			g.blocked[e.IP] = true
 			// Recreate the firewall rule for still-valid temporary blocks.
-			if err := g.blocker.Block(e.IP); err != nil && g.cfg.OnError != nil {
-				g.cfg.OnError(fmt.Errorf("restore block %s: %w", e.IP, err))
+			if !g.cfg.DryRun {
+				if err := g.blocker.Block(e.IP); err != nil && g.cfg.OnError != nil {
+					g.cfg.OnError(fmt.Errorf("restore block %s: %w", e.IP, err))
+				}
 			}
 			g.expiries[e.IP] = e.When
 			g.initial = append(g.initial, expiryEntry{ip: e.IP, when: e.When})
@@ -676,7 +697,7 @@ func (g *Guard) saveStateDebounced() {
 }
 
 func (g *Guard) saveState() {
-	if g.state == nil {
+	if g.state == nil || g.cfg.DryRun {
 		return
 	}
 	g.saveMu.Lock()
@@ -986,7 +1007,7 @@ func (g *Guard) Tick(ctx context.Context) []Candidate {
 	}
 
 	g.mu.Lock()
-	g.detector = analysis.NewDetector()
+	g.detector = analysis.NewDetectorWithPatterns(g.cfg.CustomPatterns)
 	if g.cfg.UARotationThreshold > 0 {
 		g.detector.SetUARotationThreshold(g.cfg.UARotationThreshold)
 	}
@@ -1036,9 +1057,11 @@ func (g *Guard) detectAnomaly() {
 
 func (g *Guard) block(ctx context.Context, c Candidate, now time.Time) bool {
 	g.setBlocked(c.IP)
-	if err := g.blocker.Block(c.IP); err != nil {
-		g.removeBlocked(c.IP)
-		return false
+	if !g.cfg.DryRun {
+		if err := g.blocker.Block(c.IP); err != nil {
+			g.removeBlocked(c.IP)
+			return false
+		}
 	}
 	// Track subnet blocks so IsBlocked short-circuits individual hosts in a
 	// blocked /24 without re-evaluating them on every request.
@@ -1052,8 +1075,13 @@ func (g *Guard) block(ctx context.Context, c Candidate, now time.Time) bool {
 		if g.cfg.BlockDuration <= 0 {
 			dur = "permanent"
 		}
-		g.cfg.OnAudit("block", c.IP, c.Why, dur)
+		action := "block"
+		if g.cfg.DryRun {
+			action = "would_block"
+		}
+		g.cfg.OnAudit(action, c.IP, c.Why, dur)
 	}
+	g.sessionBlocks.Add(1)
 	if g.cfg.BlockDuration > 0 {
 		expiry := now.Add(g.cfg.BlockDuration)
 		g.mu.Lock()
@@ -1100,19 +1128,25 @@ func (g *Guard) runExpiryLoop(ctx context.Context) {
 			var requeue []expiryEntry
 			for h.Len() > 0 && !h[0].when.After(now) {
 				e := heap.Pop(&h).(expiryEntry)
-				if err := g.blocker.Unblock(e.ip); err != nil {
-					if g.cfg.OnError != nil {
-						g.cfg.OnError(fmt.Errorf("unblock %s: %w", e.ip, err))
+				if !g.cfg.DryRun {
+					if err := g.blocker.Unblock(e.ip); err != nil {
+						if g.cfg.OnError != nil {
+							g.cfg.OnError(fmt.Errorf("unblock %s: %w", e.ip, err))
+						}
+						requeue = append(requeue, expiryEntry{ip: e.ip, when: now.Add(time.Minute)})
+						continue
 					}
-					requeue = append(requeue, expiryEntry{ip: e.ip, when: now.Add(time.Minute)})
-					continue
 				}
 				g.removeBlocked(e.ip)
 				g.mu.Lock()
 				delete(g.expiries, e.ip)
 				g.mu.Unlock()
 				if g.cfg.OnAudit != nil {
-					g.cfg.OnAudit("unblock", e.ip, "block duration expired", g.cfg.BlockDuration.String())
+					action := "unblock"
+					if g.cfg.DryRun {
+						action = "would_unblock"
+					}
+					g.cfg.OnAudit(action, e.ip, "block duration expired", g.cfg.BlockDuration.String())
 				}
 			}
 			for _, e := range requeue {
@@ -1164,14 +1198,22 @@ func (g *Guard) Run(ctx context.Context, linesCh <-chan string, logf func(string
 			g.Evaluate(line)
 			if c := g.pendingBlock; c != nil {
 				g.pendingBlock = nil
-				logf("[%s] + %s blocked (%s)\n", time.Now().Format("15:04:05"), c.IP, c.Why)
+				verb := "blocked"
+				if g.cfg.DryRun {
+					verb = "would be blocked"
+				}
+				logf("[%s] + %s %s (%s)\n", time.Now().Format("15:04:05"), c.IP, verb, c.Why)
 			}
 
 		case <-ticker.C:
 			blocked := g.Tick(ctx)
 			now := time.Now()
 			for _, c := range blocked {
-				logf("[%s] + %s blocked (%s)\n", now.Format("15:04:05"), c.IP, c.Why)
+				verb := "blocked"
+				if g.cfg.DryRun {
+					verb = "would be blocked"
+				}
+				logf("[%s] + %s %s (%s)\n", now.Format("15:04:05"), c.IP, verb, c.Why)
 			}
 
 		case <-ctx.Done():
@@ -1208,6 +1250,11 @@ func (g *Guard) runBlocklistRefresh(ctx context.Context, logf func(string, ...in
 // country-block matching since the guard started.
 func (g *Guard) BlocklistHits() int64 {
 	return g.blocklistHits.Load()
+}
+
+// SessionBlocks returns the number of block decisions made since startup.
+func (g *Guard) SessionBlocks() int64 {
+	return g.sessionBlocks.Load()
 }
 
 // SetIPTablesTimeout overrides the per-invocation firewall command timeout.

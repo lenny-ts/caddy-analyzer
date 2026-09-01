@@ -1,0 +1,53 @@
+replicaCount: 1
+
+image:
+  repository: ghcr.io/lenny-ts/caddy-analyzer
+  tag: ""
+  pullPolicy: IfNotPresent
+
+nameOverride: ""
+fullnameOverride: ""
+
+config:
+  source: /logs/access.log
+
+logVolume:
+  mountPath: /logs
+  existingClaim: ""
+  hostPath: ""
+  hostPathType: Directory
+
+# Docker source support is deliberately disabled. Enabling it mounts the
+# host Docker socket, which grants control over the Docker daemon.
+dockerSocket:
+  enabled: false
+  hostPath: /var/run/docker.sock
+  mountPath: /var/run/docker.sock
+
+podSecurityContext: {}
+
+securityContext:
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop:
+      - ALL
+  readOnlyRootFilesystem: true
+  runAsNonRoot: true
+  seccompProfile:
+    type: RuntimeDefault
+
+command: []
+args:
+  - tail
+  - --detect
+
+resources: {}
+
+livenessProbe:
+  enabled: true
+  initialDelaySeconds: 10
+  periodSeconds: 10
+  timeoutSeconds: 2
+  failureThreshold: 3
+
+terminationGracePeriodSeconds: 10

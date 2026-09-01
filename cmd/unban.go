@@ -6,7 +6,6 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/lenny-ts/caddy-analyzer/pkg/audit"
 	"github.com/lenny-ts/caddy-analyzer/pkg/guard"
 )
 
@@ -32,12 +31,14 @@ var (
 	unbanList      bool
 	unbanAuditLog  string
 	unbanStateFile string
+	unbanNotify    auditNotifyFlags
 )
 
 func init() {
 	unbanCmd.Flags().BoolVarP(&unbanAll, "all", "A", false, "Unblock all currently blocked IPs")
 	unbanCmd.Flags().BoolVarP(&unbanList, "list", "l", false, "Show currently blocked IPs")
 	unbanCmd.Flags().StringVarP(&unbanAuditLog, "audit-log", "", "/var/log/caddy-analyzer-audit.jsonl", "Audit log path (empty to disable)")
+	unbanNotify.addRest(unbanCmd)
 	unbanCmd.Flags().StringVarP(&unbanStateFile, "state-file", "", "/var/lib/caddy-analyzer/blocked.json", "Guard state file to sync manual unbans (empty to disable)")
 	rootCmd.AddCommand(unbanCmd)
 }
@@ -49,28 +50,27 @@ func runUnban(cmd *cobra.Command, args []string) error {
 	if os.Geteuid() != 0 {
 		return fmt.Errorf("requires root: run with sudo")
 	}
-	var al *audit.Logger
-	if unbanAuditLog != "" {
-		var err error
-		al, err = audit.New(unbanAuditLog)
-		if err != nil {
-			return fmt.Errorf("audit log: %w", err)
-		}
-		defer func() { _ = al.Close() }()
+	unbanNotify.auditLog = unbanAuditLog
+	dispatcher, err := unbanNotify.dispatcher()
+	if err != nil {
+		return err
 	}
+	defer func() { _ = dispatcher.Close() }()
 	if unbanList {
 		return listBlocked()
 	}
 	if unbanAll {
-		return unblockAll(al)
+		return unblockAll(dispatcher)
 	}
 	if len(args) == 0 {
 		return fmt.Errorf("specify at least one IP to unblock, or use --all")
 	}
-	return unblockIPs(args, al)
+	return unblockIPs(args, dispatcher)
 }
 
-func unblockIPs(ips []string, al *audit.Logger) error {
+func unblockIPs(ips []string, al interface {
+	Log(string, string, string, string)
+}) error {
 	hadErr := false
 	for _, ip := range ips {
 		if err := validateIP(ip); err != nil {
@@ -99,7 +99,9 @@ func unblockIPs(ips []string, al *audit.Logger) error {
 	return nil
 }
 
-func unblockAll(al *audit.Logger) error {
+func unblockAll(al interface {
+	Log(string, string, string, string)
+}) error {
 	ips, err := guard.ListBlockedIPs()
 	if err != nil {
 		return err

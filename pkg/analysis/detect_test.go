@@ -2,11 +2,70 @@ package analysis
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
 	"testing"
 	"time"
 
 	"github.com/lenny-ts/caddy-analyzer/pkg/types"
 )
+
+func TestLoadCustomPatterns(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "patterns.json")
+	data := `[{
+  "type":"custom_internal_api",
+  "pattern":"/internal/admin/",
+  "description":"Internal admin endpoint",
+  "confidence":8,
+  "source":"uri",
+  "mitre":"T1595.002"
+}]`
+	if err := os.WriteFile(path, []byte(data), 0600); err != nil {
+		t.Fatal(err)
+	}
+	patterns, err := LoadCustomPatterns(path)
+	if err != nil || len(patterns) != 1 {
+		t.Fatalf("load custom patterns: %v, %v", patterns, err)
+	}
+	d := NewDetectorWithPatterns(patterns)
+	det := d.Detect(&types.LogEntry{RemoteIP: "192.0.2.1", URI: "/internal/admin/users"})
+	if det == nil || det.Type != "custom_internal_api" || det.Confidence != 8 || len(det.Techniques) != 1 {
+		t.Fatalf("unexpected custom detection: %+v", det)
+	}
+}
+
+func TestLoadCustomPatternsValidation(t *testing.T) {
+	for name, data := range map[string]string{
+		"missing field":  `[{"type":"x","pattern":"x","confidence":5,"source":"uri"}]`,
+		"bad regex":      `[{"type":"x","pattern":"[","description":"x","confidence":5,"source":"uri"}]`,
+		"bad confidence": `[{"type":"x","pattern":"x","description":"x","confidence":11,"source":"uri"}]`,
+		"bad source":     `[{"type":"x","pattern":"x","description":"x","confidence":5,"source":"body"}]`,
+	} {
+		t.Run(name, func(t *testing.T) {
+			path := filepath.Join(t.TempDir(), "patterns.json")
+			if err := os.WriteFile(path, []byte(data), 0600); err != nil {
+				t.Fatal(err)
+			}
+			if _, err := LoadCustomPatterns(path); err == nil {
+				t.Fatal("expected validation error")
+			}
+		})
+	}
+}
+
+func TestCustomPatternSources(t *testing.T) {
+	patterns := []DetectionPattern{
+		{Type: "custom_header", Pattern: `x-internal-token:\s+secret`, Description: "header", Confidence: 7, Source: "header"},
+		{Type: "custom_ua", Pattern: `corp-scanner`, Description: "ua", Confidence: 6, Source: "user_agent"},
+	}
+	d := NewDetectorWithPatterns(patterns)
+	entry := &types.LogEntry{URI: "/normal", UserAgent: "corp-scanner", Headers: map[string][]string{"X-Internal-Token": {"secret"}}}
+	dets := d.DetectAll(entry)
+	if len(dets) != 2 {
+		t.Fatalf("expected header and UA detections, got %+v", dets)
+	}
+}
 
 func TestDetectorSignatures(t *testing.T) {
 	detector := NewDetector()
@@ -1220,6 +1279,23 @@ func TestDetectorIPCapEviction(t *testing.T) {
 	}
 	if len(detector.ipStats) > 3 {
 		t.Errorf("ipStats should be capped at 3, got %d", len(detector.ipStats))
+	}
+}
+
+func TestDetectorIPLRUOrder(t *testing.T) {
+	detector := NewDetector()
+	detector.SetIPCap(2)
+	for _, ip := range []string{"10.0.0.1", "10.0.0.2"} {
+		detector.DetectAll(&types.LogEntry{RemoteIP: ip, URI: "/", Status: 200})
+	}
+	// Refresh the oldest entry, so the second IP becomes the eviction target.
+	detector.DetectAll(&types.LogEntry{RemoteIP: "10.0.0.1", URI: "/", Status: 200})
+	detector.DetectAll(&types.LogEntry{RemoteIP: "10.0.0.3", URI: "/", Status: 200})
+	if _, ok := detector.ipStats["10.0.0.2"]; ok {
+		t.Fatal("least recently used IP was not evicted")
+	}
+	if _, ok := detector.ipStats["10.0.0.1"]; !ok {
+		t.Fatal("recently used IP was evicted")
 	}
 }
 

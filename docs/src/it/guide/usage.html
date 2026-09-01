@@ -33,6 +33,19 @@ caddy-analyze -f html -o report.html --detect testdata/sample.log && open report
 caddy-analyze --defang -f json testdata/sample.log      # 203.0.113.1 → 203[.]0[.]113[.]1</code></pre>
 <p><code>--defang</code> riscrive IP/URL per una condivisione sicura (anche <code>hxxp</code>).</p>
 
+<h3 id="remote">Exporter remoti</h3>
+<p>I formati remoti inviano un report aggregato per ogni report generato. Elasticsearch e OpenSearch usano la Bulk API; Loki riceve lo stesso report come una singola log line. In <code>--follow</code> e <code>--interval</code> ogni finestra viene inviata sincronicamente.</p>
+<pre><code>caddy-analyze -f elasticsearch --remote-url http://localhost:9200 --remote-index caddy-analysis testdata/sample.log
+caddy-analyze -f opensearch --remote-url https://search.example/_bulk --remote-token "$TOKEN" testdata/sample.log
+caddy-analyze -f loki --remote-url http://localhost:3100 testdata/sample.log</code></pre>
+<p>Usa <code>--remote-user</code>/<code>--remote-password</code> per Basic o <code>--remote-token</code> per Bearer. Retry e timeout sono configurabili con <code>--remote-retries</code>, <code>--remote-backoff</code> e <code>--remote-timeout</code>.</p>
+
+<h3 id="custom-patterns">Pattern personalizzati</h3>
+<p>Carica uno o più file JSON validati senza ricompilare il binario:</p>
+<pre><code>caddy-analyze --detect --custom-patterns rules.json --custom-patterns local.json testdata/sample.log</code></pre>
+<pre><code>[{"type":"internal_admin","pattern":"/internal/admin","description":"Internal admin probe","confidence":8,"source":"uri","mitre":"T1595.002"}]</code></pre>
+<p><code>source</code> può essere <code>uri</code>, <code>header</code>, <code>user_agent</code> o <code>all</code>. JSON, regex, tipo o confidence non validi bloccano l'elaborazione prima della lettura dei log.</p>
+
 <h2 id="top">Top — ispettore classificato</h2>
 <pre><code>caddy-analyze top ip testdata/sample.log
 caddy-analyze top path -t 20 --5xx testdata/sample.log
@@ -45,6 +58,17 @@ caddy-analyze top -b bandwidth -f csv -o top.csv testdata/sample.log</code></pre
 <pre><code>caddy-analyze diff testdata/sample.log testdata/large.log
 caddy-analyze diff old.log new.log -f json -o diff.json</code></pre>
 <p>Mostra delta RPS, picco di 5xx, regressione della latenza, nuovi percorsi di errore (primi 10).</p>
+
+<h2 id="baseline">Baseline e controlli di regressione</h2>
+<pre><code>caddy-analyze baseline save --output baseline.json testdata/sample.log
+caddy-analyze --against baseline.json --threshold 20 testdata/sample.log</code></pre>
+<p>La baseline è uno snapshot JSON versionato. Il confronto stampa le differenze e restituisce un exit code non-zero quando errori, latenza, errori operativi o nuovi percorsi superano la soglia. È quindi adatto ai gate CI/CD. La soglia predefinita è <code>20</code> percento.</p>
+
+<h2 id="deployment">Deployment container</h2>
+<p>Il demo locale hardened è in <code>docker-compose.yml</code>. Il chart Helm è in <code>deploy/helm/caddy-analyzer</code>: esegue il processo come non-root con filesystem in sola lettura e non monta il socket Docker di default. Abilitalo solo dopo aver valutato le implicazioni di sicurezza.</p>
+<pre><code>docker compose up --build
+helm lint deploy/helm/caddy-analyzer
+helm template caddy-analyzer deploy/helm/caddy-analyzer</code></pre>
 
 <h2 id="live">Live — follow / interval / watch</h2>
 <pre><code>caddy-analyze --follow /var/log/caddy/access.log        # stream
