@@ -38,7 +38,13 @@ jobs:
         env:
           RELEASE_TAG: ${{ github.ref_name }}
         run: |
-          previous=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || true)
+          version="${RELEASE_TAG#v}"
+          changelog_section=$(mktemp "$RUNNER_TEMP/changelog.XXXXXX.md")
+          if ! grep -q "^## \[$version\]" CHANGELOG.md; then
+            echo "Unable to extract $RELEASE_TAG from CHANGELOG.md" >&2
+            exit 1
+          fi
+          sed -n "/^## \[$version\]/,/^## \[/p" CHANGELOG.md | sed '$d' > "$changelog_section"
           {
             printf '# caddy-analyzer %s\n\n' "$RELEASE_TAG"
             printf 'Analyze Caddy v2 logs with security detection, operational metrics, and firewall protection.\n\n'
@@ -51,14 +57,9 @@ jobs:
             printf 'go install github.com/lenny-ts/caddy-analyzer/cmd/caddy-analyze@latest\n'
             printf 'docker run --rm -v /var/log/caddy:/logs ghcr.io/lenny-ts/caddy-analyzer /logs/access.log\n'
             printf '\`\`\`\n\n'
-            printf '## What changed\n\n'
-            if [ -n "$previous" ]; then
-              git log --pretty=format:'- %s (%h)' "$previous..HEAD"
-            else
-              git log --pretty=format:'- %s (%h)' HEAD
-            fi
-            printf '\n'
+            cat "$changelog_section"
           } > "$RUNNER_TEMP/release-notes.md"
+          rm -f "$changelog_section"
 
       - name: Install Syft
         uses: anchore/sbom-action@e22c389904149dbc22b58101806040fa8d37a610 # v0
@@ -79,7 +80,7 @@ jobs:
         working-directory: dist
         run: |
           cosign initialize
-          cp "$HOME/.sigstore/root/trusted_root.json" trusted_root.json
+          cosign trusted-root create --with-default-services --out trusted_root.json
           cosign sign-blob --yes \
             --bundle checksums.txt.bundle \
             checksums.txt
