@@ -74,7 +74,7 @@
   <main class="wrap" id="main">
     <div class="doc-content">
       <nav class="breadcrumb" aria-label="Breadcrumb"><a href="../reference/cli.html">Reference</a><span class="sep">/</span><span>CLI Reference</span></nav>
-      <div class="page-meta"><a href="https://github.com/lenny-ts/caddy-analyzer/releases">v0.6.1</a> · updated <time datetime="2026-08-31">2026-08-31</time> · <a href="https://github.com/lenny-ts/caddy-analyzer">GitHub</a></div>
+      <div class="page-meta"><a href="https://github.com/lenny-ts/caddy-analyzer/releases">v0.6.4</a> · updated <time datetime="2026-09-01">2026-09-01</time> · <a href="https://github.com/lenny-ts/caddy-analyzer">GitHub</a></div>
       <div class="cli-heading"><div><div class="hero-badge">Command line interface</div><h1>CLI Reference</h1></div></div>
 <p>Entry point: <code>caddy-analyze [flags] [source...]</code> — sources resolved via <a href="../sources.html">Log Sources</a> or <a href="../guide/configuration.html">caddy-analyzer.json</a>. Below: every flag, its scope, and whether it touches the system.</p>
 
@@ -98,7 +98,6 @@
 <tr><td><code>--asn</code></td><td></td><td></td><td><span class="pill pill-all">all</span></td><td>Keep ASNs (needs GeoIP)</td></tr>
 <tr><td><code>--exclude-asn</code></td><td></td><td></td><td><span class="pill pill-all">all</span></td><td>Drop ASNs</td></tr>
 <tr><td><code>--grep</code></td><td></td><td></td><td><span class="pill pill-all">all</span></td><td>Regex (fallback substring) on URI/UA/IP</td></tr>
-<tr><td><code>--custom-patterns</code></td><td></td><td></td><td><span class="pill pill-all">all</span></td><td>Load validated custom detection JSON; repeatable</td></tr>
 <tr><td><code>--2xx / --3xx / --4xx / --5xx</code></td><td></td><td>false</td><td><span class="pill pill-all">all</span></td><td>Status class shortcut</td></tr>
 <tr><td><code>--errors-only</code></td><td><code>-e</code></td><td>false</td><td><span class="pill pill-all">all</span></td><td>5xx only</td></tr>
 <tr><td><code>--slow</code></td><td></td><td></td><td><span class="pill pill-all">all</span></td><td>Slower than duration</td></tr>
@@ -120,6 +119,11 @@
 <tr><td><code>--namespace</code></td><td><code>-n</code></td><td></td><td><span class="pill pill-all">all</span></td><td>K8s namespace</td></tr>
 <tr><td><code>--geoip-db</code></td><td></td><td></td><td><span class="pill pill-all">all</span></td><td>GeoIP mmdb path (auto-discovery)</td></tr>
 <tr><td><code>--no-auto-download</code></td><td></td><td>false</td><td><span class="pill pill-all">all</span></td><td>Disable GeoIP auto-download</td></tr>
+<tr><td><code>--custom-patterns</code></td><td></td><td></td><td><span class="pill pill-all">all</span></td><td>Load validated custom detection JSON; repeatable</td></tr>
+<tr><td><code>--remote-url</code></td><td></td><td></td><td><span class="pill pill-all">all</span></td><td>Elasticsearch/OpenSearch bulk or Loki endpoint</td></tr>
+<tr><td><code>--remote-index</code></td><td></td><td>caddy-analyzer</td><td><span class="pill pill-all">all</span></td><td>Elasticsearch/OpenSearch index</td></tr>
+<tr><td><code>--remote-user/password/token</code></td><td></td><td></td><td><span class="pill pill-all">all</span></td><td>Remote Basic or Bearer authentication</td></tr>
+<tr><td><code>--remote-batch-size/retries/backoff/timeout</code></td><td></td><td></td><td><span class="pill pill-all">all</span></td><td>Remote delivery tuning</td></tr>
 </tbody>
 </table></div>
 

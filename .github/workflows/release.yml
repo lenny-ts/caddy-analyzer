@@ -34,6 +34,32 @@ jobs:
         with:
           go-version: '1.25.13'
 
+      - name: Generate release notes
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          previous=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || true)
+          {
+            printf '# caddy-analyzer %s\n\n' "$RELEASE_TAG"
+            printf 'Analyze Caddy v2 logs with security detection, operational metrics, and firewall protection.\n\n'
+            printf '## Install / Upgrade\n\n'
+            printf '\`\`\`bash\n'
+            printf '# Already installed: verify and install the latest release\n'
+            printf 'caddy-analyze update\n\n'
+            printf '# Fresh install\n'
+            printf 'curl -sSfL https://raw.githubusercontent.com/lenny-ts/caddy-analyzer/main/install.sh | bash\n'
+            printf 'go install github.com/lenny-ts/caddy-analyzer/cmd/caddy-analyze@latest\n'
+            printf 'docker run --rm -v /var/log/caddy:/logs ghcr.io/lenny-ts/caddy-analyzer /logs/access.log\n'
+            printf '\`\`\`\n\n'
+            printf '## What changed\n\n'
+            if [ -n "$previous" ]; then
+              git log --pretty=format:'- %s (%h)' "$previous..HEAD"
+            else
+              git log --pretty=format:'- %s (%h)' HEAD
+            fi
+            printf '\n'
+          } > release-notes.md
+
       - name: Install Syft
         uses: anchore/sbom-action@e22c389904149dbc22b58101806040fa8d37a610 # v0
 
@@ -61,6 +87,8 @@ jobs:
       - name: Upload SBOM and signatures
         uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2.6.2
         with:
+          body_path: release-notes.md
+          append_body: false
           files: |
             dist/*.spdx.json
             dist/checksums.txt.bundle

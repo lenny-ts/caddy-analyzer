@@ -30,6 +30,11 @@
 <tr><td><code>--never-block</code></td><td></td><td></td><td>CIDRs/IPs never block (protect your IP!)</td></tr>
 <tr><td><code>--never-block-file</code></td><td></td><td></td><td>File with CIDRs (one per line, # comment)</td></tr>
 <tr><td><code>--audit-log</code></td><td></td><td>/var/log/…-audit.jsonl</td><td>JSON lines audit (0600)</td></tr>
+<tr><td><code>--audit-syslog</code></td><td></td><td></td><td>Forward audit events to a syslog UDP address</td></tr>
+<tr><td><code>--webhook-url</code> / <code>--audit-webhook</code></td><td></td><td></td><td>Async webhook notification; provider: generic, slack, discord, pagerduty</td></tr>
+<tr><td><code>--pagerduty-routing-key</code></td><td></td><td></td><td>PagerDuty routing key (required for PagerDuty, never logged)</td></tr>
+<tr><td><code>--audit-timeout</code> / <code>--audit-retries</code></td><td></td><td>5s / 2</td><td>Per-delivery timeout and bounded retries</td></tr>
+<tr><td><code>--audit-rate-limit</code></td><td></td><td>0</td><td>Minimum notification interval per IP</td></tr>
 <tr><td><code>--state-file</code></td><td></td><td>/var/lib/…/blocked.json</td><td>Persist blocks across restarts</td></tr>
 <tr><td><code>--subnet-limit</code></td><td></td><td>0</td><td>/24 or /64 distributed scan threshold</td></tr>
 <tr><td><code>--rps-anomaly</code></td><td></td><td>0</td><td>EWMA RPS spike factor (audit alert only; requires <code>--audit-log</code>)</td></tr>

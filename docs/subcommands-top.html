@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>top — caddy-analyzer</title>
-  <meta name="description" content="Ranked inspector: 9 dimensions including country/asn with GeoIP.">
+  <meta name="description" content="Ranked inspector: 10 dimensions including country/city/asn with GeoIP.">
   <meta name="theme-color" content="#09090B">
   <link rel="icon" href="caddy-analyzer-logo.png" type="image/png">
   <link rel="canonical" href="https://lenny-ts.github.io/caddy-analyzer/subcommands-top.html">
@@ -74,7 +74,7 @@
   <main class="wrap" id="main">
     <div class="doc-content">
       <nav class="breadcrumb" aria-label="Breadcrumb"><a href="reference/cli.html">Reference</a><span class="sep">/</span><span>top</span></nav>
-      <div class="page-meta"><a href="https://github.com/lenny-ts/caddy-analyzer/releases">v0.6.1</a> · updated <time datetime="2026-08-31">2026-08-31</time> · <a href="https://github.com/lenny-ts/caddy-analyzer">GitHub</a></div>
+      <div class="page-meta"><a href="https://github.com/lenny-ts/caddy-analyzer/releases">v0.6.4</a> · updated <time datetime="2026-09-01">2026-09-01</time> · <a href="https://github.com/lenny-ts/caddy-analyzer">GitHub</a></div>
       <h1>top</h1>
 <p>Ranked inspector. <span class="pill pill-readonly">read-only</span> — never modifies the system.</p>
 
@@ -105,6 +105,7 @@ caddy-analyze top -b &lt;dimension&gt; [source...]   # --by alias</code></pre>
 <tr><td><code>host</code></td><td></td><td>Top hosts</td></tr>
 <tr><td><code>bandwidth</code></td><td></td><td>Top by response size</td></tr>
 <tr><td><code>country</code></td><td>yes</td><td>Top countries (human-readable names)</td></tr>
+<tr><td><code>city</code></td><td>yes, city MMDB</td><td>Top client cities</td></tr>
 <tr><td><code>asn</code></td><td>yes</td><td>Top ASNs</td></tr>
 </tbody>
 </table></div>

@@ -74,7 +74,7 @@
   <main class="wrap" id="main">
     <div class="doc-content">
       <nav class="breadcrumb" aria-label="Breadcrumb"><a href="../reference/cli.html">Reference</a><span class="sep">/</span><span>Detection</span></nav>
-      <div class="page-meta"><a href="https://github.com/lenny-ts/caddy-analyzer/releases">v0.6.1</a> · updated <time datetime="2026-08-31">2026-08-31</time> · <a href="https://github.com/lenny-ts/caddy-analyzer">GitHub</a></div>
+      <div class="page-meta"><a href="https://github.com/lenny-ts/caddy-analyzer/releases">v0.6.4</a> · updated <time datetime="2026-09-01">2026-09-01</time> · <a href="https://github.com/lenny-ts/caddy-analyzer">GitHub</a></div>
       <h1>MITRE, Sigma &amp; Evasion</h1>
 <p>How detections are tagged, exported, and why simple encodings do not bypass them. For the 26 rows with confidence/description/example, see <a href="security-categories.html">Categories</a>.</p>
 
@@ -151,8 +151,6 @@ caddy-analyze export-sigma - | sigma check --rules -  # validate
 </tbody>
 </table></div>
 <p>Test that bypass is covered: <code>rawPatterns</code> includes <code>%2e%2e%2f</code>, <code>%252e</code>, <code>%c0%ae</code>, <code>0x7f000001</code> etc. See <code>pkg/analysis/detect.go:778-801</code> and <code>testdata/generate.py</code> fixtures.</p>
-<h2 id="custom">Custom signatures</h2>
-<p><code>--custom-patterns file.json</code> loads repeatable JSON rule files before a run. Each rule requires a safe category <code>type</code>, Go regex <code>pattern</code>, <code>description</code>, confidence from 1 to 10, and <code>source</code> of <code>uri</code>, <code>header</code>, <code>user_agent</code>, or <code>all</code>. A comma-separated <code>mitre</code> value is optional. Invalid files fail closed before processing.</p>
       <footer class="footer">
   <p>caddy-analyzer is open-source under <a href="https://github.com/lenny-ts/caddy-analyzer/blob/main/LICENSE">MIT</a> · <a href="https://github.com/lenny-ts/caddy-analyzer">GitHub</a> · <a href="../changelog.html">Changelog</a></p>
 </footer>

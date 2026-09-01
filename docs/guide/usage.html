@@ -74,13 +74,13 @@
   <main class="wrap" id="main">
     <div class="doc-content">
       <nav class="breadcrumb" aria-label="Breadcrumb"><a href="../guide/configuration.html">Guide</a><span class="sep">/</span><span>Usage</span></nav>
-      <div class="page-meta"><a href="https://github.com/lenny-ts/caddy-analyzer/releases">v0.6.1</a> · updated <time datetime="2026-08-31">2026-08-31</time> · <a href="https://github.com/lenny-ts/caddy-analyzer">GitHub</a></div>
+      <div class="page-meta"><a href="https://github.com/lenny-ts/caddy-analyzer/releases">v0.6.4</a> · updated <time datetime="2026-09-01">2026-09-01</time> · <a href="https://github.com/lenny-ts/caddy-analyzer">GitHub</a></div>
       <h1>Usage</h1>
 <p>From “show everything” to “show only what matters”. All examples are copy-paste with <code>testdata/sample.log</code> — replace with your source (see <a href="../sources.html">Log Sources</a>).</p>
 
 <h2 id="no-filter">No filter — aggregate report</h2>
 <pre><code>caddy-analyze testdata/sample.log</code></pre>
-<p>Renders period, RPS, 2xx/3xx/4xx/5xx bars, bytes, P50/P95/P99, human/bot, top paths/IPs/UAs/methods/hosts, countries/ASNs (if GeoIP), and operational counts.</p>
+<p>Renders period, RPS, 2xx/3xx/4xx/5xx bars, bytes, P50/P95/P99, human/bot, top paths/IPs/UAs/methods/hosts, countries/cities/ASNs (if GeoIP), and operational counts.</p>
 
 <h2 id="entry-filters">Entry filters → listing mode</h2>
 <p>When any entry-level filter is active and format is <code>table</code> without <code>-o</code>, the tool switches to a color-coded <em>listing</em> (not aggregate). Force the report with <code>-f json/csv/html</code> or <code>-o</code>.</p>
@@ -109,13 +109,27 @@ caddy-analyze -f html -o report.html --detect testdata/sample.log && open report
 caddy-analyze --defang -f json testdata/sample.log      # 203.0.113.1 → 203[.]0[.]113[.]1</code></pre>
 <p><code>--defang</code> rewrites IPs/URLs for safe sharing (also <code>hxxp</code>).</p>
 
+<h3 id="remote">Remote exporters</h3>
+<p>Remote formats send one aggregated report per emitted report. Elasticsearch and OpenSearch use the Bulk API; Loki receives the same report as one log line. In <code>--follow</code> and <code>--interval</code>, every window is flushed synchronously.</p>
+<pre><code>caddy-analyze -f elasticsearch --remote-url http://localhost:9200 --remote-index caddy-analysis testdata/sample.log
+caddy-analyze -f opensearch --remote-url https://search.example/_bulk --remote-token "$TOKEN" testdata/sample.log
+caddy-analyze -f loki --remote-url http://localhost:3100 testdata/sample.log</code></pre>
+<p>Use <code>--remote-user</code>/<code>--remote-password</code> for Basic authentication, or <code>--remote-token</code> for Bearer authentication. Retry and timeout behavior is controlled by <code>--remote-retries</code>, <code>--remote-backoff</code>, and <code>--remote-timeout</code>.</p>
+
+<h3 id="custom-patterns">Custom patterns</h3>
+<p>Load one or more validated JSON rule files without recompiling the binary:</p>
+<pre><code>caddy-analyze --detect --custom-patterns rules.json --custom-patterns local.json testdata/sample.log</code></pre>
+<pre><code>[{"type":"internal_admin","pattern":"/internal/admin","description":"Internal admin probe","confidence":8,"source":"uri","mitre":"T1595.002"}]</code></pre>
+<p><code>source</code> can be <code>uri</code>, <code>header</code>, <code>user_agent</code>, or <code>all</code>. Invalid JSON, regexes, types, or confidence values fail before log processing.</p>
+
 <h2 id="top">Top — ranked inspector</h2>
 <pre><code>caddy-analyze top ip testdata/sample.log
 caddy-analyze top path -t 20 --5xx testdata/sample.log
-caddy-analyze top country --country IT testdata/sample.log
-caddy-analyze top asn testdata/sample.log
+ caddy-analyze top country --country IT testdata/sample.log
+ caddy-analyze top city testdata/sample.log
+ caddy-analyze top asn testdata/sample.log
 caddy-analyze top -b bandwidth -f csv -o top.csv testdata/sample.log</code></pre>
-<p>Dimensions: <code>path, ip, ua, status, method, host, bandwidth, country, asn</code>. Country/asn need GeoIP (see <a href="configuration.html#tuning">Configuration → tuning</a>).</p>
+<p>Dimensions: <code>path, ip, ua, status, method, host, bandwidth, country, city, asn</code>. Country/asn need GeoIP; city uses a City MMDB, which is downloaded automatically unless <code>--no-auto-download</code> is set.</p>
 
 <h2 id="diff">Diff — compare two logs</h2>
 <pre><code>caddy-analyze diff testdata/sample.log testdata/large.log
@@ -132,10 +146,6 @@ caddy-analyze tail docker://caddy --detect              # tail with inline detec
 <pre><code>caddy-analyze --detect testdata/sample.log -f table
 caddy-analyze --detect -f html -o sec.html testdata/sample.log</code></pre>
 <p>26 categories, dual-pass (raw + unescaped), MITRE-tagged. See <a href="../reference/security-categories.html">Categories</a> and <a href="../reference/security-detection.html">Detection details</a>.</p>
-<h3 id="custom-patterns">Custom patterns</h3>
-<p>Load additional request signatures with a repeatable flag. Rules are validated before processing; <code>source</code> can be <code>uri</code>, <code>header</code>, <code>user_agent</code>, or <code>all</code>.</p>
-<pre><code>caddy-analyze --detect --custom-patterns rules.json --custom-patterns local.json access.log</code></pre>
-<pre><code>[{"type":"custom_admin","pattern":"/internal/admin/","description":"Internal admin endpoint","confidence":8,"source":"uri","mitre":"T1595.002"}]</code></pre>
       <footer class="footer">
   <p>caddy-analyzer is open-source under <a href="https://github.com/lenny-ts/caddy-analyzer/blob/main/LICENSE">MIT</a> · <a href="https://github.com/lenny-ts/caddy-analyzer">GitHub</a> · <a href="../changelog.html">Changelog</a></p>
 </footer>
@@ -143,7 +153,7 @@ caddy-analyze --detect -f html -o sec.html testdata/sample.log</code></pre>
 
     </div>
   </main>
-  <nav class="doc-toc" aria-label="On this page"><div class="toc-label">On this page</div><a href="#no-filter" class="toc-link">No filter — aggregate report</a><a href="#entry-filters" class="toc-link">Entry filters → listing mode</a><a href="#formats" class="toc-link">Output formats</a><a href="#top" class="toc-link">Top — ranked inspector</a><a href="#diff" class="toc-link">Diff — compare two logs</a><a href="#live" class="toc-link">Live — follow / interval / watch</a><a href="#detect" class="toc-link">Detection</a></nav>
+  <nav class="doc-toc" aria-label="On this page"><div class="toc-label">On this page</div><a href="#no-filter" class="toc-link">No filter — aggregate report</a><a href="#entry-filters" class="toc-link">Entry filters → listing mode</a><a href="#formats" class="toc-link">Output formats</a><a href="#remote" class="toc-link h3">Remote exporters</a><a href="#custom-patterns" class="toc-link h3">Custom patterns</a><a href="#top" class="toc-link">Top — ranked inspector</a><a href="#diff" class="toc-link">Diff — compare two logs</a><a href="#live" class="toc-link">Live — follow / interval / watch</a><a href="#detect" class="toc-link">Detection</a></nav>
 </div>
 <script src="../docs.min.js?v=36"></script>
 </body>

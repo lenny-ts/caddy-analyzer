@@ -33,6 +33,19 @@ caddy-analyze -f html -o report.html --detect testdata/sample.log && open report
 caddy-analyze --defang -f json testdata/sample.log      # 203.0.113.1 → 203[.]0[.]113[.]1</code></pre>
 <p><code>--defang</code> riscrive IP/URL per una condivisione sicura (anche <code>hxxp</code>).</p>
 
+<h3 id="remote">Exporter remoti</h3>
+<p>I formati remoti inviano un report aggregato per ogni report generato. Elasticsearch e OpenSearch usano la Bulk API; Loki riceve lo stesso report come una singola log line. In <code>--follow</code> e <code>--interval</code> ogni finestra viene inviata sincronicamente.</p>
+<pre><code>caddy-analyze -f elasticsearch --remote-url http://localhost:9200 --remote-index caddy-analysis testdata/sample.log
+caddy-analyze -f opensearch --remote-url https://search.example/_bulk --remote-token "$TOKEN" testdata/sample.log
+caddy-analyze -f loki --remote-url http://localhost:3100 testdata/sample.log</code></pre>
+<p>Usa <code>--remote-user</code>/<code>--remote-password</code> per Basic o <code>--remote-token</code> per Bearer. Retry e timeout sono configurabili con <code>--remote-retries</code>, <code>--remote-backoff</code> e <code>--remote-timeout</code>.</p>
+
+<h3 id="custom-patterns">Pattern personalizzati</h3>
+<p>Carica uno o più file JSON validati senza ricompilare il binario:</p>
+<pre><code>caddy-analyze --detect --custom-patterns rules.json --custom-patterns local.json testdata/sample.log</code></pre>
+<pre><code>[{"type":"internal_admin","pattern":"/internal/admin","description":"Internal admin probe","confidence":8,"source":"uri","mitre":"T1595.002"}]</code></pre>
+<p><code>source</code> può essere <code>uri</code>, <code>header</code>, <code>user_agent</code> o <code>all</code>. JSON, regex, tipo o confidence non validi bloccano l'elaborazione prima della lettura dei log.</p>
+
 <h2 id="top">Top — ispettore classificato</h2>
 <pre><code>caddy-analyze top ip testdata/sample.log
 caddy-analyze top path -t 20 --5xx testdata/sample.log
