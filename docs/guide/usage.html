@@ -136,6 +136,17 @@ caddy-analyze top -b bandwidth -f csv -o top.csv testdata/sample.log</code></pre
 caddy-analyze diff old.log new.log -f json -o diff.json</code></pre>
 <p>Shows RPS delta, 5xx spike, latency regression, new error paths (top 10).</p>
 
+<h2 id="baseline">Baselines and regression checks</h2>
+<pre><code>caddy-analyze baseline save --output baseline.json testdata/sample.log
+caddy-analyze --against baseline.json --threshold 20 testdata/sample.log</code></pre>
+<p>The baseline is a versioned JSON snapshot. A comparison prints the metric deltas and exits non-zero when an error, latency, operational-error, or new-error-path regression exceeds the threshold. This makes it suitable for CI/CD gates. The default threshold is <code>20</code> percent.</p>
+
+<h2 id="deployment">Container deployment</h2>
+<p>A hardened local demo is available in <code>docker-compose.yml</code>. The Helm chart is under <code>deploy/helm/caddy-analyzer</code>; it runs non-root with a read-only filesystem and does not mount the Docker socket by default. Enable the socket only when the security implications are understood.</p>
+<pre><code>docker compose up --build
+helm lint deploy/helm/caddy-analyzer
+helm template caddy-analyzer deploy/helm/caddy-analyzer</code></pre>
+
 <h2 id="live">Live — follow / interval / watch</h2>
 <pre><code>caddy-analyze --follow /var/log/caddy/access.log        # stream
 caddy-analyze --interval 10s /var/log/caddy/access.log  # report every 10s
@@ -153,7 +164,7 @@ caddy-analyze --detect -f html -o sec.html testdata/sample.log</code></pre>
 
     </div>
   </main>
-  <nav class="doc-toc" aria-label="On this page"><div class="toc-label">On this page</div><a href="#no-filter" class="toc-link">No filter — aggregate report</a><a href="#entry-filters" class="toc-link">Entry filters → listing mode</a><a href="#formats" class="toc-link">Output formats</a><a href="#remote" class="toc-link h3">Remote exporters</a><a href="#custom-patterns" class="toc-link h3">Custom patterns</a><a href="#top" class="toc-link">Top — ranked inspector</a><a href="#diff" class="toc-link">Diff — compare two logs</a><a href="#live" class="toc-link">Live — follow / interval / watch</a><a href="#detect" class="toc-link">Detection</a></nav>
+  <nav class="doc-toc" aria-label="On this page"><div class="toc-label">On this page</div><a href="#no-filter" class="toc-link">No filter — aggregate report</a><a href="#entry-filters" class="toc-link">Entry filters → listing mode</a><a href="#formats" class="toc-link">Output formats</a><a href="#remote" class="toc-link h3">Remote exporters</a><a href="#custom-patterns" class="toc-link h3">Custom patterns</a><a href="#top" class="toc-link">Top — ranked inspector</a><a href="#diff" class="toc-link">Diff — compare two logs</a><a href="#baseline" class="toc-link">Baselines and regression checks</a><a href="#deployment" class="toc-link">Container deployment</a><a href="#live" class="toc-link">Live — follow / interval / watch</a><a href="#detect" class="toc-link">Detection</a></nav>
 </div>
 <script src="../docs.min.js?v=36"></script>
 </body>

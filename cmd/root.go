@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"bufio"
 	"context"
 	"fmt"
 	"io"
@@ -68,6 +67,8 @@ var (
 	flagDefang         bool
 	flagGeoIPDB        string
 	flagNoAutoDL       bool
+	flagAgainst        string
+	flagThreshold      float64
 	flagRemoteURL      string
 	flagRemoteIndex    string
 	flagRemoteUser     string
@@ -103,6 +104,7 @@ Subcommands:
   tail [source...]       Colorized real-time log viewer
   top <dimension>        Quick top-N metric inspector (path, ip, ua, status, method, host, bandwidth, country, city, asn)
   diff <log1> <log2>     Compare two log files for RPS shifts, 5xx spikes, and latency changes
+  baseline save <source...> Save a versioned JSON baseline with --output
 
 Filtering (activate colored log listing instead of report):
   --ip <ip/CIDR>         Filter by client IP or subnet
@@ -218,6 +220,8 @@ func init() {
 	flags.BoolVarP(&flagDefang, "defang", "", false, "Defang IPs in output (replace . with [.]) for safe sharing")
 	flags.StringVarP(&flagGeoIPDB, "geoip-db", "", "", "Path to GeoIP mmdb file (DB-IP or MaxMind). Auto-discovers if empty")
 	flags.BoolVarP(&flagNoAutoDL, "no-auto-download", "", false, "Disable automatic download of DB-IP lite mmdb on first run")
+	flags.StringVar(&flagAgainst, "against", "", "Compare the current analysis with a baseline JSON file")
+	flags.Float64Var(&flagThreshold, "threshold", 20, "Regression threshold percentage (default 20; non-zero exit when exceeded)")
 	rootCmd.PersistentFlags().StringVarP(&flagK8sNS, "namespace", "n", "", "Kubernetes namespace")
 
 	rootFlags := rootCmd.Flags()
@@ -281,6 +285,11 @@ func runAnalysis(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
+	if flagAgainst != "" {
+		ctx, cancel := ctxForCommand()
+		defer cancel()
+		return runAgainst(ctx, sources)
+	}
 
 	filters, err := buildFilters()
 	if err != nil {
@@ -314,6 +323,10 @@ func runAnalysis(cmd *cobra.Command, args []string) error {
 	return runOnceMode(ctx, sources, filters)
 }
 
+func ctxForCommand() (context.Context, context.CancelFunc) {
+	return signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+}
+
 func validateFlags() error {
 	if flagWorkers < 0 {
 		return fmt.Errorf("--workers must be 0 or greater")
@@ -329,6 +342,9 @@ func validateFlags() error {
 	}
 	if flagNoBots && flagBotsOnly {
 		return fmt.Errorf("--no-bots and --bots-only are mutually exclusive")
+	}
+	if flagThreshold < 0 {
+		return fmt.Errorf("--threshold must not be negative")
 	}
 	switch strings.ToLower(flagFormat) {
 	case "table", "json", "csv", "html", "elasticsearch", "es", "opensearch", "os", "loki":
@@ -376,8 +392,7 @@ func runOnceMode(ctx context.Context, sources []types.LogSource, filters types.F
 		defer func() { _ = geoip.Close() }()
 	}
 
-	totalLines := countTotalLines(sources)
-	bar := progress.New(os.Stderr, totalLines, "Analyzing")
+	bar := progress.New(os.Stderr, 0, "Analyzing")
 
 	for _, src := range sources {
 		r := reader.FromSource(src)
@@ -607,31 +622,6 @@ func enrichGeoIP(entry *types.LogEntry, g *enrich.GeoIP) {
 		return
 	}
 	entry.Geo = info
-}
-
-// countTotalLines counts the total number of lines across all local file
-// sources. For non-file sources (stdin, docker, k8s, journalctl), returns 0
-// (indeterminate progress). This is a fast pre-scan (~70K lines/sec) used
-// only to set up the progress bar — the actual parsing happens in the main loop.
-func countTotalLines(sources []types.LogSource) int64 {
-	var total int64
-	for _, src := range sources {
-		if src.Type != types.SourceFile {
-			return 0
-		}
-		f, err := os.Open(src.Path)
-		if err != nil {
-			return 0
-		}
-		scanner := bufio.NewScanner(f)
-		scanner.Buffer(make([]byte, 0, 64*1024), 1024*1024)
-		for scanner.Scan() {
-			total++
-		}
-		_ = scanner.Err()
-		_ = f.Close()
-	}
-	return total
 }
 
 // fanInFollow opens every source in follow mode and multiplexes their lines

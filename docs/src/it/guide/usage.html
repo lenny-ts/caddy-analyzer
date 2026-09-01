@@ -59,6 +59,17 @@ caddy-analyze top -b bandwidth -f csv -o top.csv testdata/sample.log</code></pre
 caddy-analyze diff old.log new.log -f json -o diff.json</code></pre>
 <p>Mostra delta RPS, picco di 5xx, regressione della latenza, nuovi percorsi di errore (primi 10).</p>
 
+<h2 id="baseline">Baseline e controlli di regressione</h2>
+<pre><code>caddy-analyze baseline save --output baseline.json testdata/sample.log
+caddy-analyze --against baseline.json --threshold 20 testdata/sample.log</code></pre>
+<p>La baseline è uno snapshot JSON versionato. Il confronto stampa le differenze e restituisce un exit code non-zero quando errori, latenza, errori operativi o nuovi percorsi superano la soglia. È quindi adatto ai gate CI/CD. La soglia predefinita è <code>20</code> percento.</p>
+
+<h2 id="deployment">Deployment container</h2>
+<p>Il demo locale hardened è in <code>docker-compose.yml</code>. Il chart Helm è in <code>deploy/helm/caddy-analyzer</code>: esegue il processo come non-root con filesystem in sola lettura e non monta il socket Docker di default. Abilitalo solo dopo aver valutato le implicazioni di sicurezza.</p>
+<pre><code>docker compose up --build
+helm lint deploy/helm/caddy-analyzer
+helm template caddy-analyzer deploy/helm/caddy-analyzer</code></pre>
+
 <h2 id="live">Live — follow / interval / watch</h2>
 <pre><code>caddy-analyze --follow /var/log/caddy/access.log        # stream
 caddy-analyze --interval 10s /var/log/caddy/access.log  # report every 10s

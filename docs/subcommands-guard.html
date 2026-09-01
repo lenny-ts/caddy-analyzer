@@ -76,9 +76,9 @@
       <nav class="breadcrumb" aria-label="Breadcrumb"><a href="reference/cli.html">Reference</a><span class="sep">/</span><span>guard</span></nav>
       <div class="page-meta"><a href="https://github.com/lenny-ts/caddy-analyzer/releases">v0.6.4</a> · updated <time datetime="2026-09-01">2026-09-01</time> · <a href="https://github.com/lenny-ts/caddy-analyzer">GitHub</a></div>
       <h1>guard</h1>
-<p>Tail a log source and auto-block IPs that exceed thresholds. <span class="pill pill-danger">modifies firewall</span> — every run can add <code>iptables</code>/<code>nftables</code>/<code>DOCKER-USER</code> rules. Do not run copy-paste examples on a remote host without allowlisting your IP first.</p>
+<p>Tail a log source and auto-block IPs that exceed thresholds. Normal runs <span class="pill pill-danger">modify the firewall</span> — every run can add <code>iptables</code>/<code>nftables</code>/<code>DOCKER-USER</code> rules. Use <code>--dry-run</code> to execute detection without firewall or state-file changes.</p>
 
-<div class="callout callout-danger"><div class="callout-label">Requires root</div><code>guard</code> needs <code>sudo</code>. Test with <code>--never-block YOUR_IP</code> or run <a href="subcommands-blocklist.html">blocklist refresh</a> first.</div>
+<div class="callout callout-danger"><div class="callout-label">Requires root</div>Normal <code>guard</code> runs need <code>sudo</code>; <code>--dry-run</code> does not. Test with <code>--never-block YOUR_IP</code> or run <a href="subcommands-blocklist.html">blocklist refresh</a> first.</div>
 
 <h2 id="synopsis">Synopsis</h2>
 <pre><code>caddy-analyze guard [source] [flags]
@@ -96,6 +96,7 @@
 <tr><td><code>--notfound-limit</code></td><td></td><td>50</td><td>404 before block</td></tr>
 <tr><td><code>--detect-confidence</code></td><td></td><td>8</td><td>Min confidence 1-10 for pattern-based blocks (0 disables only this block path; it is not a dry run)</td></tr>
 <tr><td><code>--firewall-backend</code></td><td></td><td>auto</td><td><code>auto|iptables|docker|nftables|hybrid</code></td></tr>
+<tr><td><code>--dry-run</code></td><td></td><td>false</td><td>Report would-be blocks and emit <code>would_block</code> audit events without changing firewall or state</td></tr>
 <tr><td><code>--iptables-timeout</code></td><td></td><td>10s</td><td>Per-invocation iptables timeout</td></tr>
 <tr><td><code>--country-block</code></td><td></td><td></td><td>ISO codes to block immediately (e.g. <code>CN,RU</code>)</td></tr>
 <tr><td><code>--no-blocklist</code></td><td></td><td>false</td><td>Disable 8 blocklist feeds</td></tr>
@@ -127,7 +128,7 @@ MY_IP=$(curl -s ifconfig.me)
 sudo caddy-analyze guard --never-block $MY_IP --limit 50 --window 1m /var/log/caddy/access.log</code></pre>
 
 <h2 id="advanced">Advanced example</h2>
-<p><span class="pill pill-danger">modifies firewall</span> — hybrid backend + country + persistent state. <code>guard</code> has no dry-run or audit-only mode; use <a href="subcommands-blocklist.html">blocklist list</a> only to inspect feeds without firewall changes.</p>
+<p><span class="pill pill-danger">modifies firewall</span> — hybrid backend + country + persistent state. To safely preview the same logic, add <code>--dry-run</code>; the terminal shows would-be blocks and the audit sink receives <code>would_block</code> events.</p>
 <pre><code># hybrid = INPUT + DOCKER-USER; blocks survive restart; full audit
 sudo caddy-analyze guard docker://caddy \
   --firewall-backend hybrid \
@@ -142,7 +143,7 @@ sudo caddy-analyze guard docker://caddy \
 sudo caddy-analyze unban --list
 cat /var/log/caddy-analyzer-audit.jsonl | tail</code></pre>
 
-<div class="callout callout-warning"><div class="callout-label">Do not lock yourself out</div>On a remote VM, always pass <code>--never-block $(curl -s ifconfig.me)</code> or your office CIDR. There is no safe dry-run flag: an allowlist suppresses blocks and their audit records, while <code>0.0.0.0/0</code> does not cover IPv6. Test firewall behavior only on a disposable host.</div>
+<div class="callout callout-warning"><div class="callout-label">Do not lock yourself out</div>On a remote VM, always pass <code>--never-block $(curl -s ifconfig.me)</code> or your office CIDR. Use <code>--dry-run</code> to preview blocks; it reads existing state but does not restore rules or write changes.</div>
       <footer class="footer">
   <p>caddy-analyzer is open-source under <a href="https://github.com/lenny-ts/caddy-analyzer/blob/main/LICENSE">MIT</a> · <a href="https://github.com/lenny-ts/caddy-analyzer">GitHub</a> · <a href="changelog.html">Changelog</a></p>
 </footer>

@@ -60,6 +60,17 @@ caddy-analyze top -b bandwidth -f csv -o top.csv testdata/sample.log</code></pre
 caddy-analyze diff old.log new.log -f json -o diff.json</code></pre>
 <p>Shows RPS delta, 5xx spike, latency regression, new error paths (top 10).</p>
 
+<h2 id="baseline">Baselines and regression checks</h2>
+<pre><code>caddy-analyze baseline save --output baseline.json testdata/sample.log
+caddy-analyze --against baseline.json --threshold 20 testdata/sample.log</code></pre>
+<p>The baseline is a versioned JSON snapshot. A comparison prints the metric deltas and exits non-zero when an error, latency, operational-error, or new-error-path regression exceeds the threshold. This makes it suitable for CI/CD gates. The default threshold is <code>20</code> percent.</p>
+
+<h2 id="deployment">Container deployment</h2>
+<p>A hardened local demo is available in <code>docker-compose.yml</code>. The Helm chart is under <code>deploy/helm/caddy-analyzer</code>; it runs non-root with a read-only filesystem and does not mount the Docker socket by default. Enable the socket only when the security implications are understood.</p>
+<pre><code>docker compose up --build
+helm lint deploy/helm/caddy-analyzer
+helm template caddy-analyzer deploy/helm/caddy-analyzer</code></pre>
+
 <h2 id="live">Live — follow / interval / watch</h2>
 <pre><code>caddy-analyze --follow /var/log/caddy/access.log        # stream
 caddy-analyze --interval 10s /var/log/caddy/access.log  # report every 10s
