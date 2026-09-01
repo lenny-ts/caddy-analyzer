@@ -88,7 +88,7 @@ func LoadCustomPatterns(path string) ([]DetectionPattern, error) {
 	if err != nil {
 		return nil, fmt.Errorf("open custom patterns %q: %w", path, err)
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 	var patterns []DetectionPattern
 	dec := json.NewDecoder(f)
 	if err := dec.Decode(&patterns); err != nil {

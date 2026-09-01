@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"net/url"
 	"strings"
@@ -40,6 +41,26 @@ type SyslogWriter interface {
 	Write(string) error
 	Close() error
 }
+
+// NewSyslogUDPWriter creates a small portable syslog transport. The standard
+// log/syslog package is not available on Windows, while UDP syslog needs no
+// platform-specific behavior.
+func NewSyslogUDPWriter(address string) (SyslogWriter, error) {
+	conn, err := net.Dial("udp", address)
+	if err != nil {
+		return nil, fmt.Errorf("dial syslog: %w", err)
+	}
+	return &udpSyslogWriter{conn: conn}, nil
+}
+
+type udpSyslogWriter struct{ conn net.Conn }
+
+func (w *udpSyslogWriter) Write(value string) error {
+	_, err := io.WriteString(w.conn, "<4>caddy-analyzer "+value)
+	return err
+}
+
+func (w *udpSyslogWriter) Close() error { return w.conn.Close() }
 
 type SyslogSink struct{ Writer SyslogWriter }
 
@@ -101,7 +122,7 @@ func (s HTTPSink) Emit(ctx context.Context, e Entry) error {
 		}
 		return errors.New("webhook request failed")
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		return fmt.Errorf("webhook returned HTTP %d", resp.StatusCode)
 	}

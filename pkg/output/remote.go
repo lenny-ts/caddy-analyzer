@@ -161,7 +161,7 @@ func postWithRetry(ctx context.Context, cfg RemoteConfig, endpoint string, body 
 		resp, err := cfg.client().Do(req)
 		if err == nil {
 			data, readErr := io.ReadAll(resp.Body)
-			resp.Body.Close()
+			_ = resp.Body.Close()
 			if readErr != nil {
 				err = readErr
 			} else if resp.StatusCode < 200 || resp.StatusCode >= 300 {

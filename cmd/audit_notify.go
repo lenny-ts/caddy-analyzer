@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"fmt"
-	"log/syslog"
 	"os"
 	"strings"
 	"time"
@@ -11,21 +10,11 @@ import (
 	"github.com/spf13/cobra"
 )
 
-type syslogAdapter struct{ w *syslog.Writer }
-
-func (s syslogAdapter) Write(v string) error { return s.w.Info(v) }
-func (s syslogAdapter) Close() error         { return s.w.Close() }
-
 type auditNotifyFlags struct {
 	auditLog, syslogAddress, webhookURL, webhookProvider string
 	pagerDutyRoutingKey                                  string
 	auditTimeout, auditRateLimit                         time.Duration
 	auditRetries                                         int
-}
-
-func (f *auditNotifyFlags) add(cmd *cobra.Command, logDefault string) {
-	cmd.Flags().StringVar(&f.auditLog, "audit-log", logDefault, "Audit log path (empty to disable)")
-	f.addRest(cmd)
 }
 
 func (f *auditNotifyFlags) addRest(cmd *cobra.Command) {
@@ -72,14 +61,14 @@ func (f *auditNotifyFlags) dispatcher() (*audit.Dispatcher, error) {
 		sinks = append(sinks, audit.LoggerSink{Logger: l})
 	}
 	if f.syslogAddress != "" {
-		w, err := syslog.Dial("udp", f.syslogAddress, syslog.LOG_WARNING|syslog.LOG_USER, "caddy-analyzer")
+		w, err := audit.NewSyslogUDPWriter(f.syslogAddress)
 		if err != nil {
 			if local != nil {
 				_ = local.Close()
 			}
 			return nil, fmt.Errorf("syslog %s: %w", f.syslogAddress, err)
 		}
-		sinks = append(sinks, audit.SyslogSink{Writer: syslogAdapter{w}})
+		sinks = append(sinks, audit.SyslogSink{Writer: w})
 	}
 	if f.webhookURL != "" {
 		sinks = append(sinks, audit.HTTPSink{URL: f.webhookURL, Provider: provider, RoutingKey: f.pagerDutyRoutingKey})
