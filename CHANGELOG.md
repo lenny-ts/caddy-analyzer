@@ -5,16 +5,6 @@ All notable changes to `caddy-analyzer` will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.8.0] - Unreleased
-
-### Added
-- **Guard dry-run (#78)**: exercise thresholds, detection, blocklists, and country rules without changing firewall rules or persistent state; emits `would_block` events and a summary.
-- **Persistent baselines (#73)**: save versioned JSON snapshots and compare future runs with `--against`, configurable regression thresholds, structured output, and CI-friendly exit codes.
-- **Bounded analysis caches (#69)**: replace unbounded grep/glob caches with concurrent LRU caches.
-- **O(1) detector LRU updates (#68)**: replace linear IP recency updates with a map-backed linked list.
-- **Single-pass progress analysis (#66)**: remove the full-file pre-scan that doubled I/O for large logs.
-- **Container deployment examples (#72)**: add a hardened Docker Compose demo and an opt-in, non-root Helm chart.
-
 ## [0.7.0] - Unreleased
 
 ### Added
