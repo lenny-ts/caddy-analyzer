@@ -55,6 +55,7 @@
   <div class="sidebar-sep"></div>
   <div class="sidebar-label">Reference</div>
   <a href="../reference/cli.html" class="sidebar-link active" data-page="cli.html">CLI Reference</a>
+  <a href="../reference/commands.html" class="sidebar-link" data-page="commands.html">All commands</a>
   <a href="../reference/security-categories.html" class="sidebar-link sub" data-page="security-categories.html">— Categories</a>
   <a href="../reference/security-detection.html" class="sidebar-link sub" data-page="security-detection.html">— Detection</a>
   <a href="../subcommands-guard.html" class="sidebar-link sub" data-page="subcommands-guard.html">— Guard</a>
@@ -77,6 +78,7 @@
       <div class="page-meta"><a href="https://github.com/lenny-ts/caddy-analyzer/releases">v0.7.0</a> · updated <time datetime="2026-09-01">2026-09-01</time> · <a href="https://github.com/lenny-ts/caddy-analyzer">GitHub</a></div>
       <div class="cli-heading"><div><div class="hero-badge">Command line interface</div><h1>CLI Reference</h1></div></div>
 <p>Entry point: <code>caddy-analyze [flags] [source...]</code> — sources resolved via <a href="../sources.html">Log Sources</a> or <a href="../guide/configuration.html">caddy-analyzer.json</a>. Below: every flag, its scope, and whether it touches the system.</p>
+<div class="callout callout-info"><div class="callout-label">Operational guide</div>For step-by-step explanations, use cases and subcommand-specific flags, see <a href="commands.html">All commands</a>.</div>
 
 <h2 id="global">Global flags — Scope &amp; root</h2>
 <p><span class="pill pill-all">all</span> = persistent on every subcommand. <span class="pill pill-root">root only</span> = only on the root command (not on <code>tail</code> etc.). No flag itself requires root; subcommands <code>guard</code>/<code>block</code>/<code>unban</code> do (see their pages).</p>

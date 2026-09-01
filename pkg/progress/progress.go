@@ -22,9 +22,13 @@ type Bar struct {
 	enabled  bool
 	total    int64
 	current  int64
+	frame    int
 	lastDraw time.Time
 	done     bool
 	label    string
+	stop     chan struct{}
+	stopped  chan struct{}
+	stopOnce sync.Once
 }
 
 // New creates a progress bar writing to w. The bar is only enabled if w is
@@ -38,12 +42,45 @@ func New(w io.Writer, total int64, label string) *Bar {
 			enabled = true
 		}
 	}
-	return &Bar{
+	b := &Bar{
 		w:       w,
 		enabled: enabled,
 		total:   total,
 		label:   label,
 	}
+	if enabled && total <= 0 {
+		b.stop = make(chan struct{})
+		b.stopped = make(chan struct{})
+		go b.animate()
+	}
+	return b
+}
+
+func (b *Bar) animate() {
+	defer close(b.stopped)
+	ticker := time.NewTicker(refreshInterval)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ticker.C:
+			b.mu.Lock()
+			if !b.done {
+				b.lastDraw = time.Now()
+				b.draw()
+			}
+			b.mu.Unlock()
+		case <-b.stop:
+			return
+		}
+	}
+}
+
+func (b *Bar) stopAnimation() {
+	if b.stop == nil {
+		return
+	}
+	b.stopOnce.Do(func() { close(b.stop) })
+	<-b.stopped
 }
 
 // Add increments the progress counter by n and redraws if the refresh
@@ -67,6 +104,7 @@ func (b *Bar) Done() {
 	if !b.enabled {
 		return
 	}
+	b.stopAnimation()
 	b.mu.Lock()
 	defer b.mu.Unlock()
 	b.done = true
@@ -79,8 +117,10 @@ func (b *Bar) Abort() {
 	if !b.enabled {
 		return
 	}
+	b.stopAnimation()
 	b.mu.Lock()
 	defer b.mu.Unlock()
+	b.done = true
 	fmt.Fprintf(b.w, "\r%s\r", strings.Repeat(" ", 80))
 }
 
@@ -105,6 +145,7 @@ func (b *Bar) drawDeterministic() {
 func (b *Bar) drawIndeterminate() {
 	// Spinner animation
 	chars := `⠋⠙⠹⠸⠴⠦⠧⠇⠏`
-	idx := int(b.current) % len(chars)
+	idx := b.frame % len(chars)
+	b.frame++
 	fmt.Fprintf(b.w, "\r%s %c %d entries", b.label, chars[idx], b.current)
 }

@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>All commands — caddy-analyzer</title>
+  <meta name="description" content="Detailed reference for every caddy-analyze command, mode, option and common usage.">
+  <meta name="theme-color" content="#09090B">
+  <link rel="icon" href="../caddy-analyzer-logo.png" type="image/png">
+  <link rel="canonical" href="https://lenny-ts.github.io/caddy-analyzer/reference/commands.html">
+  <link rel="alternate" hreflang="x-default" href="https://lenny-ts.github.io/caddy-analyzer/reference/commands.html">
+  <link rel="alternate" hreflang="en" href="https://lenny-ts.github.io/caddy-analyzer/reference/commands.html">
+  <link rel="alternate" hreflang="it" href="https://lenny-ts.github.io/caddy-analyzer/it/reference/commands.html">
+  <script>try{var t=localStorage.getItem('caddy-docs-theme');if(t==='light')document.documentElement.setAttribute('data-theme','light');}catch(e){}</script>
+  <meta name="color-scheme" content="dark light">
+  <link rel="stylesheet" href="../styles.min.css?v=36">
+</head>
+<body>
+<header class="site-header">
+  <a href="../index.html" class="logo">
+    <img src="../caddy-analyzer-logo.png" alt="" class="site-logo">
+    <span>caddy-analyzer</span>
+  </a>
+  <nav aria-label="Primary">
+    <a href="../installation.html" data-nav="installation.html">Installation</a>
+    <a href="../sources.html" data-nav="sources.html">Log Sources</a>
+    <a href="../reference/cli.html" data-nav="cli.html">CLI Reference</a>
+    <a href="../security.html" data-nav="security.html">Threat Engine</a>
+    <a href="../tui-html.html" data-nav="tui-html.html">TUI & HTML Reports</a>
+  </nav>
+  <div class="header-actions">
+    <a href="https://github.com/lenny-ts/caddy-analyzer" style="color:var(--text-sec);font-size:0.85rem;" rel="noopener">GitHub</a>
+    <div class="language-switch" role="group" aria-label="Language"><span class="lang-option active" aria-current="page">EN</span><a class="lang-option" href="../it/reference/commands.html" hreflang="it" lang="it">IT</a></div>
+    <button class="theme-toggle" type="button" aria-label="Switch to light theme">
+      <span class="theme-icon theme-sun" aria-hidden="true">☀</span>
+      <span class="theme-icon theme-moon" aria-hidden="true">☾</span>
+    </button>
+  </div>
+</header>
+<div class="scroll-progress" aria-hidden="true"></div>
+
+<div class="docs-layout">
+   <aside class="doc-sidebar" aria-label="Page navigation">
+  <div class="sidebar-label">Documentation</div>
+  <a href="../index.html" class="sidebar-link" data-page="index.html">Overview</a>
+  <a href="../quickstart.html" class="sidebar-link" data-page="quickstart.html">Quickstart</a>
+  <a href="../installation.html" class="sidebar-link" data-page="installation.html">Installation</a>
+  <a href="../sources.html" class="sidebar-link" data-page="sources.html">Log Sources</a>
+  <div class="sidebar-sep"></div>
+  <div class="sidebar-label">Guide</div>
+  <a href="../guide/configuration.html" class="sidebar-link" data-page="configuration.html">Configuration</a>
+  <a href="../guide/usage.html" class="sidebar-link" data-page="usage.html">Usage</a>
+  <a href="../guide/examples.html" class="sidebar-link" data-page="examples.html">Examples</a>
+  <a href="../guide/troubleshooting.html" class="sidebar-link" data-page="troubleshooting.html">Troubleshooting</a>
+  <div class="sidebar-sep"></div>
+  <div class="sidebar-label">Reference</div>
+  <a href="../reference/cli.html" class="sidebar-link" data-page="cli.html">CLI Reference</a>
+  <a href="../reference/commands.html" class="sidebar-link active" data-page="commands.html">All commands</a>
+  <a href="../reference/security-categories.html" class="sidebar-link sub" data-page="security-categories.html">— Categories</a>
+  <a href="../reference/security-detection.html" class="sidebar-link sub" data-page="security-detection.html">— Detection</a>
+  <a href="../subcommands-guard.html" class="sidebar-link sub" data-page="subcommands-guard.html">— Guard</a>
+  <a href="../subcommands-blocklist.html" class="sidebar-link sub" data-page="subcommands-blocklist.html">— Blocklist</a>
+  <a href="../subcommands-block.html" class="sidebar-link sub" data-page="subcommands-block.html">— Block / Unban</a>
+  <a href="../subcommands-top.html" class="sidebar-link sub" data-page="subcommands-top.html">— Top</a>
+  <a href="../reference/api.html" class="sidebar-link" data-page="api.html">API / Packages</a>
+  <div class="sidebar-sep"></div>
+  <a href="../security.html" class="sidebar-link" data-page="security.html">Threat Engine</a>
+  <a href="../architecture.html" class="sidebar-link" data-page="architecture.html">Architecture</a>
+  <a href="../tui-html.html" class="sidebar-link" data-page="tui-html.html">TUI & HTML Reports</a>
+  <a href="../contributing.html" class="sidebar-link" data-page="contributing.html">Contributing</a>
+  <a href="../faq.html" class="sidebar-link" data-page="faq.html">FAQ</a>
+  <a href="../changelog.html" class="sidebar-link" data-page="changelog.html">Changelog</a>
+</aside>
+
+  <main class="wrap" id="main">
+    <div class="doc-content">
+      <nav class="breadcrumb" aria-label="Breadcrumb"><a href="../reference/cli.html">Reference</a><span class="sep">/</span><span>All commands</span></nav>
+      <div class="page-meta"><a href="https://github.com/lenny-ts/caddy-analyzer/releases">v0.7.0</a> · updated <time datetime="2026-09-01">2026-09-01</time> · <a href="https://github.com/lenny-ts/caddy-analyzer">GitHub</a></div>
+      <h1>All commands</h1>
+<p>This page explains what every command does, what it reads or changes, and which mode to choose. Use <code>caddy-analyze &lt;command&gt; --help</code> for the exact flags installed in your binary. The complete flag section separates persistent flags, root-only modes and command-specific options.</p>
+
+<h2 id="decision">Choose a command</h2>
+<div class="table-wrap"><table><thead><tr><th>Goal</th><th>Command</th><th>Effect</th></tr></thead><tbody>
+<tr><td>Summarize one or more logs</td><td><code>caddy-analyze SOURCE...</code></td><td>Read-only report</td></tr>
+<tr><td>Find suspicious requests</td><td><code>caddy-analyze --detect SOURCE...</code></td><td>Read-only threat report</td></tr>
+<tr><td>Watch new entries</td><td><code>tail</code> or <code>--follow</code></td><td>Read-only stream/report</td></tr>
+<tr><td>See rankings</td><td><code>top</code></td><td>Read-only aggregation</td></tr>
+<tr><td>Compare two periods</td><td><code>diff</code></td><td>Read-only comparison</td></tr>
+<tr><td>Store a reference period</td><td><code>baseline save</code></td><td>Writes JSON</td></tr>
+<tr><td>Automatically block attackers</td><td><code>guard</code></td><td>May change firewall rules</td></tr>
+<tr><td>Block or unblock manually</td><td><code>block</code> / <code>unban</code></td><td>Changes firewall rules</td></tr>
+<tr><td>Manage threat-intel feeds</td><td><code>blocklist</code></td><td>Writes cache/config, not firewall</td></tr>
+<tr><td>Manage defaults</td><td><code>config</code></td><td>Writes configuration</td></tr>
+<tr><td>Maintain protected IPs</td><td><code>whitelist</code></td><td>Writes allowlist</td></tr>
+<tr><td>Export detection rules</td><td><code>export-sigma</code></td><td>Writes YAML or stdout</td></tr>
+<tr><td>Install a release</td><td><code>update</code></td><td>Replaces the binary</td></tr>
+</tbody></table></div>
+
+<h2 id="analyze">Analyze: the root command</h2>
+<pre><code>caddy-analyze [flags] [source...]
+caddy-analyze --detect --format json access.log
+caddy-analyze --from 1h --5xx /var/log/caddy/*.log</code></pre>
+<p>With no subcommand, the tool parses Caddy JSON access logs and operational events, applies filters, aggregates metrics, and prints a table report. Sources can be local files or globs, <code>-</code> for stdin, <code>docker://container</code>, <code>k8s://pod</code>, or <code>journalctl://unit</code>. If no source is supplied, the configured default source is used.</p>
+<p><code>--detect</code> enables the dual-pass security engine and adds suspicious IPs, categories, confidence and evidence to the report. It does not block anything. Use <code>--format json</code> for automation, <code>--format csv</code> for spreadsheets, and <code>--format html -o report.html</code> for sharing. Filtering flags such as <code>--ip</code>, <code>--path</code>, <code>--slow</code> and <code>--5xx</code> are combined as AND conditions; <code>--status</code>, country and ASN lists match any value in their list.</p>
+<p>Use <code>--follow</code> for periodic reports, <code>--interval 5m</code> for windowed aggregation, or <code>--watch</code> for the interactive dashboard. These root-only modes cannot be combined with each other where the CLI reports them as mutually exclusive.</p>
+<pre><code># Pipe logs and produce machine-readable output
+cat access.log | caddy-analyze --detect --format json -
+
+# Inspect only slow server errors from a time window
+caddy-analyze --from 2h --5xx --slow 500ms access.log
+
+# Send analyzed documents to Loki or Elasticsearch-compatible storage
+caddy-analyze --format loki --remote-url https://logs.example/api/prom/push access.log</code></pre>
+
+<h2 id="tail">tail</h2>
+<pre><code>caddy-analyze tail [source...] [--detect]</code></pre>
+<p>Streams entries as they arrive and colorizes status, method, path, latency and client IP. It is the interactive choice for troubleshooting a live service. <code>--detect</code> highlights matching requests inline; it does not modify the firewall. Filters still apply, so a filtered-out entry is not printed.</p>
+<pre><code>caddy-analyze tail docker://caddy --detect --5xx
+caddy-analyze tail --grep '/admin|wp-login' /var/log/caddy/access.log</code></pre>
+
+<h2 id="top">top</h2>
+<pre><code>caddy-analyze top [dimension] [source...] [flags]</code></pre>
+<p>Computes only a ranked view instead of a full report. Dimensions are <code>path</code>, <code>ip</code>, <code>ua</code>, <code>status</code>, <code>method</code>, <code>host</code>, <code>bandwidth</code>, <code>country</code>, <code>city</code> and <code>asn</code>. The dimension may be positional or supplied with <code>--by</code>; <code>path</code> is the default. Use <code>-t 0</code> to disable the top list, and use normal filters to limit the population before ranking.</p>
+<pre><code>caddy-analyze top ip access.log -t 20
+caddy-analyze top bandwidth access.log --from 24h
+caddy-analyze top --by status --5xx access.log
+caddy-analyze top country --geoip-db GeoLite2-Country.mmdb access.log</code></pre>
+
+<h2 id="diff">diff</h2>
+<pre><code>caddy-analyze diff &lt;baseline_log&gt; &lt;target_log&gt; [flags]</code></pre>
+<p>Compares two local log files and reports changes in request rate, status errors and latency. The first file is the reference period and the second is the period under investigation. It does not require or create a saved baseline. Use <code>--format json</code> or <code>--output</code> for CI and scheduled checks.</p>
+<pre><code>caddy-analyze diff yesterday.log today.log
+caddy-analyze diff before.log after.log --format json -o regression.json</code></pre>
+
+<h2 id="baseline">baseline save</h2>
+<pre><code>caddy-analyze baseline save &lt;source...&gt; -o baseline.json [--detect]</code></pre>
+<p>Parses a source and stores a versioned JSON snapshot of aggregate metrics. This is useful for keeping a known-good deployment reference. It writes the file specified by <code>--output</code>; use filters to ensure the baseline and later comparisons cover the same population. <code>--detect</code> includes detection statistics. Saving a baseline does not block IPs.</p>
+<pre><code>caddy-analyze baseline save access.log --from 7d -o baseline.json --detect
+caddy-analyze --against baseline.json access.log --threshold 15</code></pre>
+
+<h2 id="guard">guard</h2>
+<pre><code>sudo caddy-analyze guard [source] [flags]</code></pre>
+<p>Continuously monitors a source and automatically blocks IPs that cross request, authentication, not-found or detection thresholds. Depending on <code>--firewall-backend</code>, it can modify iptables, nftables, Docker's <code>DOCKER-USER</code> chain, or a hybrid of them. Blocks can be persisted in the state file and every action can be audited.</p>
+<div class="callout callout-danger"><div class="callout-label">Firewall safety</div>Protect the administrator IP with <code>--never-block</code> or <code>--never-block-file</code> before running on a remote host. Use <code>--dry-run</code> first. Normal mode needs root; dry-run does not change firewall or state.</div>
+<pre><code>sudo caddy-analyze guard /var/log/caddy/access.log --dry-run
+sudo caddy-analyze guard docker://caddy --never-block 203.0.113.10 \
+  --firewall-backend hybrid --state-file /var/lib/caddy-analyzer/blocked.json</code></pre>
+<p><code>--country-block</code> blocks matching countries immediately when GeoIP is available. Blocklist feeds are enabled by default and can be disabled with <code>--no-blocklist</code>. Audit notifications support JSONL, syslog and generic, Slack, Discord or PagerDuty webhooks. See the dedicated <a href="../subcommands-guard.html">guard reference</a> for all thresholds and sinks.</p>
+
+<h2 id="firewall">block and unban</h2>
+<pre><code>sudo caddy-analyze block &lt;ip&gt; [ip...]
+sudo caddy-analyze unban &lt;ip&gt; [ip...] | --all | --list</code></pre>
+<p><code>block</code> adds one or more addresses to the firewall and, unless disabled, synchronizes the guard state file. <code>unban</code> removes selected addresses; <code>--list</code> only displays current state and <code>--all</code> removes every tracked block. Configure the same state file and audit sinks used by guard when these commands are part of an incident workflow.</p>
+<pre><code>sudo caddy-analyze block 198.51.100.7 --webhook-url https://hooks.example/...
+sudo caddy-analyze unban --list
+sudo caddy-analyze unban 198.51.100.7</code></pre>
+
+<h2 id="blocklist">blocklist</h2>
+<pre><code>caddy-analyze blocklist refresh|list|config|init [flags]</code></pre>
+<p>Downloads and parses threat-intelligence feeds used by <code>guard</code>. <code>refresh</code> updates the cache, <code>list</code> shows active feeds and counts, <code>config</code> prints effective configuration, and <code>init</code> persists CLI settings. These operations do not install firewall rules.</p>
+<pre><code>caddy-analyze blocklist refresh
+caddy-analyze blocklist list -f json
+caddy-analyze blocklist --blocklist-config custom.json \
+  --no-default-blocklists init</code></pre>
+<p>Use <code>--cache-dir</code> for a service-owned cache. Custom JSON sources use <code>name</code>, <code>url</code> and <code>format</code>; validate access and format before enabling them in guard.</p>
+
+<h2 id="config">config</h2>
+<pre><code>caddy-analyze config [show|set|reset|source] [--global]</code></pre>
+<p>Sets the default source used when the root command has no positional source. Without <code>--global</code>, configuration is stored in <code>./caddy-analyzer.json</code>; with it, the file is stored under <code>~/.config/caddy-analyzer/config.json</code>. Local configuration is project-specific and takes precedence over the global location. <code>show</code> displays the active choice and <code>reset</code> removes the selected file.</p>
+<pre><code>caddy-analyze config /var/log/caddy/access.log
+caddy-analyze config docker://caddy --global
+caddy-analyze config show
+caddy-analyze config reset</code></pre>
+
+<h2 id="whitelist">whitelist</h2>
+<pre><code>sudo caddy-analyze whitelist [--add IP/CIDR] [--remove IP/CIDR]
+caddy-analyze whitelist --list [--file PATH]</code></pre>
+<p>Maintains a file of IPs and CIDRs that guard must never block. The default is <code>/etc/caddy-analyzer/whitelist.txt</code>. <code>--init</code> creates it with a header, <code>--add</code> and <code>--remove</code> accept comma-separated values, and <code>--list</code> prints entries. Point guard at the same file with <code>--never-block-file</code>.</p>
+
+<h2 id="sigma">export-sigma</h2>
+<pre><code>caddy-analyze export-sigma [output-file]</code></pre>
+<p>Exports the built-in detection categories as multi-document Sigma YAML. With no file it writes to stdout, which makes it suitable for piping to a validator; with a file it writes the complete rule set. The export is vendor-neutral and includes MITRE ATT&amp;CK tags. Custom runtime patterns are not silently converted unless supported by the exporter.</p>
+<pre><code>caddy-analyze export-sigma rules.yml
+caddy-analyze export-sigma - | sigma check</code></pre>
+
+<h2 id="update">update</h2>
+<pre><code>caddy-analyze update [--check|--version TAG|--force]</code></pre>
+<p>Checks for and installs a verified release from GitHub. Installation is fail-closed: cosign must validate the signed release manifest and the archive checksum must match it. <code>--check</code> performs no installation, <code>--version</code> pins a tag, <code>--force</code> permits reinstall or downgrade, and <code>--install-dir</code> selects a directory. If verification fails, the current binary is left untouched.</p>
+<pre><code>caddy-analyze update --check
+sudo caddy-analyze update
+caddy-analyze update --version v0.7.0 --install-dir ~/.local/bin</code></pre>
+
+<h2 id="completion">completion and version</h2>
+<pre><code>caddy-analyze --version
+caddy-analyze completion bash &gt; ~/.local/share/bash-completion/completions/caddy-analyze
+caddy-analyze completion zsh
+caddy-analyze completion fish</code></pre>
+<p><code>--version</code> prints the installed version. The hidden <code>completion</code> command generates shell completions for bash, zsh or fish; it requires exactly one supported shell name.</p>
+
+<h2 id="combinations">Useful combinations</h2>
+<pre><code># Investigate a suspected scan without taking action
+caddy-analyze --detect --grep 'wp-login|\.env|/admin' access.log
+
+# Create a comparable baseline and check for a regression
+caddy-analyze baseline save baseline.log -o baseline.json
+caddy-analyze --against baseline.json current.log --threshold 20
+
+# Preview guard decisions, then enable enforcement
+sudo caddy-analyze guard access.log --dry-run --never-block-file whitelist.txt
+sudo caddy-analyze guard access.log --never-block-file whitelist.txt</code></pre>
+<div class="callout callout-info"><div class="callout-label">Read next</div>See <a href="cli.html">CLI Reference</a> for the complete flag matrix, <a href="../sources.html">Log Sources</a> for source syntax, and <a href="security-detection.html">Security Detection</a> for categories, confidence and evidence.</div>
+
+<h2 id="global-flags">Global flags: complete reference</h2>
+<p>Most options below are persistent and inherited by subcommands. The root-only modes are <code>--follow</code>, <code>--interval</code>, <code>--watch</code>, root <code>--detect</code> and <code>--version</code>; <code>tail</code> has its own local <code>--detect</code>. An omitted value keeps the default. Durations use Go syntax such as <code>500ms</code>, <code>5m</code> or <code>1h</code>.</p>
+<div class="table-wrap"><table><thead><tr><th>Flag</th><th>Default</th><th>What it does</th></tr></thead><tbody>
+<tr><td><code>--from</code></td><td>none</td><td>Keeps entries after an RFC3339 time or relative period such as <code>5m</code>, <code>1h</code> or <code>2d</code>.</td></tr>
+<tr><td><code>--to</code></td><td>none</td><td>Keeps entries before the supplied RFC3339 time.</td></tr>
+<tr><td><code>--status, -s</code></td><td>all</td><td>Selects one or more HTTP status codes, for example <code>-s 200,404</code>; repeatable.</td></tr>
+<tr><td><code>--2xx</code>, <code>--3xx</code>, <code>--4xx</code>, <code>--5xx</code></td><td>false</td><td>Shortcuts for selecting a status class.</td></tr>
+<tr><td><code>--errors-only, -e</code></td><td>false</td><td>Keeps only 5xx server errors.</td></tr>
+<tr><td><code>--method, -m</code></td><td>none</td><td>Filters by HTTP method, case-insensitively.</td></tr>
+<tr><td><code>--path, -p</code></td><td>none</td><td>Filters paths with a glob such as <code>/api/*</code>.</td></tr>
+<tr><td><code>--host</code></td><td>none</td><td>Filters by a substring of the request host.</td></tr>
+<tr><td><code>--ip</code> / <code>--exclude-ip</code></td><td>none</td><td>Include or exclude an IP address or CIDR network.</td></tr>
+<tr><td><code>--country</code> / <code>--exclude-country</code></td><td>none</td><td>Include or exclude ISO country codes or names; requires GeoIP.</td></tr>
+<tr><td><code>--asn</code> / <code>--exclude-asn</code></td><td>none</td><td>Include or exclude ASN numbers; requires GeoIP.</td></tr>
+<tr><td><code>--slow</code></td><td>none</td><td>Selects requests slower than the supplied duration.</td></tr>
+<tr><td><code>--max-latency</code></td><td>none</td><td>Selects requests no slower than the supplied duration.</td></tr>
+<tr><td><code>--min-size</code> / <code>--max-size</code></td><td>none</td><td>Bounds response size in bytes; accepts <code>kb</code>, <code>mb</code> and <code>gb</code> suffixes.</td></tr>
+<tr><td><code>--grep</code></td><td>none</td><td>Searches URI, User-Agent and IP using a regex, with substring fallback for invalid patterns.</td></tr>
+<tr><td><code>--no-bots</code> / <code>--bots-only</code></td><td>false</td><td>Exclude or include only traffic classified as bots and crawlers.</td></tr>
+<tr><td><code>--level</code></td><td>all</td><td>Filters operational events by <code>error</code>, <code>warn</code>, <code>info</code> or <code>debug</code>; repeatable.</td></tr>
+<tr><td><code>--ops-only</code></td><td>false</td><td>Shows only non-HTTP operational events.</td></tr>
+<tr><td><code>--top, -t</code></td><td>10</td><td>Number of ranked items; <code>0</code> disables top lists.</td></tr>
+<tr><td><code>--format, -f</code></td><td><code>table</code></td><td>Selects <code>table</code>, <code>json</code>, <code>csv</code>, <code>html</code>, <code>elasticsearch</code>, <code>opensearch</code> or <code>loki</code> where supported.</td></tr>
+<tr><td><code>--output, -o</code></td><td>stdout</td><td>Writes output to a file instead of stdout.</td></tr>
+<tr><td><code>--compact, -c</code></td><td>false</td><td>Uses the compact table layout.</td></tr>
+<tr><td><code>--defang</code></td><td>false</td><td>Replaces dots in IPs with <code>[.]</code> for safe IOC sharing.</td></tr>
+<tr><td><code>--workers</code></td><td>available CPUs</td><td>Sets parser worker count; <code>0</code> selects automatically and keeps reduction ordered.</td></tr>
+<tr><td><code>--max-cardinality</code></td><td>100000</td><td>Caps distinct keys per counter to bound memory; <code>0</code> is unlimited.</td></tr>
+<tr><td><code>--trust-forwarded</code></td><td>false</td><td>Uses the last public <code>X-Forwarded-For</code>/<code>X-Real-IP</code> hop; enable only behind a trusted proxy.</td></tr>
+<tr><td><code>--geoip-db</code></td><td>auto</td><td>Sets a DB-IP or MaxMind mmdb path; empty enables auto-discovery.</td></tr>
+<tr><td><code>--no-auto-download</code></td><td>false</td><td>Prevents the first-use DB-IP database download.</td></tr>
+<tr><td><code>--geo-cache-ttl</code></td><td>24h</td><td>Sets GeoIP cache lifetime; <code>0</code> disables caching.</td></tr>
+<tr><td><code>--geo-cache-size</code></td><td>50000</td><td>Sets maximum cached GeoIP lookups; <code>0</code> disables caching.</td></tr>
+<tr><td><code>--ua-rotation</code></td><td>10</td><td>Distinct User-Agent count from one IP before the rotation/scanner heuristic fires.</td></tr>
+<tr><td><code>--custom-patterns</code></td><td>none</td><td>Loads one or more validated custom detection JSON files.</td></tr>
+<tr><td><code>--against</code></td><td>none</td><td>Compares current analysis with a baseline JSON and applies the threshold.</td></tr>
+<tr><td><code>--threshold</code></td><td>20%</td><td>Regression percentage used by baseline comparison.</td></tr>
+<tr><td><code>--namespace, -n</code></td><td>none</td><td>Kubernetes namespace for <code>k8s://</code> sources.</td></tr>
+<tr><td><code>--follow, -F</code></td><td>false</td><td>Follows new logs and emits periodic reports; root mode.</td></tr>
+<tr><td><code>--interval, -i</code></td><td>none</td><td>Sets aggregation window length in follow mode.</td></tr>
+<tr><td><code>--watch, -w</code></td><td>false</td><td>Opens the live TUI dashboard and requires a terminal.</td></tr>
+<tr><td><code>--detect, -d</code></td><td>false</td><td>Enables threat detection in the root report.</td></tr>
+<tr><td><code>--remote-url</code></td><td>none</td><td>HTTP endpoint for Elasticsearch/OpenSearch bulk or Loki output; required for those formats.</td></tr>
+<tr><td><code>--remote-index</code></td><td><code>caddy-analyzer</code></td><td>Elasticsearch/OpenSearch index name.</td></tr>
+<tr><td><code>--remote-user</code>, <code>--remote-password</code></td><td>none</td><td>HTTP Basic credentials for remote delivery.</td></tr>
+<tr><td><code>--remote-token</code></td><td>none</td><td>HTTP Bearer token for remote delivery.</td></tr>
+<tr><td><code>--remote-batch-size</code></td><td>100</td><td>Documents per remote request.</td></tr>
+<tr><td><code>--remote-retries</code></td><td>3</td><td>Retries after the first remote delivery attempt.</td></tr>
+<tr><td><code>--remote-backoff</code></td><td>250ms</td><td>Initial delay between remote retries.</td></tr>
+<tr><td><code>--remote-timeout</code></td><td>10s</td><td>Timeout for each remote request.</td></tr>
+</tbody></table></div>
+
+<h2 id="subcommand-flags">Subcommand-specific flags</h2>
+<h3 id="tail-flags">tail</h3>
+<p><code>tail --detect</code> highlights suspicious requests inline. All global filters remain available, but <code>tail</code> does not aggregate a report and never blocks IPs.</p>
+<h3 id="top-flags">top</h3>
+<p><code>top --by DIMENSION</code> is the flag form of the positional dimension. Valid dimensions are <code>path</code>, <code>ip</code>, <code>ua</code>, <code>status</code>, <code>method</code>, <code>host</code>, <code>bandwidth</code>, <code>country</code>, <code>city</code> and <code>asn</code>. The last three require a compatible GeoIP database.</p>
+<h3 id="baseline-flags">baseline save</h3>
+<p><code>baseline save --detect</code> adds security statistics to the JSON. <code>--output</code> is the global flag used to retain the file; generate the baseline with the same filters used for comparison.</p>
+<h3 id="blocklist-flags">blocklist</h3>
+<div class="table-wrap"><table><thead><tr><th>Flag</th><th>What it does</th></tr></thead><tbody>
+<tr><td><code>--cache-dir</code></td><td>Directory for downloaded feed files.</td></tr>
+<tr><td><code>--no-default-blocklists</code></td><td>Disables the eight built-in feeds for a custom-only setup.</td></tr>
+<tr><td><code>--blocklist-config FILE</code></td><td>Adds JSON sources with <code>name</code>, <code>url</code> and optional <code>format</code>; repeatable.</td></tr>
+<tr><td><code>--blocklist-remove NAME</code></td><td>Removes named sources; accepts comma-separated names.</td></tr>
+<tr><td><code>--format table|json</code></td><td>Output format for <code>list</code> and <code>config</code>.</td></tr>
+</tbody></table></div>
+<p><code>refresh</code> downloads feeds; <code>list</code> shows status, age, errors and counts; <code>config</code> prints effective configuration; <code>init</code> saves current settings. None changes firewall rules.</p>
+<h3 id="guard-flags">guard</h3>
+<div class="table-wrap"><table><thead><tr><th>Flag</th><th>Default</th><th>What it does</th></tr></thead><tbody>
+<tr><td><code>--limit, -l</code></td><td>100</td><td>HTTP requests per IP in the window before blocking; <code>0</code> disables.</td></tr>
+<tr><td><code>--window, -w</code></td><td>1m</td><td>Sliding monitoring window with per-second buckets.</td></tr>
+<tr><td><code>--duration, -d</code></td><td>10m</td><td>Block duration; <code>0</code> is permanent.</td></tr>
+<tr><td><code>--auth-limit</code></td><td>10</td><td>401/403 responses before blocking; <code>0</code> disables.</td></tr>
+<tr><td><code>--notfound-limit</code></td><td>50</td><td>404 responses before blocking; <code>0</code> disables.</td></tr>
+<tr><td><code>--detect-confidence</code></td><td>8</td><td>Minimum pattern confidence from 1-10; <code>0</code> disables only this block path.</td></tr>
+<tr><td><code>--firewall-backend</code></td><td>auto</td><td>Selects <code>auto</code>, <code>iptables</code>, <code>docker</code>, <code>nftables</code> or <code>hybrid</code>.</td></tr>
+<tr><td><code>--dry-run</code></td><td>false</td><td>Reports and audits would-be blocks without changing firewall or state.</td></tr>
+<tr><td><code>--country-block</code></td><td>none</td><td>Immediately blocks listed ISO countries through GeoIP.</td></tr>
+<tr><td><code>--no-blocklist</code></td><td>false</td><td>Disables checking the eight feeds.</td></tr>
+<tr><td><code>--blocklist-refresh</code></td><td>6h</td><td>Feed refresh interval; minimum 1h, <code>0</code> disables.</td></tr>
+<tr><td><code>--cache-dir</code></td><td>user cache</td><td>Blocklist cache directory.</td></tr>
+<tr><td><code>--never-block</code></td><td>none</td><td>Protected IPs/CIDRs; repeatable.</td></tr>
+<tr><td><code>--never-block-file</code></td><td>none</td><td>One IP/CIDR per line, with <code>#</code> comments.</td></tr>
+<tr><td><code>--state-file</code></td><td><code>/var/lib/caddy-analyzer/blocked.json</code></td><td>Persists and recovers blocks; empty disables.</td></tr>
+<tr><td><code>--iptables-timeout</code></td><td>10s</td><td>Timeout for each firewall invocation.</td></tr>
+<tr><td><code>--subnet-limit</code></td><td>0</td><td>Blocks a /24 or /64 when distributed requests exceed the threshold.</td></tr>
+<tr><td><code>--rps-anomaly</code></td><td>0</td><td>Audits an RPS spike over the EWMA baseline; it is not a block.</td></tr>
+<tr><td><code>--cred-stuffing-limit</code></td><td>0</td><td>Audits distinct IPs failing the same path; it is not a block.</td></tr>
+<tr><td><code>--audit-log</code></td><td>JSONL in <code>/var/log</code></td><td>Local event log; empty disables.</td></tr>
+<tr><td><code>--audit-syslog</code></td><td>disabled</td><td>UDP syslog destination such as <code>127.0.0.1:514</code>.</td></tr>
+<tr><td><code>--webhook-url</code> / <code>--audit-webhook</code></td><td>disabled</td><td>Generic, Slack, Discord or PagerDuty notifications.</td></tr>
+<tr><td><code>--webhook-provider</code></td><td>generic</td><td>Webhook provider name.</td></tr>
+<tr><td><code>--pagerduty-routing-key</code></td><td>none</td><td>PagerDuty routing key; excluded from logs.</td></tr>
+<tr><td><code>--audit-timeout</code> / <code>--audit-retries</code></td><td>5s / 2</td><td>Sink timeout and retries after the first attempt; max 5 retries.</td></tr>
+<tr><td><code>--audit-rate-limit</code></td><td>0</td><td>Minimum interval between notifications for one IP; <code>0</code> disables.</td></tr>
+</tbody></table></div>
+<h3 id="block-unban-flags">block and unban</h3>
+<p>Both commands share audit flags: <code>--audit-log</code>, <code>--audit-syslog</code>, <code>--webhook-url</code>/<code>--audit-webhook</code>, <code>--webhook-provider</code>, <code>--pagerduty-routing-key</code>, <code>--audit-timeout</code>, <code>--audit-retries</code> and <code>--audit-rate-limit</code>. <code>--state-file</code> synchronizes manual changes with guard. Additionally, <code>unban --list</code> lists active IPs and <code>unban --all</code> removes all tracked blocks; do not combine them.</p>
+<h3 id="config-flags">config</h3>
+<p><code>--global, -g</code> selects the global configuration file instead of the local one. <code>config SOURCE</code> and <code>config set SOURCE</code> set a source; <code>config show</code> displays it and <code>config reset</code> removes the selected file.</p>
+<h3 id="whitelist-flags">whitelist</h3>
+<p><code>--file</code> selects the file, <code>--init</code> creates it, <code>--add</code> inserts IPs/CIDRs, <code>--remove</code> deletes them and <code>--list, -l</code> prints entries. Pass the same file to guard with <code>--never-block-file</code>.</p>
+<h3 id="update-flags">update</h3>
+<p><code>--check</code> only checks, <code>--version TAG</code> installs an exact release, <code>--force</code> allows reinstall or downgrade and <code>--install-dir DIR</code> selects the destination directory. cosign and SHA256 verification is mandatory.</p>
+<h3 id="export-flags">export-sigma</h3>
+<p>Accepts at most one output file. No argument or <code>-</code> writes multi-document Sigma YAML to stdout; a path writes the complete rule set. Global analysis filters do not change the exported rules.</p>
+<h3 id="help-flags">help and --help</h3>
+<p><code>caddy-analyze help COMMAND</code> displays command help without executing it; <code>--help</code> is available on every command and subcommand. The help generated by the installed binary is the final authority for flags and defaults in that version.</p>
+      <footer class="footer">
+  <p>caddy-analyzer is open-source under <a href="https://github.com/lenny-ts/caddy-analyzer/blob/main/LICENSE">MIT</a> · <a href="https://github.com/lenny-ts/caddy-analyzer">GitHub</a> · <a href="../changelog.html">Changelog</a></p>
+</footer>
+<button class="back-to-top" aria-label="Back to top">↑</button>
+
+    </div>
+  </main>
+  <nav class="doc-toc" aria-label="On this page"><div class="toc-label">On this page</div><a href="#decision" class="toc-link">Choose a command</a><a href="#analyze" class="toc-link">Analyze: the root command</a><a href="#tail" class="toc-link">tail</a><a href="#top" class="toc-link">top</a><a href="#diff" class="toc-link">diff</a><a href="#baseline" class="toc-link">baseline save</a><a href="#guard" class="toc-link">guard</a><a href="#firewall" class="toc-link">block and unban</a><a href="#blocklist" class="toc-link">blocklist</a><a href="#config" class="toc-link">config</a><a href="#whitelist" class="toc-link">whitelist</a><a href="#sigma" class="toc-link">export-sigma</a><a href="#update" class="toc-link">update</a><a href="#completion" class="toc-link">completion and version</a><a href="#combinations" class="toc-link">Useful combinations</a><a href="#global-flags" class="toc-link">Global flags: complete reference</a><a href="#subcommand-flags" class="toc-link">Subcommand-specific flags</a><a href="#tail-flags" class="toc-link h3">tail</a><a href="#top-flags" class="toc-link h3">top</a><a href="#baseline-flags" class="toc-link h3">baseline save</a><a href="#blocklist-flags" class="toc-link h3">blocklist</a><a href="#guard-flags" class="toc-link h3">guard</a><a href="#block-unban-flags" class="toc-link h3">block and unban</a><a href="#config-flags" class="toc-link h3">config</a><a href="#whitelist-flags" class="toc-link h3">whitelist</a><a href="#update-flags" class="toc-link h3">update</a><a href="#export-flags" class="toc-link h3">export-sigma</a><a href="#help-flags" class="toc-link h3">help and --help</a></nav>
+</div>
+<script src="../docs.min.js?v=36"></script>
+</body>
+</html>

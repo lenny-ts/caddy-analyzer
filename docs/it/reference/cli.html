@@ -55,6 +55,7 @@
   <div class="sidebar-sep"></div>
   <div class="sidebar-label">Riferimento</div>
   <a href="../../it/reference/cli.html" class="sidebar-link active" data-page="cli.html">Riferimento CLI</a>
+  <a href="../../it/reference/commands.html" class="sidebar-link" data-page="commands.html">Tutti i comandi</a>
   <a href="../../it/reference/security-categories.html" class="sidebar-link sub" data-page="security-categories.html">— Categorie</a>
   <a href="../../it/reference/security-detection.html" class="sidebar-link sub" data-page="security-detection.html">— Rilevamento</a>
   <a href="../../it/subcommands-guard.html" class="sidebar-link sub" data-page="subcommands-guard.html">— Guard</a>
@@ -77,6 +78,7 @@
       <div class="page-meta"><a href="https://github.com/lenny-ts/caddy-analyzer/releases">v0.7.0</a> · aggiornata <time datetime="2026-09-01">2026-09-01</time> · <a href="https://github.com/lenny-ts/caddy-analyzer">GitHub</a></div>
       <div class="cli-heading"><div><div class="hero-badge">Interfaccia a riga di comando</div><h1>Riferimento CLI</h1></div></div>
 <p>Punto di ingresso: <code>caddy-analyze [flags] [source...]</code> — le sorgenti sono risolte tramite <a href="../sources.html">Sorgenti log</a> o <a href="../guide/configuration.html">caddy-analyzer.json</a>. Di seguito: ogni flag, il suo ambito e se interagisce con il sistema.</p>
+<div class="callout callout-info"><div class="callout-label">Guida operativa</div>Per spiegazioni passo passo, casi d'uso e flag propri di ogni sottocomando, consulta <a href="commands.html">Tutti i comandi</a>.</div>
 
 <h2 id="global">Flag globali — ambito e root</h2>
 <p><span class="pill pill-all">tutti</span> = persistente in ogni sottocomando. <span class="pill pill-root">solo root</span> = solo nel comando radice (non in <code>tail</code> ecc.). Nessun flag richiede di per sé root; i sottocomandi <code>guard</code>/<code>block</code>/<code>unban</code> sì (consulta le rispettive pagine).</p>

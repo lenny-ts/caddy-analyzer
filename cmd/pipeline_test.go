@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"context"
+	"os"
 	"testing"
 
 	"github.com/lenny-ts/caddy-analyzer/pkg/types"
@@ -34,5 +35,17 @@ func TestProcessParsedLinesPreservesInputOrder(t *testing.T) {
 		if got[i] != want[i] {
 			t.Errorf("result %d = %q, want %q", i, got[i], want[i])
 		}
+	}
+}
+
+func TestCountTotalLinesForLocalSources(t *testing.T) {
+	path := t.TempDir() + "/access.log"
+	if err := os.WriteFile(path, []byte("one\ntwo\nthree\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	got := countTotalLines([]types.LogSource{{Type: types.SourceFile, Path: path}})
+	if got != 3 {
+		t.Fatalf("countTotalLines() = %d, want 3", got)
 	}
 }

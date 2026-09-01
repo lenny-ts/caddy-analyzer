@@ -1,6 +1,7 @@
 <!-- fm: title=CLI Reference — caddy-analyzer | description=All flags and subcommands: global filters, root-only modes, guard, blocklist, top, tail, diff. | breadcrumb=Reference > CLI Reference -->
 <div class="cli-heading"><div><div class="hero-badge">Command line interface</div><h1>CLI Reference</h1></div></div>
 <p>Entry point: <code>caddy-analyze [flags] [source...]</code> — sources resolved via <a href="../sources.html">Log Sources</a> or <a href="../guide/configuration.html">caddy-analyzer.json</a>. Below: every flag, its scope, and whether it touches the system.</p>
+<div class="callout callout-info"><div class="callout-label">Operational guide</div>For step-by-step explanations, use cases and subcommand-specific flags, see <a href="commands.html">All commands</a>.</div>
 
 <h2 id="global">Global flags — Scope &amp; root</h2>
 <p><span class="pill pill-all">all</span> = persistent on every subcommand. <span class="pill pill-root">root only</span> = only on the root command (not on <code>tail</code> etc.). No flag itself requires root; subcommands <code>guard</code>/<code>block</code>/<code>unban</code> do (see their pages).</p>

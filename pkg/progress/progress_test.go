@@ -58,6 +58,25 @@ func TestBarIndeterminate(t *testing.T) {
 	}
 }
 
+func TestBarIndeterminateFrameDoesNotDependOnCount(t *testing.T) {
+	bar := &Bar{
+		w:       &bytes.Buffer{},
+		enabled: true,
+		total:   0,
+		label:   "Test",
+	}
+	bar.current = 9
+	bar.draw()
+	first := bar.w.(*bytes.Buffer).String()
+	bar.current = 18
+	bar.draw()
+	second := bar.w.(*bytes.Buffer).String()
+
+	if strings.HasSuffix(first, "⠋ 9 entries") && strings.HasSuffix(second, "⠋ 18 entries") {
+		t.Fatal("spinner frame repeated when entry count advanced by one full cycle")
+	}
+}
+
 func TestBarDonePrintsNewline(t *testing.T) {
 	bar := &Bar{
 		w:       &bytes.Buffer{},

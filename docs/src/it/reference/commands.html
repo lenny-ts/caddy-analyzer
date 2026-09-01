@@ -1,0 +1,242 @@
+<!-- fm: title=Tutti i comandi — caddy-analyzer | description=Riferimento dettagliato per ogni comando caddy-analyze, modalità, opzioni e casi d'uso. | breadcrumb=Riferimento > Tutti i comandi -->
+<h1>Tutti i comandi</h1>
+<p>Questa pagina spiega cosa fa ogni comando, cosa legge o modifica e quale modalità scegliere. Usa <code>caddy-analyze &lt;comando&gt; --help</code> per vedere i flag esatti del binario installato. La sezione completa dei flag distingue opzioni persistenti, modalità solo root e opzioni proprie dei comandi.</p>
+
+<h2 id="scelta">Scegli il comando</h2>
+<div class="table-wrap"><table><thead><tr><th>Obiettivo</th><th>Comando</th><th>Effetto</th></tr></thead><tbody>
+<tr><td>Riassumere uno o più log</td><td><code>caddy-analyze SOURCE...</code></td><td>Report in sola lettura</td></tr>
+<tr><td>Cercare richieste sospette</td><td><code>caddy-analyze --detect SOURCE...</code></td><td>Report delle minacce</td></tr>
+<tr><td>Seguire le nuove voci</td><td><code>tail</code> o <code>--follow</code></td><td>Flusso/report in sola lettura</td></tr>
+<tr><td>Vedere le classifiche</td><td><code>top</code></td><td>Aggregazione in sola lettura</td></tr>
+<tr><td>Confrontare due periodi</td><td><code>diff</code></td><td>Confronto in sola lettura</td></tr>
+<tr><td>Salvare un periodo di riferimento</td><td><code>baseline save</code></td><td>Scrive JSON</td></tr>
+<tr><td>Bloccare automaticamente gli attaccanti</td><td><code>guard</code></td><td>Può modificare il firewall</td></tr>
+<tr><td>Bloccare o sbloccare manualmente</td><td><code>block</code> / <code>unban</code></td><td>Modifica il firewall</td></tr>
+<tr><td>Gestire i feed di threat intelligence</td><td><code>blocklist</code></td><td>Scrive cache/config, non il firewall</td></tr>
+<tr><td>Gestire le impostazioni predefinite</td><td><code>config</code></td><td>Scrive la configurazione</td></tr>
+<tr><td>Proteggere gli IP fidati</td><td><code>whitelist</code></td><td>Scrive l'allowlist</td></tr>
+<tr><td>Esportare le regole di detection</td><td><code>export-sigma</code></td><td>Scrive YAML o stdout</td></tr>
+<tr><td>Installare una release</td><td><code>update</code></td><td>Sostituisce il binario</td></tr>
+</tbody></table></div>
+
+<h2 id="analizza">Analisi: comando principale</h2>
+<pre><code>caddy-analyze [flags] [source...]
+caddy-analyze --detect --format json access.log
+caddy-analyze --from 1h --5xx /var/log/caddy/*.log</code></pre>
+<p>Senza sottocomando, il tool analizza log JSON di accesso Caddy ed eventi operativi, applica i filtri, calcola le metriche e stampa un report tabellare. Le sorgenti possono essere file o glob locali, <code>-</code> per stdin, <code>docker://container</code>, <code>k8s://pod</code> o <code>journalctl://unit</code>. Se non specifichi una sorgente viene usata quella predefinita configurata.</p>
+<p><code>--detect</code> attiva il motore di sicurezza a doppio passaggio e aggiunge al report IP sospetti, categorie, confidence ed evidenze. Non blocca nulla. Usa <code>--format json</code> per l'automazione, <code>--format csv</code> per i fogli di calcolo e <code>--format html -o report.html</code> per condividere il risultato. I filtri vengono combinati; per esempio <code>--ip</code>, <code>--path</code>, <code>--slow</code> e <code>--5xx</code> devono essere tutti soddisfatti.</p>
+<pre><code># Analizzare stdin con output per macchine
+cat access.log | caddy-analyze --detect --format json -
+
+# Solo errori server lenti nelle ultime due ore
+caddy-analyze --from 2h --5xx --slow 500ms access.log
+
+# Inviare i documenti a Loki
+caddy-analyze --format loki --remote-url https://logs.example/api/prom/push access.log</code></pre>
+
+<h2 id="tail">tail</h2>
+<pre><code>caddy-analyze tail [source...] [--detect]</code></pre>
+<p>Trasmette le voci appena arrivano e colora stato, metodo, percorso, latenza e IP client. È la scelta interattiva per diagnosticare un servizio attivo. <code>--detect</code> evidenzia inline le richieste sospette e non modifica il firewall. I filtri si applicano anche qui.</p>
+<pre><code>caddy-analyze tail docker://caddy --detect --5xx
+caddy-analyze tail --grep '/admin|wp-login' /var/log/caddy/access.log</code></pre>
+
+<h2 id="top">top</h2>
+<pre><code>caddy-analyze top [dimension] [source...] [flags]</code></pre>
+<p>Calcola solo una classifica invece del report completo. Le dimensioni sono <code>path</code>, <code>ip</code>, <code>ua</code>, <code>status</code>, <code>method</code>, <code>host</code>, <code>bandwidth</code>, <code>country</code>, <code>city</code> e <code>asn</code>. La dimensione può essere posizionale o passata con <code>--by</code>; il default è <code>path</code>. Usa <code>-t 0</code> per disabilitare la lista.</p>
+<pre><code>caddy-analyze top ip access.log -t 20
+caddy-analyze top bandwidth access.log --from 24h
+caddy-analyze top --by status --5xx access.log
+caddy-analyze top country --geoip-db GeoLite2-Country.mmdb access.log</code></pre>
+
+<h2 id="diff">diff</h2>
+<pre><code>caddy-analyze diff &lt;baseline_log&gt; &lt;target_log&gt; [flags]</code></pre>
+<p>Confronta due file di log locali e mostra le variazioni di richieste al secondo, errori e latenza. Il primo file è il periodo di riferimento, il secondo quello da esaminare. Non crea un baseline salvato; usa <code>--format json</code> o <code>--output</code> per CI e controlli pianificati.</p>
+<pre><code>caddy-analyze diff ieri.log oggi.log
+caddy-analyze diff prima.log dopo.log --format json -o regressione.json</code></pre>
+
+<h2 id="baseline">baseline save</h2>
+<pre><code>caddy-analyze baseline save &lt;source...&gt; -o baseline.json [--detect]</code></pre>
+<p>Analizza una sorgente e salva uno snapshot JSON versionato delle metriche aggregate. È utile per conservare il riferimento di un deployment funzionante. <code>--detect</code> include le statistiche di detection. Salvare un baseline non blocca gli IP.</p>
+<pre><code>caddy-analyze baseline save access.log --from 7d -o baseline.json --detect
+caddy-analyze --against baseline.json access.log --threshold 15</code></pre>
+
+<h2 id="guard">guard</h2>
+<pre><code>sudo caddy-analyze guard [source] [flags]</code></pre>
+<p>Monitora continuamente una sorgente e blocca automaticamente gli IP che superano le soglie di richieste, autenticazione, 404 o detection. In base a <code>--firewall-backend</code> può modificare iptables, nftables, la catena Docker <code>DOCKER-USER</code> o una combinazione. I blocchi possono essere persistiti e ogni azione può essere registrata.</p>
+<div class="callout callout-danger"><div class="callout-label">Sicurezza firewall</div>Proteggi il tuo IP con <code>--never-block</code> o <code>--never-block-file</code> prima di eseguire il comando su un host remoto. Prova prima <code>--dry-run</code>. La modalità normale richiede root; la simulazione non modifica firewall o stato.</div>
+<pre><code>sudo caddy-analyze guard /var/log/caddy/access.log --dry-run
+sudo caddy-analyze guard docker://caddy --never-block 203.0.113.10 \
+  --firewall-backend hybrid --state-file /var/lib/caddy-analyzer/blocked.json</code></pre>
+<p><code>--country-block</code> blocca subito i paesi indicati quando GeoIP è disponibile. I feed blocklist sono attivi di default e si disabilitano con <code>--no-blocklist</code>. Per tutte le soglie e i sink consulta la pagina dedicata <a href="../subcommands-guard.html">guard</a>.</p>
+
+<h2 id="firewall">block e unban</h2>
+<pre><code>sudo caddy-analyze block &lt;ip&gt; [ip...]
+sudo caddy-analyze unban &lt;ip&gt; [ip...] | --all | --list</code></pre>
+<p><code>block</code> aggiunge uno o più indirizzi al firewall e, salvo disabilitazione, aggiorna il file di stato di guard. <code>unban</code> rimuove gli indirizzi scelti; <code>--list</code> mostra soltanto lo stato corrente e <code>--all</code> rimuove tutti i blocchi tracciati.</p>
+<pre><code>sudo caddy-analyze block 198.51.100.7
+sudo caddy-analyze unban --list
+sudo caddy-analyze unban 198.51.100.7</code></pre>
+
+<h2 id="blocklist">blocklist</h2>
+<pre><code>caddy-analyze blocklist refresh|list|config|init [flags]</code></pre>
+<p>Scarica e analizza i feed di threat intelligence usati da <code>guard</code>. <code>refresh</code> aggiorna la cache, <code>list</code> mostra feed e conteggi, <code>config</code> stampa la configurazione effettiva e <code>init</code> salva le impostazioni. Queste operazioni non installano regole firewall.</p>
+<pre><code>caddy-analyze blocklist refresh
+caddy-analyze blocklist list -f json
+caddy-analyze blocklist --blocklist-config custom.json \
+  --no-default-blocklists init</code></pre>
+
+<h2 id="config">config</h2>
+<pre><code>caddy-analyze config [show|set|reset|source] [--global]</code></pre>
+<p>Imposta la sorgente predefinita usata quando il comando principale non riceve una sorgente posizionale. Senza <code>--global</code> salva in <code>./caddy-analyzer.json</code>; con il flag salva in <code>~/.config/caddy-analyzer/config.json</code>. <code>show</code> mostra la scelta attiva e <code>reset</code> rimuove il file selezionato.</p>
+<pre><code>caddy-analyze config /var/log/caddy/access.log
+caddy-analyze config docker://caddy --global
+caddy-analyze config show
+caddy-analyze config reset</code></pre>
+
+<h2 id="whitelist">whitelist</h2>
+<pre><code>sudo caddy-analyze whitelist [--add IP/CIDR] [--remove IP/CIDR]
+caddy-analyze whitelist --list [--file PATH]</code></pre>
+<p>Gestisce il file degli IP e CIDR che guard non deve mai bloccare. Il default è <code>/etc/caddy-analyzer/whitelist.txt</code>. <code>--init</code> lo crea con intestazione, <code>--add</code> e <code>--remove</code> accettano valori separati da virgole e <code>--list</code> stampa le voci. Passa lo stesso file a guard con <code>--never-block-file</code>.</p>
+
+<h2 id="sigma">export-sigma</h2>
+<pre><code>caddy-analyze export-sigma [output-file]</code></pre>
+<p>Esporta le categorie integrate di detection in YAML Sigma multi-documento. Senza file scrive su stdout, con un file salva l'intero set di regole. Le regole sono indipendenti dal vendor e includono i tag MITRE ATT&amp;CK.</p>
+<pre><code>caddy-analyze export-sigma rules.yml
+caddy-analyze export-sigma - | sigma check</code></pre>
+
+<h2 id="update">update</h2>
+<pre><code>caddy-analyze update [--check|--version TAG|--force]</code></pre>
+<p>Controlla e installa una release verificata da GitHub. L'installazione è fail-closed: cosign deve validare il manifest firmato e l'hash dell'archivio deve corrispondere. <code>--check</code> non installa, <code>--version</code> fissa un tag, <code>--force</code> consente reinstallazione o downgrade e <code>--install-dir</code> sceglie la directory. Se la verifica fallisce il binario corrente resta intatto.</p>
+<pre><code>caddy-analyze update --check
+sudo caddy-analyze update
+caddy-analyze update --version v0.7.0 --install-dir ~/.local/bin</code></pre>
+
+<h2 id="completion">completion e versione</h2>
+<pre><code>caddy-analyze --version
+caddy-analyze completion bash &gt; ~/.local/share/bash-completion/completions/caddy-analyze
+caddy-analyze completion zsh
+caddy-analyze completion fish</code></pre>
+<p><code>--version</code> stampa la versione installata. Il comando nascosto <code>completion</code> genera completamenti per bash, zsh o fish e richiede esattamente uno di questi nomi.</p>
+
+<h2 id="combinazioni">Combinazioni utili</h2>
+<pre><code># Indagare uno scan senza intraprendere azioni
+caddy-analyze --detect --grep 'wp-login|\.env|/admin' access.log
+
+# Creare un baseline confrontabile e cercare regressioni
+caddy-analyze baseline save baseline.log -o baseline.json
+caddy-analyze --against baseline.json current.log --threshold 20
+
+# Simulare guard e poi attivare il blocco
+sudo caddy-analyze guard access.log --dry-run --never-block-file whitelist.txt
+sudo caddy-analyze guard access.log --never-block-file whitelist.txt</code></pre>
+<div class="callout callout-info"><div class="callout-label">Continua</div>Consulta il <a href="cli.html">Riferimento CLI</a> per la matrice completa dei flag, <a href="../sources.html">Sorgenti log</a> per la sintassi delle sorgenti e <a href="security-detection.html">Security Detection</a> per categorie, confidence ed evidenze.</div>
+
+<h2 id="flag-globali">Flag globali: riferimento completo</h2>
+<p>La maggior parte dei flag è persistente e viene ereditata dai sottocomandi. Le modalità solo root sono <code>--follow</code>, <code>--interval</code>, <code>--watch</code>, <code>--detect</code> root e <code>--version</code>; <code>tail</code> ha il proprio <code>--detect</code> locale. Un valore omesso lascia attivo il default. Le durate usano la sintassi Go, ad esempio <code>500ms</code>, <code>5m</code> o <code>1h</code>.</p>
+<div class="table-wrap"><table><thead><tr><th>Flag</th><th>Default</th><th>Funzione</th></tr></thead><tbody>
+<tr><td><code>--from</code></td><td>nessuno</td><td>Mantiene le voci successive a un istante RFC3339 o a un intervallo relativo come <code>5m</code>, <code>1h</code>, <code>2d</code>.</td></tr>
+<tr><td><code>--to</code></td><td>nessuno</td><td>Mantiene le voci precedenti all'istante RFC3339 indicato.</td></tr>
+<tr><td><code>--status, -s</code></td><td>tutti</td><td>Seleziona uno o più codici HTTP, per esempio <code>-s 200,404</code>; si può ripetere.</td></tr>
+<tr><td><code>--2xx</code>, <code>--3xx</code>, <code>--4xx</code>, <code>--5xx</code></td><td>false</td><td>Scorciatoie per includere una classe di stato.</td></tr>
+<tr><td><code>--errors-only, -e</code></td><td>false</td><td>Limita ai soli errori server 5xx.</td></tr>
+<tr><td><code>--method, -m</code></td><td>nessuno</td><td>Filtra per metodo HTTP, senza distinzione tra maiuscole e minuscole.</td></tr>
+<tr><td><code>--path, -p</code></td><td>nessuno</td><td>Filtra il percorso con un glob, ad esempio <code>/api/*</code>.</td></tr>
+<tr><td><code>--host</code></td><td>nessuno</td><td>Filtra per sottostringa dell'host della richiesta.</td></tr>
+<tr><td><code>--ip</code> / <code>--exclude-ip</code></td><td>nessuno</td><td>Includono o escludono un IP o una rete CIDR.</td></tr>
+<tr><td><code>--country</code> / <code>--exclude-country</code></td><td>nessuno</td><td>Includono o escludono paesi con codice ISO o nome; richiedono GeoIP.</td></tr>
+<tr><td><code>--asn</code> / <code>--exclude-asn</code></td><td>nessuno</td><td>Includono o escludono numeri ASN; richiedono GeoIP.</td></tr>
+<tr><td><code>--slow</code></td><td>nessuno</td><td>Seleziona richieste più lente della durata indicata.</td></tr>
+<tr><td><code>--max-latency</code></td><td>nessuno</td><td>Seleziona richieste non più lente della durata indicata.</td></tr>
+<tr><td><code>--min-size</code> / <code>--max-size</code></td><td>nessuno</td><td>Limitano la dimensione della risposta; accettano byte e suffissi <code>kb</code>, <code>mb</code>, <code>gb</code>.</td></tr>
+<tr><td><code>--grep</code></td><td>nessuno</td><td>Cerca un pattern su URI, User-Agent e IP; usa regex valide e ripiega sulla sottostringa se il pattern non è regex.</td></tr>
+<tr><td><code>--no-bots</code> / <code>--bots-only</code></td><td>false</td><td>Escludono o includono soltanto bot e crawler classificati.</td></tr>
+<tr><td><code>--level</code></td><td>tutti</td><td>Filtra gli eventi operativi per <code>error</code>, <code>warn</code>, <code>info</code> o <code>debug</code>; ripetibile.</td></tr>
+<tr><td><code>--ops-only</code></td><td>false</td><td>Mostra solo eventi operativi non HTTP.</td></tr>
+<tr><td><code>--top, -t</code></td><td>10</td><td>Numero di elementi nelle classifiche; <code>0</code> disabilita le classifiche.</td></tr>
+<tr><td><code>--format, -f</code></td><td><code>table</code></td><td>Output <code>table</code>, <code>json</code>, <code>csv</code>, <code>html</code>, <code>elasticsearch</code>, <code>opensearch</code> o <code>loki</code> secondo il comando.</td></tr>
+<tr><td><code>--output, -o</code></td><td>stdout</td><td>Scrive l'output in un file invece che su stdout.</td></tr>
+<tr><td><code>--compact, -c</code></td><td>false</td><td>Riduce il layout dei report tabellari.</td></tr>
+<tr><td><code>--defang</code></td><td>false</td><td>Trasforma i punti degli IP in <code>[.]</code> per condividere gli indicatori senza renderli cliccabili.</td></tr>
+<tr><td><code>--workers</code></td><td>CPU disponibili</td><td>Numero di parser paralleli; <code>0</code> seleziona automaticamente. La riduzione dei risultati resta ordinata.</td></tr>
+<tr><td><code>--max-cardinality</code></td><td>100000</td><td>Limita le chiavi distinte per contatore per contenere la memoria; <code>0</code> significa illimitato.</td></tr>
+<tr><td><code>--trust-forwarded</code></td><td>false</td><td>Usa l'ultimo hop pubblico di <code>X-Forwarded-For</code>/<code>X-Real-IP</code>; attivalo solo dietro proxy fidati.</td></tr>
+<tr><td><code>--geoip-db</code></td><td>auto</td><td>Indica il file mmdb DB-IP o MaxMind. Se vuoto tenta l'auto-discovery.</td></tr>
+<tr><td><code>--no-auto-download</code></td><td>false</td><td>Impedisce il download automatico del database DB-IP al primo uso GeoIP.</td></tr>
+<tr><td><code>--geo-cache-ttl</code></td><td>24h</td><td>Durata degli elementi nella cache GeoIP; <code>0</code> disabilita la cache.</td></tr>
+<tr><td><code>--geo-cache-size</code></td><td>50000</td><td>Numero massimo di lookup GeoIP in cache; <code>0</code> disabilita la cache.</td></tr>
+<tr><td><code>--ua-rotation</code></td><td>10</td><td>Numero di User-Agent distinti dallo stesso IP prima dell'euristica di rotazione/scanner.</td></tr>
+<tr><td><code>--custom-patterns</code></td><td>nessuno</td><td>Carica uno o più file JSON di regole custom validati dal motore.</td></tr>
+<tr><td><code>--against</code></td><td>nessuno</td><td>Confronta l'analisi corrente con un baseline JSON e restituisce errore se supera la soglia.</td></tr>
+<tr><td><code>--threshold</code></td><td>20%</td><td>Soglia percentuale usata dal confronto con baseline.</td></tr>
+<tr><td><code>--namespace, -n</code></td><td>nessuno</td><td>Namespace Kubernetes per sorgenti <code>k8s://</code>.</td></tr>
+<tr><td><code>--follow, -F</code></td><td>false</td><td>Segue i nuovi log e produce report periodici; modalità root.</td></tr>
+<tr><td><code>--interval, -i</code></td><td>nessuno</td><td>Imposta la durata delle finestre aggregate in modalità follow.</td></tr>
+<tr><td><code>--watch, -w</code></td><td>false</td><td>Apre la dashboard TUI live; richiede un terminale.</td></tr>
+<tr><td><code>--detect, -d</code></td><td>false</td><td>Attiva la detection delle minacce nel report root.</td></tr>
+<tr><td><code>--remote-url</code></td><td>nessuno</td><td>Endpoint HTTP per output Elasticsearch/OpenSearch bulk o Loki; obbligatorio per quei formati.</td></tr>
+<tr><td><code>--remote-index</code></td><td><code>caddy-analyzer</code></td><td>Indice Elasticsearch/OpenSearch.</td></tr>
+<tr><td><code>--remote-user</code>, <code>--remote-password</code></td><td>nessuno</td><td>Credenziali Basic HTTP per l'endpoint remoto.</td></tr>
+<tr><td><code>--remote-token</code></td><td>nessuno</td><td>Bearer token HTTP; non usare insieme alle credenziali Basic salvo necessità dell'endpoint.</td></tr>
+<tr><td><code>--remote-batch-size</code></td><td>100</td><td>Documenti per richiesta remota.</td></tr>
+<tr><td><code>--remote-retries</code></td><td>3</td><td>Nuovi tentativi dopo il primo invio.</td></tr>
+<tr><td><code>--remote-backoff</code></td><td>250ms</td><td>Attesa iniziale tra tentativi remoti.</td></tr>
+<tr><td><code>--remote-timeout</code></td><td>10s</td><td>Timeout di ogni richiesta remota.</td></tr>
+</tbody></table></div>
+
+<h2 id="flag-sottocomandi">Flag propri dei sottocomandi</h2>
+<h3 id="tail-flag">tail</h3>
+<p><code>tail --detect</code> abilita l'evidenziazione inline delle richieste sospette. Tutti i filtri globali restano disponibili, ma <code>tail</code> non produce un report aggregato e non blocca IP.</p>
+<h3 id="top-flag">top</h3>
+<p><code>top --by DIMENSION</code> è l'alternativa al parametro posizionale. Le dimensioni valide sono <code>path</code>, <code>ip</code>, <code>ua</code>, <code>status</code>, <code>method</code>, <code>host</code>, <code>bandwidth</code>, <code>country</code>, <code>city</code> e <code>asn</code>. <code>country</code>, <code>city</code> e <code>asn</code> richiedono un database GeoIP compatibile.</p>
+<h3 id="baseline-flag">baseline save</h3>
+<p><code>baseline save --detect</code> include le statistiche di sicurezza nel JSON. <code>--output</code> è necessario per conservare il file e il baseline deve essere generato con gli stessi filtri che userai nel confronto.</p>
+<h3 id="blocklist-flag">blocklist</h3>
+<div class="table-wrap"><table><thead><tr><th>Flag</th><th>Uso</th></tr></thead><tbody>
+<tr><td><code>--cache-dir</code></td><td>Directory in cui salvare i file dei feed scaricati.</td></tr>
+<tr><td><code>--no-default-blocklists</code></td><td>Disabilita gli otto feed predefiniti; utile con una configurazione solo custom.</td></tr>
+<tr><td><code>--blocklist-config FILE</code></td><td>Aggiunge file JSON con sorgenti <code>name</code>, <code>url</code> e, se necessario, <code>format</code>; ripetibile.</td></tr>
+<tr><td><code>--blocklist-remove NAME</code></td><td>Rimuove sorgenti nominate dalla configurazione; accetta valori separati da virgole.</td></tr>
+<tr><td><code>--format table|json</code></td><td>Formato di <code>list</code> e <code>config</code>.</td></tr>
+</tbody></table></div>
+<p>Le azioni sono: <code>refresh</code> scarica e aggiorna la cache; <code>list</code> mostra stato, età, errori e conteggi; <code>config</code> stampa la configurazione; <code>init</code> salva le impostazioni correnti per i comandi successivi. Nessuna azione modifica il firewall.</p>
+<h3 id="guard-flag">guard</h3>
+<div class="table-wrap"><table><thead><tr><th>Flag</th><th>Default</th><th>Uso</th></tr></thead><tbody>
+<tr><td><code>--limit, -l</code></td><td>100</td><td>Richieste HTTP per IP nella finestra prima del blocco; <code>0</code> disabilita.</td></tr>
+<tr><td><code>--window, -w</code></td><td>1m</td><td>Finestra scorrevole, calcolata con bucket per secondo.</td></tr>
+<tr><td><code>--duration, -d</code></td><td>10m</td><td>Durata del blocco; <code>0</code> significa permanente.</td></tr>
+<tr><td><code>--auth-limit</code></td><td>10</td><td>Numero di risposte 401/403 prima del blocco; <code>0</code> disabilita.</td></tr>
+<tr><td><code>--notfound-limit</code></td><td>50</td><td>Numero di 404 prima del blocco; <code>0</code> disabilita.</td></tr>
+<tr><td><code>--detect-confidence</code></td><td>8</td><td>Confidence minima 1-10 per il blocco da pattern; <code>0</code> disabilita solo questo percorso.</td></tr>
+<tr><td><code>--firewall-backend</code></td><td>auto</td><td>Backend <code>auto</code>, <code>iptables</code>, <code>docker</code>, <code>nftables</code> o <code>hybrid</code>.</td></tr>
+<tr><td><code>--dry-run</code></td><td>false</td><td>Valuta e registra i blocchi possibili senza modificare firewall o state file.</td></tr>
+<tr><td><code>--country-block</code></td><td>nessuno</td><td>Blocca immediatamente i paesi ISO indicati tramite GeoIP.</td></tr>
+<tr><td><code>--no-blocklist</code></td><td>false</td><td>Disabilita il controllo degli otto feed.</td></tr>
+<tr><td><code>--blocklist-refresh</code></td><td>6h</td><td>Intervallo di refresh dei feed; minimo 1h, <code>0</code> disabilita.</td></tr>
+<tr><td><code>--cache-dir</code></td><td>cache utente</td><td>Directory dei feed cache.</td></tr>
+<tr><td><code>--never-block</code></td><td>nessuno</td><td>IP/CIDR da proteggere sempre; ripetibile.</td></tr>
+<tr><td><code>--never-block-file</code></td><td>nessuno</td><td>File con un IP/CIDR per riga e commenti <code>#</code>.</td></tr>
+<tr><td><code>--state-file</code></td><td><code>/var/lib/caddy-analyzer/blocked.json</code></td><td>Persistenza e recupero dei blocchi dopo un riavvio; vuoto disabilita.</td></tr>
+<tr><td><code>--iptables-timeout</code></td><td>10s</td><td>Timeout di ogni invocazione firewall.</td></tr>
+<tr><td><code>--subnet-limit</code></td><td>0</td><td>Blocca una rete /24 o /64 quando le richieste distribuite superano la soglia.</td></tr>
+<tr><td><code>--rps-anomaly</code></td><td>0</td><td>Segnala un picco RPS rispetto alla baseline EWMA; è un alert audit, non un blocco.</td></tr>
+<tr><td><code>--cred-stuffing-limit</code></td><td>0</td><td>Segnala IP distinti che falliscono lo stesso percorso; è un alert audit.</td></tr>
+<tr><td><code>--audit-log</code></td><td>JSONL in <code>/var/log</code></td><td>File locale degli eventi; vuoto disabilita.</td></tr>
+<tr><td><code>--audit-syslog</code></td><td>disabilitato</td><td>Destinazione UDP syslog, ad esempio <code>127.0.0.1:514</code>.</td></tr>
+<tr><td><code>--webhook-url</code> / <code>--audit-webhook</code></td><td>disabilitato</td><td>Invia notifiche a webhook generico, Slack, Discord o PagerDuty.</td></tr>
+<tr><td><code>--webhook-provider</code></td><td>generic</td><td>Provider del webhook.</td></tr>
+<tr><td><code>--pagerduty-routing-key</code></td><td>nessuno</td><td>Routing key richiesta dal provider PagerDuty; non viene scritta nei log.</td></tr>
+<tr><td><code>--audit-timeout</code> / <code>--audit-retries</code></td><td>5s / 2</td><td>Timeout per sink e retry dopo il primo invio; massimo 5 retry.</td></tr>
+<tr><td><code>--audit-rate-limit</code></td><td>0</td><td>Intervallo minimo tra notifiche dello stesso IP; <code>0</code> disabilita.</td></tr>
+</tbody></table></div>
+<h3 id="block-unban-flag">block e unban</h3>
+<p>Entrambi condividono i flag di audit: <code>--audit-log</code>, <code>--audit-syslog</code>, <code>--webhook-url</code>/<code>--audit-webhook</code>, <code>--webhook-provider</code>, <code>--pagerduty-routing-key</code>, <code>--audit-timeout</code>, <code>--audit-retries</code> e <code>--audit-rate-limit</code>. <code>--state-file</code> sincronizza i blocchi manuali con guard. In aggiunta, <code>unban --list</code> elenca gli IP attivi e <code>unban --all</code> li rimuove tutti; non usare entrambi insieme.</p>
+<h3 id="config-flag">config</h3>
+<p><code>--global, -g</code> seleziona il file globale invece di quello locale. Le forme brevi sono <code>config SOURCE</code> o <code>config set SOURCE</code>; <code>config show</code> mostra la configurazione attiva, <code>config reset</code> rimuove il file e <code>config source</code> gestisce la sorgente predefinita.</p>
+<h3 id="whitelist-flag">whitelist</h3>
+<p><code>--file</code> sceglie il file, <code>--init</code> lo crea con intestazione, <code>--add</code> inserisce IP/CIDR, <code>--remove</code> li elimina e <code>--list, -l</code> stampa il contenuto. Il file deve poi essere passato a guard con <code>--never-block-file</code>.</p>
+<h3 id="update-flag">update</h3>
+<p><code>--check</code> controlla soltanto, <code>--version TAG</code> installa una release precisa, <code>--force</code> consente reinstallazione o downgrade e <code>--install-dir DIR</code> sostituisce il binario in una directory scelta. La verifica cosign e SHA256 è obbligatoria e un errore lascia intatta l'installazione.</p>
+<h3 id="export-flag">export-sigma</h3>
+<p>Accetta al massimo un file di output. Il valore <code>-</code> o l'assenza del parametro scrive su stdout; un percorso scrive YAML Sigma multi-documento. I flag globali di analisi non cambiano l'insieme delle regole esportate.</p>
+<h3 id="help-flag">help e --help</h3>
+<p><code>caddy-analyze help COMANDO</code> mostra l'help di un comando senza eseguirlo; <code>--help</code> è disponibile su ogni comando e sottocomando. L'help generato dal binario è la fonte definitiva per verificare flag e default della versione in uso.</p>

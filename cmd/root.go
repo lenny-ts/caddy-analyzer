@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"bufio"
 	"context"
 	"fmt"
 	"io"
@@ -392,7 +393,7 @@ func runOnceMode(ctx context.Context, sources []types.LogSource, filters types.F
 		defer func() { _ = geoip.Close() }()
 	}
 
-	bar := progress.New(os.Stderr, 0, "Analyzing")
+	bar := progress.New(os.Stderr, countTotalLines(sources), "Analyzing")
 
 	for _, src := range sources {
 		r := reader.FromSource(src)
@@ -622,6 +623,41 @@ func enrichGeoIP(entry *types.LogEntry, g *enrich.GeoIP) {
 		return
 	}
 	entry.Geo = info
+}
+
+// countTotalLines enables a percentage bar for finite local files. Streaming
+// sources return zero and keep the indeterminate spinner.
+func countTotalLines(sources []types.LogSource) int64 {
+	var total int64
+	for _, src := range sources {
+		if src.Type != types.SourceFile {
+			return 0
+		}
+		for _, path := range expandSourcePaths(src.Path) {
+			f, err := os.Open(path)
+			if err != nil {
+				return 0
+			}
+			scanner := bufio.NewScanner(f)
+			scanner.Buffer(make([]byte, 64*1024), 1024*1024)
+			for scanner.Scan() {
+				total++
+			}
+			_ = f.Close()
+			if err := scanner.Err(); err != nil {
+				return 0
+			}
+		}
+	}
+	return total
+}
+
+func expandSourcePaths(pattern string) []string {
+	matches, err := filepath.Glob(pattern)
+	if err != nil || len(matches) == 0 {
+		return []string{pattern}
+	}
+	return matches
 }
 
 // fanInFollowWithPolicy opens every source in follow mode and multiplexes its

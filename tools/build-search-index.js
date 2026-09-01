@@ -49,6 +49,7 @@ const pageTitle = (rel, raw) => {
     "guide/examples.html": "Examples",
     "guide/troubleshooting.html": "Troubleshooting",
     "reference/cli.html": "CLI Reference",
+    "reference/commands.html": "All commands",
     "reference/api.html": "API / Packages",
     "reference/security-categories.html": "26 Categories",
     "reference/security-detection.html": "MITRE, Sigma & Evasion",
