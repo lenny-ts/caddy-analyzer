@@ -5,6 +5,14 @@ All notable changes to `caddy-analyzer` will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.1] - 2026-09-01
+
+### Fixed
+- **Progress bar for large analyses**: restore deterministic progress for finite local files, including `--detect`, while retaining the animated spinner for streaming sources. The spinner now advances independently while expensive detection work is running.
+
+### Docs
+- **Complete command reference**: document every command, subcommand, global flag, command-specific flag, safety requirement, output mode, and common workflow in English and Italian.
+
 ## [0.7.0] - 2026-09-01
 
 ### Added
