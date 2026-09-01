@@ -58,7 +58,7 @@ jobs:
               git log --pretty=format:'- %s (%h)' HEAD
             fi
             printf '\n'
-          } > release-notes.md
+          } > "$RUNNER_TEMP/release-notes.md"
 
       - name: Install Syft
         uses: anchore/sbom-action@e22c389904149dbc22b58101806040fa8d37a610 # v0
@@ -87,7 +87,7 @@ jobs:
       - name: Upload SBOM and signatures
         uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2.6.2
         with:
-          body_path: release-notes.md
+          body_path: ${{ runner.temp }}/release-notes.md
           append_body: false
           files: |
             dist/*.spdx.json
