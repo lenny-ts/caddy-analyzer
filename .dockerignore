@@ -1,0 +1,9 @@
+.git
+.github
+coverage.out
+dist
+docs
+*.log
+*.html
+*.png
+testdata/large.log

@@ -97,8 +97,7 @@ func runTopCmd(cmd *cobra.Command, args []string) error {
 		defer func() { _ = geoip.Close() }()
 	}
 
-	totalLines := countTotalLines(sources)
-	bar := progress.New(os.Stderr, totalLines, "Analyzing")
+	bar := progress.New(os.Stderr, 0, "Analyzing")
 
 	for _, src := range sources {
 		r := reader.FromSource(src)

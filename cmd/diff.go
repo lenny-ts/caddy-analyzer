@@ -156,8 +156,7 @@ func processLogFile(ctx context.Context, path string) (*analysis.Engine, error) 
 	if err != nil {
 		return nil, err
 	}
-	total := countTotalLines([]types.LogSource{src})
-	bar := progress.New(os.Stderr, total, "Parsing "+filepath.Base(path))
+	bar := progress.New(os.Stderr, 0, "Parsing "+filepath.Base(path))
 	for line := range lines {
 		entry, err := parser.Parse(line)
 		if err != nil || entry == nil {

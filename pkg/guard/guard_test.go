@@ -3,6 +3,7 @@ package guard
 import (
 	"context"
 	"fmt"
+	"os"
 	"sync"
 	"testing"
 	"time"
@@ -155,6 +156,38 @@ func TestGuardTickBlocksOnAuthThreshold(t *testing.T) {
 	}
 	if !fb.blocked["1.2.3.4"] {
 		t.Error("expected fake blocker to have blocked 1.2.3.4")
+	}
+}
+
+func TestGuardDryRunDoesNotCallBlockerOrPersist(t *testing.T) {
+	fb := newFakeBlocker()
+	statePath := t.TempDir() + "/blocked.json"
+	if err := os.WriteFile(statePath, []byte("[]\n"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	var actions []string
+	g := New(Config{
+		Limit: 1, Window: time.Minute, BlockDuration: time.Hour,
+		Blocker: fb, StatePath: statePath, DryRun: true,
+		IPValidator: func(string) error { return nil },
+		OnAudit:     func(action, ip, reason, duration string) { actions = append(actions, action) },
+	})
+	g.Evaluate(caddyLine("1.2.3.4", "/api", "GET", 200))
+	if got := g.Tick(context.Background()); len(got) != 1 {
+		t.Fatalf("expected one simulated block, got %d", len(got))
+	}
+	if len(fb.blocked) != 0 {
+		t.Fatalf("dry-run called blocker: %v", fb.blocked)
+	}
+	if g.SessionBlocks() != 1 || !g.IsBlocked("1.2.3.4") {
+		t.Fatalf("expected simulated block to be tracked")
+	}
+	if len(actions) != 1 || actions[0] != "would_block" {
+		t.Fatalf("expected would_block audit event, got %v", actions)
+	}
+	data, err := os.ReadFile(statePath)
+	if err != nil || string(data) != "[]\n" {
+		t.Fatalf("dry-run changed state file: %q (%v)", data, err)
 	}
 }
 

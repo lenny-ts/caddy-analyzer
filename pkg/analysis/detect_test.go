@@ -1282,6 +1282,23 @@ func TestDetectorIPCapEviction(t *testing.T) {
 	}
 }
 
+func TestDetectorIPLRUOrder(t *testing.T) {
+	detector := NewDetector()
+	detector.SetIPCap(2)
+	for _, ip := range []string{"10.0.0.1", "10.0.0.2"} {
+		detector.DetectAll(&types.LogEntry{RemoteIP: ip, URI: "/", Status: 200})
+	}
+	// Refresh the oldest entry, so the second IP becomes the eviction target.
+	detector.DetectAll(&types.LogEntry{RemoteIP: "10.0.0.1", URI: "/", Status: 200})
+	detector.DetectAll(&types.LogEntry{RemoteIP: "10.0.0.3", URI: "/", Status: 200})
+	if _, ok := detector.ipStats["10.0.0.2"]; ok {
+		t.Fatal("least recently used IP was not evicted")
+	}
+	if _, ok := detector.ipStats["10.0.0.1"]; !ok {
+		t.Fatal("recently used IP was evicted")
+	}
+}
+
 // TestCompiledPatternsCached verifies the ~150 detection regexes are compiled
 // exactly once per process and shared across Detector instances, instead of
 // being recompiled on every NewDetector() call (which guard.Tick and the

@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "caddy-analyzer.fullname" . }}
+  labels:
+    {{- include "caddy-analyzer.labels" . | nindent 4 }}
+data:
+  caddy-analyzer.json: {{ .Values.config | toJson | quote }}

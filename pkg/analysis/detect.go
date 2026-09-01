@@ -1,6 +1,7 @@
 package analysis
 
 import (
+	"container/list"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -243,8 +244,9 @@ type Detector struct {
 	patterns            []compiledPattern
 	customPatterns      []compiledPattern
 	ipStats             map[string]*IPDetStats
-	ipOrder             []string // LRU tracking: most recently used at the end
-	ipCap               int      // max tracked IPs (0 = unlimited)
+	ipOrder             *list.List // LRU tracking: least recent at front
+	ipNodes             map[string]*list.Element
+	ipCap               int // max tracked IPs (0 = unlimited)
 	uaRotationThreshold int
 }
 
@@ -276,6 +278,8 @@ func NewDetectorWithPatterns(custom []DetectionPattern) *Detector {
 		patterns:            getCompiledPatterns(),
 		customPatterns:      compiled,
 		ipStats:             make(map[string]*IPDetStats),
+		ipOrder:             list.New(),
+		ipNodes:             make(map[string]*list.Element),
 		ipCap:               DefaultIPCap,
 		uaRotationThreshold: defaultUARotationThreshold,
 	}
@@ -292,7 +296,15 @@ func splitTechniques(value string) []string {
 }
 
 // SetIPCap configures the maximum number of tracked IPs. 0 disables eviction.
-func (d *Detector) SetIPCap(cap int) { d.ipCap = cap }
+func (d *Detector) SetIPCap(cap int) {
+	d.ipCap = cap
+	if cap <= 0 {
+		return
+	}
+	for len(d.ipStats) > cap {
+		d.evictOldestIP()
+	}
+}
 
 // SetUARotationThreshold configures how many distinct User-Agents from one
 // IP trigger the scanner/rotation heuristic. Values <= 0 reset to default.
@@ -311,25 +323,19 @@ func (d *Detector) UARotationThreshold() int { return d.uaRotationThreshold }
 // are never evicted. The guard resets the detector each tick so this
 // primarily protects long-running offline --detect runs.
 func (d *Detector) evictOldestIP() {
-	for len(d.ipOrder) > 0 {
-		ip := d.ipOrder[0]
-		d.ipOrder = d.ipOrder[1:]
-		if _, ok := d.ipStats[ip]; ok {
-			delete(d.ipStats, ip)
-			return
-		}
+	if elem := d.ipOrder.Front(); elem != nil {
+		ip := elem.Value.(string)
+		delete(d.ipStats, ip)
+		delete(d.ipNodes, ip)
+		d.ipOrder.Remove(elem)
 	}
 }
 
 // touchIP moves ip to the end of ipOrder, marking it as most recently used.
 // This implements true LRU eviction so actively-used IPs are never dropped.
 func (d *Detector) touchIP(ip string) {
-	for i, v := range d.ipOrder {
-		if v == ip {
-			d.ipOrder = append(d.ipOrder[:i], d.ipOrder[i+1:]...)
-			d.ipOrder = append(d.ipOrder, ip)
-			return
-		}
+	if elem, ok := d.ipNodes[ip]; ok {
+		d.ipOrder.MoveToBack(elem)
 	}
 }
 
@@ -982,7 +988,7 @@ func (d *Detector) DetectAll(entry *types.LogEntry) []Detection {
 			PathWriteCount: make(map[string]int),
 		}
 		d.ipStats[entry.RemoteIP] = stats
-		d.ipOrder = append(d.ipOrder, entry.RemoteIP)
+		d.ipNodes[entry.RemoteIP] = d.ipOrder.PushBack(entry.RemoteIP)
 	} else {
 		d.touchIP(entry.RemoteIP)
 	}

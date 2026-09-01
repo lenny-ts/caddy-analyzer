@@ -1,6 +1,7 @@
 package analysis
 
 import (
+	"container/list"
 	"fmt"
 	"net/netip"
 	"regexp"
@@ -11,10 +12,46 @@ import (
 	"github.com/lenny-ts/caddy-analyzer/pkg/types"
 )
 
+const compiledPatternCacheCap = 1024
+
+type lruCache[V any] struct {
+	mu    sync.Mutex
+	cap   int
+	items map[string]*list.Element
+	order *list.List
+}
+
+type lruCacheEntry[V any] struct {
+	key   string
+	value V
+}
+
+func newLRUCache[V any](cap int) *lruCache[V] {
+	return &lruCache[V]{cap: cap, items: make(map[string]*list.Element), order: list.New()}
+}
+
+func (c *lruCache[V]) getOrCreate(key string, create func() V) V {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if elem, ok := c.items[key]; ok {
+		c.order.MoveToBack(elem)
+		return elem.Value.(lruCacheEntry[V]).value
+	}
+	value := create()
+	elem := c.order.PushBack(lruCacheEntry[V]{key: key, value: value})
+	c.items[key] = elem
+	if c.cap > 0 && c.order.Len() > c.cap {
+		oldest := c.order.Front()
+		delete(c.items, oldest.Value.(lruCacheEntry[V]).key)
+		c.order.Remove(oldest)
+	}
+	return value
+}
+
 // grepCache caches compiled grep patterns across entries so a multi-million-line
 // log does not recompile the same regex per row. Patterns that are not valid
 // regex fall back to case-insensitive substring matching.
-var grepCache sync.Map
+var grepCache = newLRUCache[grepMatcher](compiledPatternCacheCap)
 
 type grepMatcher struct {
 	re  *regexp.Regexp
@@ -22,17 +59,15 @@ type grepMatcher struct {
 }
 
 func grepCompile(pattern string) grepMatcher {
-	if m, ok := grepCache.Load(pattern); ok {
-		return m.(grepMatcher)
-	}
-	var gm grepMatcher
-	if re, err := regexp.Compile("(?i)" + pattern); err == nil {
-		gm.re = re
-	} else {
-		gm.lit = strings.ToLower(pattern)
-	}
-	grepCache.Store(pattern, gm)
-	return gm
+	return grepCache.getOrCreate(pattern, func() grepMatcher {
+		var gm grepMatcher
+		if re, err := regexp.Compile("(?i)" + pattern); err == nil {
+			gm.re = re
+		} else {
+			gm.lit = strings.ToLower(pattern)
+		}
+		return gm
+	})
 }
 
 func (gm grepMatcher) match(target string) bool {
@@ -54,6 +89,16 @@ func New(filters types.Filters) *Engine {
 		filters: filters,
 		stats:   types.NewStats(),
 	}
+}
+
+// NewFromStats creates an engine backed by an already finalized snapshot.
+// It is used by baseline comparisons; the snapshot is never mutated by the
+// comparison itself.
+func NewFromStats(filters types.Filters, stats *types.Stats) *Engine {
+	if stats == nil {
+		stats = types.NewStats()
+	}
+	return &Engine{filters: filters, entries: int(stats.TotalRequests), stats: stats}
 }
 
 func (e *Engine) SetDetector(d *Detector) {
@@ -446,19 +491,13 @@ func containsInt(list []int, v int) bool {
 
 // globCache caches compiled glob patterns so a multi-million-line log does
 // not recompile the same glob per row.
-var globCache sync.Map
+var globCache = newLRUCache[*regexp.Regexp](compiledPatternCacheCap)
 
 func matchGlob(pattern, s string) bool {
 	if pattern == "*" || pattern == "" {
 		return true
 	}
-	var re *regexp.Regexp
-	if v, ok := globCache.Load(pattern); ok {
-		re = v.(*regexp.Regexp)
-	} else {
-		re = compileGlob(pattern)
-		globCache.Store(pattern, re)
-	}
+	re := globCache.getOrCreate(pattern, func() *regexp.Regexp { return compileGlob(pattern) })
 	if re != nil {
 		return re.MatchString(s)
 	}

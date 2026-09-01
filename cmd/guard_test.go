@@ -27,6 +27,16 @@ func TestRunGuardInvalidWindow(t *testing.T) {
 	}
 }
 
+func TestGuardDryRunFlag(t *testing.T) {
+	flag := guardCmd.Flags().Lookup("dry-run")
+	if flag == nil {
+		t.Fatal("expected --dry-run flag")
+	}
+	if flag.DefValue != "false" {
+		t.Fatalf("expected dry-run default false, got %s", flag.DefValue)
+	}
+}
+
 // TestRunGuardRequiresRoot: when not running as root, guard must refuse to
 // start with a clear error so the user does not believe protection is
 // active while every BlockIP silently fails.

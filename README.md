@@ -97,6 +97,10 @@ caddy-analyze -f html -o report.html --detect
 # Compare two log files for regressions
 caddy-analyze diff before.log after.log
 
+# Save a reusable baseline, then fail on regressions above 5%
+caddy-analyze baseline save --output baseline.json production.log
+caddy-analyze --against baseline.json --threshold 5 production.log
+
 # Launch interactive TUI dashboard
 caddy-analyze --watch
 
@@ -108,6 +112,15 @@ caddy-analyze blocklist init --no-default-blocklists --blocklist-config mylist.t
 # Real-time guard with blocklist + country-block
 sudo caddy-analyze guard --country-block CN,RU,IR docker://my-caddy
 ```
+
+The baseline is a versioned JSON file containing the analyzed HTTP and
+operational aggregates plus creation time, tool version, sources, filters,
+and detection metadata. `--against` applies the current filters and exits
+with status 1 when 5xx errors, average latency, or operational errors rise,
+or requests-per-second falls, by more than `--threshold` percent. Newly
+failing HTTP paths also fail the comparison. `--format table|json|csv` is
+supported for comparison output; malformed files, unsupported schema versions,
+directories, and symlinks are rejected.
 
 ---
 
@@ -142,6 +155,7 @@ Caddy v2 uses a **structured JSON log format** that differs from the Common/Comb
 | **Threat Intel** | Offline GeoIP enrichment (MaxMind GeoLite2 / DB-IP mmdb, no API key) with auto-download of Country, ASN, and City databases. `top country` / `top city` / `top asn` dimensions. Country, city, coordinates, and heatmap sections in HTML reports. Auto-discovery in cwd, `~/.config/caddy-analyzer/`, `/var/lib/caddy-analyzer/`, `/usr/share/GeoIP/` |
 | **Traffic Analysis** | Classifies human users vs crawlers (Googlebot, Bingbot, Yandex, DuckDuckBot, GPTBot, ClaudeBot, Bytespider, CCBot, Amazonbot, and others) and automated scrapers |
 | **Diff Engine** | Side-by-side comparison of two log files detecting 5xx spikes, RPS shifts, and latency regressions |
+| **Baselines** | Versioned JSON snapshots via `baseline save`; `--against` compares HTTP and operational statistics and returns a non-zero exit status when a regression exceeds `--threshold` |
 | **TUI Dashboard** | 8-tab Bubbletea/Lipgloss interface with live streaming, security alerts, top metrics, GeoIP country/ASN, and operational (non-HTTP) events |
 | **HTML Reports** | Standalone dark-mode single-file HTML reports for sharing with your team |
 | **Data Sources** | Local files, stdin, Docker (`docker://`), Kubernetes (`k8s://`), systemd journalctl (`journalctl://`) |
@@ -218,6 +232,28 @@ caddy-analyze update --check             # report availability only
 caddy-analyze update --version v0.6.1    # pin an exact release
 sudo caddy-analyze update                # when the binary is in a root-owned path
 ```
+
+### Local Docker and Kubernetes demos
+
+The repository includes a safe, file-based Compose demo. It mounts the sample
+logs read-only, drops all capabilities, and does not mount the Docker socket:
+
+```bash
+docker compose up --build
+```
+
+The Helm chart is under [`deploy/helm/caddy-analyzer`](deploy/helm/caddy-analyzer)
+and reads a log file from a PVC when `logVolume.existingClaim` is set. Its
+default `emptyDir` is intentionally empty; configure a PVC or an explicit
+host path before deploying against real logs. The chart creates no Service,
+ServiceAccount, or RBAC objects because the analyzer is a CLI and does not
+call the Kubernetes API.
+
+The analyzer has no HTTP health endpoint. Helm's optional liveness probe only
+checks that the process is alive, not that a log exists or that analysis is
+progressing. Docker socket access is disabled by default; enabling
+`dockerSocket.enabled` is an explicit, trusted-local-demo opt-in and grants
+control over the Docker daemon.
 
 ---
 

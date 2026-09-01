@@ -42,6 +42,7 @@ var (
 	guardGeoIPDB           string
 	guardNoAutoDL          bool
 	guardFirewallBackend   string
+	guardDryRun            bool
 	guardNotify            auditNotifyFlags
 )
 
@@ -75,6 +76,8 @@ func init() {
 	guardCmd.Flags().StringVarP(&blocklistCacheDir, "cache-dir", "", defaultBlocklistCacheDir(), "Directory for cached blocklist files")
 	guardCmd.Flags().StringVarP(&guardFirewallBackend, "firewall-backend", "", "auto",
 		"Firewall backend: auto, iptables, docker, nftables, hybrid (auto-detects Docker/nftables)")
+	guardCmd.Flags().BoolVar(&guardDryRun, "dry-run", false,
+		"Evaluate and report blocks without changing the firewall or state file")
 	rootCmd.AddCommand(guardCmd)
 }
 
@@ -137,7 +140,7 @@ func runGuard(cmd *cobra.Command, args []string) error {
 	// protection is active while it is not. Fail loud at startup instead.
 	// Checked after flag validation so unit tests on invalid flags do not
 	// depend on the host's euid.
-	if os.Geteuid() != 0 {
+	if os.Geteuid() != 0 && !guardDryRun {
 		return fmt.Errorf("guard requires root: run with sudo (iptables needs CAP_NET_ADMIN)")
 	}
 
@@ -329,6 +332,7 @@ func runGuard(cmd *cobra.Command, args []string) error {
 		CountryBlock:        guardCountryBlock,
 		GeoIP:               geoip,
 		FirewallBackend:     fwBackend,
+		DryRun:              guardDryRun,
 	})
 
 	durMsg := duration.String()
@@ -341,7 +345,11 @@ func runGuard(cmd *cobra.Command, args []string) error {
 		}
 		return fmt.Sprintf("%s: >%d", label, v)
 	}
-	fmt.Fprintf(os.Stderr, "Guard active — %s | %s | %s / %s | block: %s\n",
+	mode := "active"
+	if guardDryRun {
+		mode = "dry-run"
+	}
+	fmt.Fprintf(os.Stderr, "Guard %s — %s | %s | %s / %s | block: %s\n", mode,
 		thr("auth", guardAuthLimit), thr("404", guardNotFoundLimit), thr("total", guardLimit), guardWindow, durMsg)
 	fmt.Fprintf(os.Stderr, "Firewall backend: %s\n", fwBackend.Name())
 	if guardDetectConfidence > 0 {
@@ -387,11 +395,19 @@ func runGuard(cmd *cobra.Command, args []string) error {
 	g.FlushState()
 
 	fmt.Fprintln(os.Stderr, "Guard stopped.")
-	if n := g.Count(); n > 0 {
-		fmt.Fprintf(os.Stderr, "IPs blocked this session: %d\n", n)
+	if n := g.SessionBlocks(); n > 0 {
+		label := "IPs blocked this session"
+		if guardDryRun {
+			label = "IPs that would be blocked this session"
+		}
+		fmt.Fprintf(os.Stderr, "%s: %d\n", label, n)
 	}
 	if n := g.BlocklistHits(); n > 0 {
-		fmt.Fprintf(os.Stderr, "IPs blocked via blocklist/country-block: %d\n", n)
+		label := "IPs blocked via blocklist/country-block"
+		if guardDryRun {
+			label = "IPs that would be blocked via blocklist/country-block"
+		}
+		fmt.Fprintf(os.Stderr, "%s: %d\n", label, n)
 	}
 	return nil
 }
