@@ -74,7 +74,7 @@
   <main class="wrap" id="main">
     <div class="doc-content">
       <nav class="breadcrumb" aria-label="Breadcrumb"><a href="../../it/reference/cli.html">Riferimento</a><span class="sep">/</span><span>Riferimento CLI</span></nav>
-      <div class="page-meta"><a href="https://github.com/lenny-ts/caddy-analyzer/releases">v0.6.4</a> · aggiornata <time datetime="2026-09-01">2026-09-01</time> · <a href="https://github.com/lenny-ts/caddy-analyzer">GitHub</a></div>
+      <div class="page-meta"><a href="https://github.com/lenny-ts/caddy-analyzer/releases">v0.7.0</a> · aggiornata <time datetime="2026-09-01">2026-09-01</time> · <a href="https://github.com/lenny-ts/caddy-analyzer">GitHub</a></div>
       <div class="cli-heading"><div><div class="hero-badge">Interfaccia a riga di comando</div><h1>Riferimento CLI</h1></div></div>
 <p>Punto di ingresso: <code>caddy-analyze [flags] [source...]</code> — le sorgenti sono risolte tramite <a href="../sources.html">Sorgenti log</a> o <a href="../guide/configuration.html">caddy-analyzer.json</a>. Di seguito: ogni flag, il suo ambito e se interagisce con il sistema.</p>
 
@@ -119,6 +119,13 @@
 <tr><td><code>--namespace</code></td><td><code>-n</code></td><td></td><td><span class="pill pill-all">tutti</span></td><td>Namespace K8s</td></tr>
 <tr><td><code>--geoip-db</code></td><td></td><td></td><td><span class="pill pill-all">tutti</span></td><td>Percorso mmdb GeoIP (rilevamento automatico)</td></tr>
 <tr><td><code>--no-auto-download</code></td><td></td><td>false</td><td><span class="pill pill-all">tutti</span></td><td>Disabilita il download automatico di GeoIP</td></tr>
+<tr><td><code>--against</code></td><td></td><td></td><td><span class="pill pill-all">tutti</span></td><td>Confronta con un file baseline JSON</td></tr>
+<tr><td><code>--threshold</code></td><td></td><td>20</td><td><span class="pill pill-all">tutti</span></td><td>Soglia percentuale di regressione</td></tr>
+<tr><td><code>--custom-patterns</code></td><td></td><td></td><td><span class="pill pill-all">tutti</span></td><td>Carica JSON di pattern validati; ripetibile</td></tr>
+<tr><td><code>--remote-url</code></td><td></td><td></td><td><span class="pill pill-all">tutti</span></td><td>Endpoint bulk Elasticsearch/OpenSearch o Loki</td></tr>
+<tr><td><code>--remote-index</code></td><td></td><td>caddy-analyzer</td><td><span class="pill pill-all">tutti</span></td><td>Indice Elasticsearch/OpenSearch</td></tr>
+<tr><td><code>--remote-user/password/token</code></td><td></td><td></td><td><span class="pill pill-all">tutti</span></td><td>Autenticazione remota Basic o Bearer</td></tr>
+<tr><td><code>--remote-batch-size/retries/backoff/timeout</code></td><td></td><td></td><td><span class="pill pill-all">tutti</span></td><td>Parametri di consegna remota</td></tr>
 </tbody>
 </table></div>
 
@@ -141,8 +148,9 @@
 <thead><tr><th>Comando</th><th>Ambito</th><th>Descrizione</th></tr></thead>
 <tbody>
 <tr><td><code>tail</code></td><td><span class="pill pill-readonly">sola lettura</span></td><td>Trasmette e colora (locale <code>--detect</code>)</td></tr>
-<tr><td><code>top</code></td><td><span class="pill pill-readonly">sola lettura</span></td><td>Ispettore classificato (9 dimensioni)</td></tr>
+<tr><td><code>top</code></td><td><span class="pill pill-readonly">sola lettura</span></td><td>Ispettore classificato (10 dimensioni)</td></tr>
 <tr><td><code>diff</code></td><td><span class="pill pill-readonly">sola lettura</span></td><td>Confronta due log</td></tr>
+<tr><td><code>baseline</code></td><td>scrive un file</td><td>Salva baseline di analisi versionate</td></tr>
 <tr><td><code>guard</code></td><td><span class="pill pill-danger">modifica il firewall</span></td><td>Blocco automatico tramite iptables/nftables/Docker</td></tr>
 <tr><td><code>block</code> / <code>unban</code></td><td><span class="pill pill-danger">modifica il firewall</span></td><td>Firewall manuale</td></tr>
 <tr><td><code>blocklist</code></td><td>scrive cache/config</td><td>8 feed, refresh/list/config/init</td></tr>

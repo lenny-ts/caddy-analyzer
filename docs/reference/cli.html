@@ -74,7 +74,7 @@
   <main class="wrap" id="main">
     <div class="doc-content">
       <nav class="breadcrumb" aria-label="Breadcrumb"><a href="../reference/cli.html">Reference</a><span class="sep">/</span><span>CLI Reference</span></nav>
-      <div class="page-meta"><a href="https://github.com/lenny-ts/caddy-analyzer/releases">v0.6.4</a> · updated <time datetime="2026-09-01">2026-09-01</time> · <a href="https://github.com/lenny-ts/caddy-analyzer">GitHub</a></div>
+      <div class="page-meta"><a href="https://github.com/lenny-ts/caddy-analyzer/releases">v0.7.0</a> · updated <time datetime="2026-09-01">2026-09-01</time> · <a href="https://github.com/lenny-ts/caddy-analyzer">GitHub</a></div>
       <div class="cli-heading"><div><div class="hero-badge">Command line interface</div><h1>CLI Reference</h1></div></div>
 <p>Entry point: <code>caddy-analyze [flags] [source...]</code> — sources resolved via <a href="../sources.html">Log Sources</a> or <a href="../guide/configuration.html">caddy-analyzer.json</a>. Below: every flag, its scope, and whether it touches the system.</p>
 
@@ -119,6 +119,8 @@
 <tr><td><code>--namespace</code></td><td><code>-n</code></td><td></td><td><span class="pill pill-all">all</span></td><td>K8s namespace</td></tr>
 <tr><td><code>--geoip-db</code></td><td></td><td></td><td><span class="pill pill-all">all</span></td><td>GeoIP mmdb path (auto-discovery)</td></tr>
 <tr><td><code>--no-auto-download</code></td><td></td><td>false</td><td><span class="pill pill-all">all</span></td><td>Disable GeoIP auto-download</td></tr>
+<tr><td><code>--against</code></td><td></td><td></td><td><span class="pill pill-all">all</span></td><td>Compare with a baseline JSON file</td></tr>
+<tr><td><code>--threshold</code></td><td></td><td>20</td><td><span class="pill pill-all">all</span></td><td>Regression threshold percentage</td></tr>
 <tr><td><code>--custom-patterns</code></td><td></td><td></td><td><span class="pill pill-all">all</span></td><td>Load validated custom detection JSON; repeatable</td></tr>
 <tr><td><code>--remote-url</code></td><td></td><td></td><td><span class="pill pill-all">all</span></td><td>Elasticsearch/OpenSearch bulk or Loki endpoint</td></tr>
 <tr><td><code>--remote-index</code></td><td></td><td>caddy-analyzer</td><td><span class="pill pill-all">all</span></td><td>Elasticsearch/OpenSearch index</td></tr>
@@ -146,8 +148,9 @@
 <thead><tr><th>Command</th><th>Scope</th><th>Description</th></tr></thead>
 <tbody>
 <tr><td><code>tail</code></td><td><span class="pill pill-readonly">read-only</span></td><td>Stream and colorize (local <code>--detect</code>)</td></tr>
-<tr><td><code>top</code></td><td><span class="pill pill-readonly">read-only</span></td><td>Ranked inspector (9 dimensions)</td></tr>
+<tr><td><code>top</code></td><td><span class="pill pill-readonly">read-only</span></td><td>Ranked inspector (10 dimensions)</td></tr>
 <tr><td><code>diff</code></td><td><span class="pill pill-readonly">read-only</span></td><td>Compare two logs</td></tr>
+<tr><td><code>baseline</code></td><td>writes file</td><td>Save versioned analysis baselines</td></tr>
 <tr><td><code>guard</code></td><td><span class="pill pill-danger">modifies firewall</span></td><td>Auto-block via iptables/nftables/Docker</td></tr>
 <tr><td><code>block</code> / <code>unban</code></td><td><span class="pill pill-danger">modifies firewall</span></td><td>Manual firewall</td></tr>
 <tr><td><code>blocklist</code></td><td>writes cache/config</td><td>8 feeds, refresh/list/config/init</td></tr>
