@@ -70,7 +70,7 @@ func VerifyChecksumsSignature(ctx context.Context, runner CommandRunner, cosignP
 		if _, err := os.Stat(trustedRoot); err != nil {
 			return fmt.Errorf("cosign bundle is present but trusted root is unavailable: %w", err)
 		}
-		args = append(args, "--bundle", bundle, "--trusted-root", trustedRoot)
+		args = append(args, "--bundle", bundle, "--trusted-root", trustedRoot, "--new-bundle-format")
 	} else if !os.IsNotExist(err) {
 		return fmt.Errorf("inspect cosign bundle: %w", err)
 	} else {

@@ -211,7 +211,7 @@ func TestVerifyChecksumsSignatureUsesBundleAndTrustedRoot(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	call := strings.Join(runner.calls[0], "\x00")
-	for _, want := range []string{"--bundle", filepath.Join(dir, "checksums.txt.bundle"), "--trusted-root", filepath.Join(dir, "trusted_root.json")} {
+	for _, want := range []string{"--bundle", filepath.Join(dir, "checksums.txt.bundle"), "--trusted-root", filepath.Join(dir, "trusted_root.json"), "--new-bundle-format"} {
 		if !strings.Contains(call, want) {
 			t.Errorf("cosign args missing %q; got %v", want, runner.calls[0])
 		}
