@@ -80,7 +80,9 @@ jobs:
         working-directory: dist
         run: |
           cosign initialize
-          cosign trusted-root create --with-default-services --out trusted_root.json
+          curl --fail --location --retry 3 \
+            --output trusted_root.json \
+            https://raw.githubusercontent.com/sigstore/root-signing/main/targets/trusted_root.json
           cosign sign-blob --yes \
             --bundle checksums.txt.bundle \
             checksums.txt
