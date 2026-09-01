@@ -40,7 +40,7 @@ caddy-analyze top path -t 20 --5xx testdata/sample.log
  caddy-analyze top city testdata/sample.log
  caddy-analyze top asn testdata/sample.log
 caddy-analyze top -b bandwidth -f csv -o top.csv testdata/sample.log</code></pre>
-<p>Dimensions: <code>path, ip, ua, status, method, host, bandwidth, country, city, asn</code>. Country/asn need GeoIP; city needs a local city MMDB. City databases are discovered but never auto-downloaded.</p>
+<p>Dimensions: <code>path, ip, ua, status, method, host, bandwidth, country, city, asn</code>. Country/asn need GeoIP; city uses a City MMDB, which is downloaded automatically unless <code>--no-auto-download</code> is set.</p>
 
 <h2 id="diff">Diff — compare two logs</h2>
 <pre><code>caddy-analyze diff testdata/sample.log testdata/large.log

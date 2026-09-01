@@ -5,6 +5,11 @@ All notable changes to `caddy-analyzer` will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.6] - 2026-09-01
+
+### Added
+- **Automatic City GeoIP download**: download the GeoLite2 City database alongside Country and ASN data unless `--no-auto-download` is set.
+
 ## [0.6.5] - 2026-09-01
 
 ### Fixed

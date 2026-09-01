@@ -39,7 +39,7 @@ caddy-analyze top path -t 20 --5xx testdata/sample.log
 caddy-analyze top country --country IT testdata/sample.log
 caddy-analyze top asn testdata/sample.log
 caddy-analyze top -b bandwidth -f csv -o top.csv testdata/sample.log</code></pre>
-<p>Dimensioni: <code>path, ip, ua, status, method, host, bandwidth, country, asn</code>. Paese/asn richiedono GeoIP (consulta <a href="configuration.html#tuning">Configurazione → ottimizzazione</a>).</p>
+<p>Dimensioni: <code>path, ip, ua, status, method, host, bandwidth, country, city, asn</code>. Paese/asn richiedono GeoIP; City scarica automaticamente il database GeoLite2 City, salvo usare <code>--no-auto-download</code> (consulta <a href="configuration.html#tuning">Configurazione → ottimizzazione</a>).</p>
 
 <h2 id="diff">Diff — confronta due log</h2>
 <pre><code>caddy-analyze diff testdata/sample.log testdata/large.log
