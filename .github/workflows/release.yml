@@ -50,12 +50,17 @@ jobs:
             printf 'Analyze Caddy v2 logs with security detection, operational metrics, and firewall protection.\n\n'
             printf '## Install / Upgrade\n\n'
             printf '\`\`\`bash\n'
-            printf '# Already installed: verify and install the latest release\n'
-            printf 'caddy-analyze update\n\n'
             printf '# Fresh install\n'
             printf 'curl -sSfL https://raw.githubusercontent.com/lenny-ts/caddy-analyzer/main/install.sh | bash\n'
             printf 'go install github.com/lenny-ts/caddy-analyzer/cmd/caddy-analyze@latest\n'
             printf 'docker run --rm -v /var/log/caddy:/logs ghcr.io/lenny-ts/caddy-analyzer /logs/access.log\n'
+            printf '\`\`\`\n\n'
+            printf '## Upgrade\n\n'
+            printf 'For an existing installation, `caddy-analyze update` downloads the latest release, verifies its Cosign signature and SHA256 checksum, and replaces the binary atomically. Use `--check` to preview the available version, or `--version v0.7.0` to install this exact release.\n\n'
+            printf '\`\`\`bash\n'
+            printf 'caddy-analyze update --check\n'
+            printf 'caddy-analyze update\n'
+            printf 'caddy-analyze update --version v0.7.0\n'
             printf '\`\`\`\n\n'
             cat "$changelog_section"
           } > "$RUNNER_TEMP/release-notes.md"
@@ -80,7 +85,9 @@ jobs:
         working-directory: dist
         run: |
           cosign initialize
-          cosign trusted-root create --with-default-services --out trusted_root.json
+          curl --fail --location --retry 3 \
+            --output trusted_root.json \
+            https://raw.githubusercontent.com/sigstore/root-signing/main/targets/trusted_root.json
           cosign sign-blob --yes \
             --bundle checksums.txt.bundle \
             checksums.txt
