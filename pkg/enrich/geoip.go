@@ -32,10 +32,12 @@ const (
 	geoipCountryURL = "https://github.com/P3TERX/GeoLite.mmdb/releases/latest/download/GeoLite2-Country.mmdb"
 	// geoipASNURL is the MaxMind GeoLite2 ASN mmdb download URL.
 	geoipASNURL = "https://github.com/P3TERX/GeoLite.mmdb/releases/latest/download/GeoLite2-ASN.mmdb"
+	// geoipCityURL is the MaxMind GeoLite2 city mmdb download URL.
+	geoipCityURL = "https://github.com/P3TERX/GeoLite.mmdb/releases/latest/download/GeoLite2-City.mmdb"
 )
 
-// autoDownload controls whether NewGeoIP auto-downloads the DB-IP lite
-// mmdb when no file is found. Enabled by default; can be disabled via
+// autoDownload controls whether NewGeoIP auto-downloads the GeoLite2 mmdb
+// files when no file is found. Enabled by default; can be disabled via
 // SetAutoDownload(false).
 var autoDownload = true
 
@@ -230,6 +232,15 @@ func autoDownloadGeoIP() (countryPath, asnPath string, err error) {
 		}
 		fmt.Fprintf(os.Stderr, "  done.\n")
 	}
+	cityPath := filepath.Join(dir, "GeoLite2-City.mmdb")
+	if _, e := os.Stat(cityPath); e != nil {
+		fmt.Fprintf(os.Stderr, "Auto-downloading GeoLite2-City mmdb to %s...\n", cityPath)
+		if err := downloadFile(geoipCityURL, cityPath); err != nil {
+			fmt.Fprintf(os.Stderr, "  warning: city database download failed: %v\n", err)
+			return countryPath, asnPath, nil
+		}
+		fmt.Fprintf(os.Stderr, "  done.\n")
+	}
 	return countryPath, asnPath, nil
 }
 
@@ -259,7 +270,7 @@ func FindCityDB() string {
 // ~/.config/caddy-analyzer/ and opens it.
 func NewGeoIP(path string) (*GeoIP, error) {
 	if path != "" {
-		return openGeoIP(path, "", cityDBFor(path))
+		return openGeoIP(path, "", cityDBForOrDownload(path))
 	}
 
 	countryPath, ok := findFirst(geoIPSearchPaths)
@@ -274,7 +285,7 @@ func NewGeoIP(path string) (*GeoIP, error) {
 		return nil, fmt.Errorf("no GeoIP mmdb file found; pass --geoip-db or place a file in one of: %v", geoIPSearchPaths)
 	}
 	asnPath, _ := findFirst(geoIPASNSearchPaths)
-	return openGeoIP(countryPath, asnPath, cityDBFor(countryPath))
+	return openGeoIP(countryPath, asnPath, cityDBForOrDownload(countryPath))
 }
 
 func cityDBFor(countryPath string) string {
@@ -282,6 +293,30 @@ func cityDBFor(countryPath string) string {
 		return countryPath
 	}
 	p, _ := findFirst(geoIPCitySearchPaths)
+	return p
+}
+
+func cityDBForOrDownload(countryPath string) string {
+	if p := cityDBFor(countryPath); p != "" {
+		return p
+	}
+	if !autoDownload {
+		return ""
+	}
+	dir, err := userConfigDir()
+	if err != nil {
+		return ""
+	}
+	p := filepath.Join(dir, "GeoLite2-City.mmdb")
+	if _, err := os.Stat(p); err == nil {
+		return p
+	}
+	fmt.Fprintf(os.Stderr, "Auto-downloading GeoLite2-City mmdb to %s...\n", p)
+	if err := downloadFile(geoipCityURL, p); err != nil {
+		fmt.Fprintf(os.Stderr, "  warning: city database download failed: %v\n", err)
+		return ""
+	}
+	fmt.Fprintf(os.Stderr, "  done.\n")
 	return p
 }
 
@@ -319,12 +354,12 @@ func openGeoIP(countryPath, asnPath, cityPath string) (*GeoIP, error) {
 // data. This keeps interactive modes (notably --watch) responsive.
 func NewGeoIPAsync(path string) (*GeoIP, error) {
 	if path != "" {
-		return openGeoIP(path, "", cityDBFor(path))
+		return openGeoIP(path, "", cityDBForOrDownload(path))
 	}
 	countryPath, ok := findFirst(geoIPSearchPaths)
 	if ok {
 		asnPath, _ := findFirst(geoIPASNSearchPaths)
-		return openGeoIP(countryPath, asnPath, cityDBFor(countryPath))
+		return openGeoIP(countryPath, asnPath, cityDBForOrDownload(countryPath))
 	}
 	if !autoDownload {
 		return nil, fmt.Errorf("no GeoIP mmdb file found; pass --geoip-db or place a file in one of: %v", geoIPSearchPaths)
