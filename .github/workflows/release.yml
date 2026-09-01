@@ -52,9 +52,10 @@ jobs:
       - name: Sign checksums with cosign (keyless)
         working-directory: dist
         run: |
+          cosign initialize
+          cp "$HOME/.sigstore/root/trusted_root.json" trusted_root.json
           cosign sign-blob --yes \
-            --output-certificate checksums.txt.pem \
-            --output-signature checksums.txt.sig \
+            --bundle checksums.txt.bundle \
             checksums.txt
 
       - name: Upload SBOM and signatures
@@ -62,5 +63,5 @@ jobs:
         with:
           files: |
             dist/*.spdx.json
-            dist/checksums.txt.pem
-            dist/checksums.txt.sig
+            dist/checksums.txt.bundle
+            dist/trusted_root.json

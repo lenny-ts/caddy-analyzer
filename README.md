@@ -259,11 +259,25 @@ Subcommands:
 <details>
 <summary><strong>Flags Reference</strong></summary>
 
+Remote formats send one aggregated report document per emitted report, not the
+individual access-log entries. Elasticsearch and OpenSearch use the Bulk API;
+Loki receives the same JSON report as one log line. In `--follow` and
+`--interval`, each window is flushed synchronously, and a failed push is
+returned as a command error.
+
 | Flag | Short | Default | Description |
 |---|---|---|---|
 | `--detect` | `-d` | `false` | Enable security threat detection |
-| `--format` | `-f` | `table` | Output format: `table`, `json`, `csv`, `html` |
+| `--format` | `-f` | `table` | Output format: `table`, `json`, `csv`, `html`, `elasticsearch`, `opensearch`, `loki` |
 | `--output` | `-o` | `""` | Write report to file |
+| `--remote-url` | | `""` | HTTP endpoint for Elasticsearch/OpenSearch bulk or Loki push |
+| `--remote-index` | | `caddy-analyzer` | Elasticsearch/OpenSearch index |
+| `--remote-user/password` | | `""` | HTTP Basic authentication |
+| `--remote-token` | | `""` | HTTP Bearer token authentication |
+| `--remote-batch-size` | | `100` | Aggregated documents per request |
+| `--remote-retries` | | `3` | Retries after the first request |
+| `--remote-backoff` | | `250ms` | Initial exponential retry delay |
+| `--remote-timeout` | | `10s` | HTTP request timeout |
 | `--watch` | `-w` | `false` | Launch 8-tab interactive TUI dashboard (Summary, Realtime, Security, Top IPs/Paths, User Agents, Geo, Operational) |
 | `--top` | `-t` | `10` | Max top entries in tables (0 disables) |
 | `--workers` | | `0` | Parallel parsing workers. `0` uses the available CPU count |
@@ -302,6 +316,11 @@ Subcommands:
 | `--max-size` | | `""` | Filter responses at most this size (bytes, or `k`/`mb`/`gb` suffix) |
 | `--namespace` | `-n` | `""` | Kubernetes pod namespace |
 | `--audit-log` | | `/var/log/caddy-analyzer-audit.jsonl` | JSON-lines audit log of block/unblock/anomaly actions (guard/block/unban). Empty to disable |
+| `--audit-syslog` | | `""` | Send audit events to a syslog UDP address (guard/block/unban) |
+| `--webhook-url` | | `""` | Asynchronous notification endpoint; use with `--webhook-provider` (`generic`, `slack`, `discord`, `pagerduty`) |
+| `--pagerduty-routing-key` | | `""` | PagerDuty Events API routing key; never included in diagnostics |
+| `--audit-timeout` / `--audit-retries` | | `5s` / `2` | Per-delivery timeout and bounded retries (maximum 5) |
+| `--audit-rate-limit` | | `0` | Minimum interval between notifications for the same IP; `0` disables |
 | `--state-file` | | `/var/lib/caddy-analyzer/blocked.json` | Persist blocked-IP state across restarts (guard/block/unban). Empty to disable |
 | `--never-block` | | `""` | Comma-separated IPs/CIDRs that should never be blocked (guard) |
 | `--never-block-file` | | `""` | File with IPs/CIDRs (one per line, `#` comments) to never block (guard) |

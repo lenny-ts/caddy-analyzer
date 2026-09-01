@@ -2,9 +2,12 @@ package analysis
 
 import (
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
+	"io"
 	"math"
 	"net/url"
+	"os"
 	"regexp"
 	"regexp/syntax"
 	"strings"
@@ -54,6 +57,79 @@ type Detection struct {
 	Desc       string        `json:"description"`
 	Confidence int           `json:"confidence"`
 	Techniques []string      `json:"techniques,omitempty"`
+}
+
+// DetectionPattern is the JSON representation of a custom signature.
+type DetectionPattern struct {
+	Type        string `json:"type"`
+	Pattern     string `json:"pattern"`
+	Description string `json:"description"`
+	Confidence  int    `json:"confidence"`
+	Source      string `json:"source"`
+	MITRE       string `json:"mitre,omitempty"`
+}
+
+const (
+	maxCustomPatternFileSize = 10 << 20
+	maxCustomPatterns        = 1000
+)
+
+// LoadCustomPatterns reads and validates a JSON array of custom signatures.
+func LoadCustomPatterns(path string) ([]DetectionPattern, error) {
+	info, err := os.Stat(path)
+	if err != nil {
+		return nil, fmt.Errorf("custom patterns %q: %w", path, err)
+	}
+	if info.Size() > maxCustomPatternFileSize {
+		return nil, fmt.Errorf("custom patterns %q is larger than %d bytes", path, maxCustomPatternFileSize)
+	}
+	f, err := os.Open(path)
+	if err != nil {
+		return nil, fmt.Errorf("open custom patterns %q: %w", path, err)
+	}
+	defer f.Close()
+	var patterns []DetectionPattern
+	dec := json.NewDecoder(f)
+	if err := dec.Decode(&patterns); err != nil {
+		return nil, fmt.Errorf("decode custom patterns %q: %w", path, err)
+	}
+	if patterns == nil {
+		return nil, fmt.Errorf("custom patterns %q must contain a JSON array", path)
+	}
+	var extra any
+	if err := dec.Decode(&extra); err == nil {
+		return nil, fmt.Errorf("custom patterns %q contains trailing JSON", path)
+	} else if err != io.EOF {
+		return nil, fmt.Errorf("custom patterns %q has invalid trailing JSON: %w", path, err)
+	}
+	if len(patterns) > maxCustomPatterns {
+		return nil, fmt.Errorf("custom patterns %q contains more than %d patterns", path, maxCustomPatterns)
+	}
+	for i := range patterns {
+		p := &patterns[i]
+		p.Type = strings.TrimSpace(p.Type)
+		p.Pattern = strings.TrimSpace(p.Pattern)
+		p.Description = strings.TrimSpace(p.Description)
+		p.Source = strings.ToLower(strings.TrimSpace(p.Source))
+		if p.Type == "" || p.Pattern == "" || p.Description == "" {
+			return nil, fmt.Errorf("custom pattern %d: type, pattern, and description are required", i+1)
+		}
+		if !regexp.MustCompile(`^[A-Za-z0-9_.-]+$`).MatchString(p.Type) {
+			return nil, fmt.Errorf("custom pattern %d: invalid type %q", i+1, p.Type)
+		}
+		if p.Confidence < 1 || p.Confidence > 10 {
+			return nil, fmt.Errorf("custom pattern %d: confidence must be between 1 and 10", i+1)
+		}
+		switch p.Source {
+		case "uri", "header", "user_agent", "all":
+		default:
+			return nil, fmt.Errorf("custom pattern %d: source must be uri, header, user_agent, or all", i+1)
+		}
+		if _, err := regexp.Compile(p.Pattern); err != nil {
+			return nil, fmt.Errorf("custom pattern %d: invalid regex: %w", i+1, err)
+		}
+	}
+	return patterns, nil
 }
 
 // detectionTechniques maps each DetectionType to its MITRE ATT&CK technique
@@ -133,6 +209,8 @@ type compiledPattern struct {
 	gate       string   // if non-empty, source must contain this substring (case-insensitive) before regex runs
 	hasMarkers bool     // true if isMarkerCovered returns true for this pattern
 	literals   []string // if non-empty, pattern is a pure literal alternation; match with strings.Contains instead of regex
+	source     string
+	techniques []string
 }
 
 // compiledPatternsCache holds the result of compilePatterns() so the ~150
@@ -163,6 +241,7 @@ func getCompiledPatterns() []compiledPattern {
 
 type Detector struct {
 	patterns            []compiledPattern
+	customPatterns      []compiledPattern
 	ipStats             map[string]*IPDetStats
 	ipOrder             []string // LRU tracking: most recently used at the end
 	ipCap               int      // max tracked IPs (0 = unlimited)
@@ -175,12 +254,41 @@ type Detector struct {
 const DefaultIPCap = 100000
 
 func NewDetector() *Detector {
+	return NewDetectorWithPatterns(nil)
+}
+
+// NewDetectorWithPatterns keeps custom signatures local while sharing the
+// built-in compiled slice and its sync.Once cache.
+func NewDetectorWithPatterns(custom []DetectionPattern) *Detector {
+	compiled := make([]compiledPattern, 0, len(custom))
+	for _, p := range custom {
+		compiled = append(compiled, compiledPattern{
+			re:         compileLowercase(p.Pattern),
+			dtype:      DetectionType(p.Type),
+			desc:       p.Description,
+			confidence: p.Confidence,
+			source:     p.Source,
+			techniques: splitTechniques(p.MITRE),
+			literals:   extractPureLiterals(p.Pattern),
+		})
+	}
 	return &Detector{
 		patterns:            getCompiledPatterns(),
+		customPatterns:      compiled,
 		ipStats:             make(map[string]*IPDetStats),
 		ipCap:               DefaultIPCap,
 		uaRotationThreshold: defaultUARotationThreshold,
 	}
+}
+
+func splitTechniques(value string) []string {
+	var out []string
+	for _, v := range strings.Split(value, ",") {
+		if v = strings.TrimSpace(v); v != "" {
+			out = append(out, v)
+		}
+	}
+	return out
 }
 
 // SetIPCap configures the maximum number of tracked IPs. 0 disables eviction.
@@ -973,6 +1081,7 @@ func (d *Detector) DetectAll(entry *types.LogEntry) []Detection {
 		}
 	}
 
+	var appendDetection func(compiledPattern)
 	consider := func(p compiledPattern, lowerSrc string) {
 		var matched bool
 		if len(p.literals) > 0 {
@@ -988,6 +1097,13 @@ func (d *Detector) DetectAll(entry *types.LogEntry) []Detection {
 		if !matched {
 			return
 		}
+		appendDetection(p)
+	}
+	appendDetection = func(p compiledPattern) {
+		techniques := p.techniques
+		if len(techniques) == 0 {
+			techniques = detectionTechniques[p.dtype]
+		}
 		det := Detection{
 			Type:       p.dtype,
 			IP:         entry.RemoteIP,
@@ -995,7 +1111,7 @@ func (d *Detector) DetectAll(entry *types.LogEntry) []Detection {
 			Status:     entry.Status,
 			Desc:       p.desc,
 			Confidence: p.confidence,
-			Techniques: detectionTechniques[p.dtype],
+			Techniques: techniques,
 		}
 		if idx, ok := index[p.dtype]; ok {
 			if p.confidence > dets[idx].Confidence {
@@ -1057,6 +1173,43 @@ func (d *Detector) DetectAll(entry *types.LogEntry) []Detection {
 			continue
 		}
 		consider(p, lowerRaw)
+	}
+
+	// Custom signatures deliberately bypass built-in marker triage: their
+	// source and regex are user-defined, so an inferred marker could skip a
+	// valid match. They still use compiled regexes and literal fast paths.
+	headerText := ""
+	for name, values := range entry.Headers {
+		for _, value := range values {
+			headerText += strings.ToLower(name) + ": " + strings.ToLower(value) + "\n"
+		}
+	}
+	for _, p := range d.customPatterns {
+		match := func(src string) bool {
+			if len(p.literals) > 0 {
+				for _, lit := range p.literals {
+					if strings.Contains(src, lit) {
+						return true
+					}
+				}
+				return false
+			}
+			return p.re.MatchString(src)
+		}
+		matched := false
+		switch p.source {
+		case "uri":
+			matched = match(lowerURI) || match(lowerRaw)
+		case "header":
+			matched = match(headerText)
+		case "user_agent":
+			matched = match(lowerUA)
+		case "all":
+			matched = match(lowerURI) || match(lowerRaw) || match(headerText) || match(lowerUA)
+		}
+		if matched {
+			appendDetection(p)
+		}
 	}
 
 	return dets

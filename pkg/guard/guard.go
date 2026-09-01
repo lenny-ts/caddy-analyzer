@@ -208,6 +208,7 @@ type Config struct {
 	AnomalyFactor       float64
 	UARotationThreshold int
 	CredStuffingLimit   int
+	CustomPatterns      []analysis.DetectionPattern
 	// Blocker is an optional firewall blocker. If nil, the real
 	// iptables blocker is used. Tests should provide a fake blocker
 	// so that loadState cleanup hits the fake, not real iptables.
@@ -502,7 +503,7 @@ func New(cfg Config) *Guard {
 	g := &Guard{
 		blocked:        make(map[string]bool),
 		blockedSubnets: make([]*net.IPNet, 0),
-		detector:       analysis.NewDetector(),
+		detector:       analysis.NewDetectorWithPatterns(cfg.CustomPatterns),
 		engine:         analysis.New(types.Filters{}),
 		blocker:        blocker,
 		cfg:            cfg,
@@ -986,7 +987,7 @@ func (g *Guard) Tick(ctx context.Context) []Candidate {
 	}
 
 	g.mu.Lock()
-	g.detector = analysis.NewDetector()
+	g.detector = analysis.NewDetectorWithPatterns(g.cfg.CustomPatterns)
 	if g.cfg.UARotationThreshold > 0 {
 		g.detector.SetUARotationThreshold(g.cfg.UARotationThreshold)
 	}

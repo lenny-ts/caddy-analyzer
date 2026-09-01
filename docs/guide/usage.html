@@ -132,6 +132,10 @@ caddy-analyze tail docker://caddy --detect              # tail with inline detec
 <pre><code>caddy-analyze --detect testdata/sample.log -f table
 caddy-analyze --detect -f html -o sec.html testdata/sample.log</code></pre>
 <p>26 categories, dual-pass (raw + unescaped), MITRE-tagged. See <a href="../reference/security-categories.html">Categories</a> and <a href="../reference/security-detection.html">Detection details</a>.</p>
+<h3 id="custom-patterns">Custom patterns</h3>
+<p>Load additional request signatures with a repeatable flag. Rules are validated before processing; <code>source</code> can be <code>uri</code>, <code>header</code>, <code>user_agent</code>, or <code>all</code>.</p>
+<pre><code>caddy-analyze --detect --custom-patterns rules.json --custom-patterns local.json access.log</code></pre>
+<pre><code>[{"type":"custom_admin","pattern":"/internal/admin/","description":"Internal admin endpoint","confidence":8,"source":"uri","mitre":"T1595.002"}]</code></pre>
       <footer class="footer">
   <p>caddy-analyzer is open-source under <a href="https://github.com/lenny-ts/caddy-analyzer/blob/main/LICENSE">MIT</a> · <a href="https://github.com/lenny-ts/caddy-analyzer">GitHub</a> · <a href="../changelog.html">Changelog</a></p>
 </footer>

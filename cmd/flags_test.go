@@ -31,21 +31,27 @@ func TestValidateFlags(t *testing.T) {
 		{name: "json format ok", format: "json"},
 		{name: "csv format ok", format: "csv"},
 		{name: "html format ok", format: "html"},
+		{name: "elasticsearch format ok", format: "elasticsearch"},
+		{name: "loki requires endpoint", format: "loki", wantErr: true, errContains: "--remote-url"},
 		{name: "uppercase format ok", format: "TABLE"},
 	}
 
-	orig := func() (bool, bool, string, bool, bool, string) {
-		return flagWatch, flagFollow, flagInterval, flagNoBots, flagBotsOnly, flagFormat
+	orig := func() (bool, bool, string, bool, bool, string, string) {
+		return flagWatch, flagFollow, flagInterval, flagNoBots, flagBotsOnly, flagFormat, flagRemoteURL
 	}
-	ow, of, oi, onb, obo, ofmt := orig()
+	ow, of, oi, onb, obo, ofmt, ourl := orig()
 	defer func() {
-		flagWatch, flagFollow, flagInterval, flagNoBots, flagBotsOnly, flagFormat = ow, of, oi, onb, obo, ofmt
+		flagWatch, flagFollow, flagInterval, flagNoBots, flagBotsOnly, flagFormat, flagRemoteURL = ow, of, oi, onb, obo, ofmt, ourl
 	}()
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			flagWatch, flagFollow, flagInterval = tt.watch, tt.follow, tt.interval
 			flagNoBots, flagBotsOnly, flagFormat = tt.noBots, tt.botsOnly, tt.format
+			flagRemoteURL = ""
+			if tt.format == "elasticsearch" {
+				flagRemoteURL = "http://localhost:9200"
+			}
 
 			err := validateFlags()
 			if tt.wantErr {

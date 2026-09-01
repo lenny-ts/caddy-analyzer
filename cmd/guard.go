@@ -13,7 +13,6 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/lenny-ts/caddy-analyzer/pkg/audit"
 	"github.com/lenny-ts/caddy-analyzer/pkg/blocklist"
 	"github.com/lenny-ts/caddy-analyzer/pkg/config"
 	"github.com/lenny-ts/caddy-analyzer/pkg/enrich"
@@ -43,6 +42,7 @@ var (
 	guardGeoIPDB           string
 	guardNoAutoDL          bool
 	guardFirewallBackend   string
+	guardNotify            auditNotifyFlags
 )
 
 const minBlocklistRefresh = 1 * time.Hour
@@ -59,6 +59,7 @@ func init() {
 	guardCmd.Flags().IntVarP(&guardNotFoundLimit, "notfound-limit", "", 50, "Max not found (404) before blocking (0 disables)")
 	guardCmd.Flags().IntVarP(&guardDetectConfidence, "detect-confidence", "", 8, "Min confidence (1-10) for pattern-detection blocking; 0 disables")
 	guardCmd.Flags().StringVarP(&guardAuditLog, "audit-log", "", "/var/log/caddy-analyzer-audit.jsonl", "Audit log path (empty to disable)")
+	guardNotify.addRest(guardCmd)
 	guardCmd.Flags().StringVarP(&guardStateFile, "state-file", "", "/var/lib/caddy-analyzer/blocked.json", "State file for crash recovery (empty to disable)")
 	guardCmd.Flags().StringSliceVarP(&guardNeverBlock, "never-block", "", nil, "IPs/CIDRs that will never be blocked (e.g. 10.0.0.0/8,192.168.1.1)")
 	guardCmd.Flags().StringVarP(&guardNeverBlockFile, "never-block-file", "", "", "File with IPs/CIDRs to never block (one per line, # comments allowed)")
@@ -173,18 +174,12 @@ func runGuard(cmd *cobra.Command, args []string) error {
 		close(linesCh)
 	}()
 
-	var onAudit func(action, ip, reason, duration string)
-	if guardAuditLog != "" {
-		al, err := audit.New(guardAuditLog)
-		if err != nil {
-			return fmt.Errorf("audit log: %w", err)
-		}
-		al.SetErrorHandler(func(err error) {
-			fmt.Fprintf(os.Stderr, "audit error: %v\n", err)
-		})
-		defer func() { _ = al.Close() }()
-		onAudit = al.Log
+	guardNotify.auditLog = guardAuditLog
+	dispatcher, err := guardNotify.dispatcher()
+	if err != nil {
+		return err
 	}
+	defer func() { _ = dispatcher.Close() }()
 
 	neverBlock := guardNeverBlock
 	// Load the whitelist file (managed by `caddy-analyze whitelist`).
@@ -317,7 +312,7 @@ func runGuard(cmd *cobra.Command, args []string) error {
 		BlockDuration:       duration,
 		DetectionConfidence: guardDetectConfidence,
 		IPValidator:         validateIP,
-		OnAudit:             onAudit,
+		OnAudit:             dispatcher.Log,
 		OnError: func(err error) {
 			fmt.Fprintf(os.Stderr, "guard error: %v\n", err)
 		},
@@ -327,6 +322,7 @@ func runGuard(cmd *cobra.Command, args []string) error {
 		SubnetLimit:         guardSubnetLimit,
 		AnomalyFactor:       guardAnomalyFactor,
 		UARotationThreshold: guardUARotation,
+		CustomPatterns:      customPatterns,
 		CredStuffingLimit:   guardCredStuffingLimit,
 		BlocklistMgr:        blMgr,
 		BlocklistRefresh:    blocklistRefresh,
