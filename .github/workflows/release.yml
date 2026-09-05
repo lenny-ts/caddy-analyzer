@@ -90,6 +90,7 @@ jobs:
             https://raw.githubusercontent.com/sigstore/root-signing/main/targets/trusted_root.json
           cosign sign-blob --yes \
             --bundle checksums.txt.bundle \
+            --new-bundle-format \
             --output-signature checksums.txt.sig \
             --output-certificate checksums.txt.pem \
             checksums.txt

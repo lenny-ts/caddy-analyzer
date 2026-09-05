@@ -7,8 +7,10 @@ import (
 	"compress/gzip"
 	"context"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -201,10 +203,11 @@ func TestVerifyChecksumsSignatureBuildsCosignCommand(t *testing.T) {
 
 func TestVerifyChecksumsSignatureUsesBundleAndTrustedRoot(t *testing.T) {
 	dir := t.TempDir()
-	for _, name := range []string{"checksums.txt.bundle", "trusted_root.json"} {
-		if err := os.WriteFile(filepath.Join(dir, name), []byte("fixture"), 0o600); err != nil {
-			t.Fatal(err)
-		}
+	if err := os.WriteFile(filepath.Join(dir, "checksums.txt.bundle"), []byte(`{"mediaType":"application/vnd.dev.sigstore.bundle.v0.3+json"}`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "trusted_root.json"), []byte("fixture"), 0o600); err != nil {
+		t.Fatal(err)
 	}
 	runner := &recordingRunner{}
 	if err := VerifyChecksumsSignature(context.Background(), runner, "cosign", dir, DefaultRepo); err != nil {
@@ -223,12 +226,147 @@ func TestVerifyChecksumsSignatureUsesBundleAndTrustedRoot(t *testing.T) {
 
 func TestVerifyChecksumsSignatureRejectsIncompleteBundle(t *testing.T) {
 	dir := t.TempDir()
-	if err := os.WriteFile(filepath.Join(dir, "checksums.txt.bundle"), []byte("fixture"), 0o600); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, "checksums.txt.bundle"), []byte(`{"mediaType":"application/vnd.dev.sigstore.bundle.v0.3+json"}`), 0o600); err != nil {
 		t.Fatal(err)
 	}
 	if err := VerifyChecksumsSignature(context.Background(), &recordingRunner{}, "cosign", dir, DefaultRepo); err == nil {
 		t.Fatal("bundle without trusted root must fail closed")
 	}
+}
+
+func TestVerifyChecksumsSignatureFallsBackToLegacyForOldBundle(t *testing.T) {
+	dir := t.TempDir()
+	// Old-format cosign bundle (as published before --new-bundle-format):
+	// the updater must ignore it and verify via the legacy sidecars.
+	oldBundle := `{"base64Signature":"eA","cert":"eQ","rekorBundle":{}}`
+	for name, content := range map[string]string{
+		"checksums.txt.bundle": oldBundle,
+		"checksums.txt.pem":    "fixture-cert",
+		"checksums.txt.sig":    "fixture-sig",
+	} {
+		if err := os.WriteFile(filepath.Join(dir, name), []byte(content), 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	runner := &recordingRunner{}
+	if err := VerifyChecksumsSignature(context.Background(), runner, "cosign", dir, DefaultRepo); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(runner.calls) != 1 {
+		t.Fatalf("expected exactly one cosign invocation, got %d", len(runner.calls))
+	}
+	call := strings.Join(runner.calls[0], "\x00")
+	for _, want := range []string{"--certificate", "--signature"} {
+		if !strings.Contains(call, want) {
+			t.Errorf("cosign args missing %q; got %v", want, runner.calls[0])
+		}
+	}
+	for _, notWant := range []string{"--bundle", "--trusted-root", "--new-bundle-format"} {
+		if strings.Contains(call, notWant) {
+			t.Errorf("cosign args must not contain %q for old-format bundle; got %v", notWant, runner.calls[0])
+		}
+	}
+}
+
+func TestIsNewFormatBundle(t *testing.T) {
+	dir := t.TempDir()
+	newBundle := filepath.Join(dir, "new.bundle")
+	if err := os.WriteFile(newBundle, []byte(`{"mediaType":"application/vnd.dev.sigstore.bundle.v0.3+json"}`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	oldBundle := filepath.Join(dir, "old.bundle")
+	if err := os.WriteFile(oldBundle, []byte(`{"base64Signature":"eA","cert":"eQ","rekorBundle":{}}`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	garbage := filepath.Join(dir, "garbage.bundle")
+	if err := os.WriteFile(garbage, []byte("not json"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	tests := []struct {
+		name string
+		path string
+		want bool
+	}{
+		{name: "new format", path: newBundle, want: true},
+		{name: "old format", path: oldBundle},
+		{name: "invalid json", path: garbage},
+		{name: "missing file", path: filepath.Join(dir, "does-not-exist.bundle")},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := isNewFormatBundle(tt.path); got != tt.want {
+				t.Errorf("isNewFormatBundle(%s) = %v, want %v", tt.path, got, tt.want)
+			}
+		})
+	}
+}
+
+func TestDownloadArtifactsFetchesSidecarsAlongsideBundle(t *testing.T) {
+	ext := ".tar.gz"
+	if runtime.GOOS == "windows" {
+		ext = ".zip"
+	}
+	archName := fmt.Sprintf("caddy-analyzer_0.7.2_%s_%s%s", runtime.GOOS, runtime.GOARCH, ext)
+	sum := strings.Repeat("ab", 32)
+	bodies := map[string]string{
+		"/checksums.txt":        sum + "  " + archName + "\n",
+		"/checksums.txt.pem":    "pem",
+		"/checksums.txt.sig":    "sig",
+		"/checksums.txt.bundle": `{"mediaType":"application/vnd.dev.sigstore.bundle.v0.3+json"}`,
+		"/trusted_root.json":    "{}",
+		"/" + archName:          "archive-bytes",
+	}
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		b, ok := bodies[r.URL.Path]
+		if !ok {
+			http.NotFound(w, r)
+			return
+		}
+		_, _ = io.WriteString(w, b)
+	}))
+	defer srv.Close()
+	asset := func(name string) Asset { return Asset{Name: name, URL: srv.URL + "/" + name} }
+
+	t.Run("with bundle", func(t *testing.T) {
+		rel := &Release{Tag: "v0.7.2", Assets: []Asset{
+			asset("checksums.txt"), asset("checksums.txt.pem"), asset("checksums.txt.sig"),
+			asset("checksums.txt.bundle"), asset("trusted_root.json"), asset(archName),
+		}}
+		dir := t.TempDir()
+		sums, archivePath, err := downloadArtifacts(context.Background(), srv.Client(), rel, dir)
+		if err != nil {
+			t.Fatalf("downloadArtifacts: %v", err)
+		}
+		for _, name := range []string{"checksums.txt", "checksums.txt.pem", "checksums.txt.sig", "checksums.txt.bundle", "trusted_root.json", archName} {
+			if _, err := os.Stat(filepath.Join(dir, name)); err != nil {
+				t.Errorf("expected staged %s: %v", name, err)
+			}
+		}
+		if sums[archName] != sum {
+			t.Errorf("sums[%q] = %q, want %q", archName, sums[archName], sum)
+		}
+		if filepath.Base(archivePath) != archName {
+			t.Errorf("archive = %q, want %q", archivePath, archName)
+		}
+	})
+
+	t.Run("without bundle", func(t *testing.T) {
+		rel := &Release{Tag: "v0.7.1", Assets: []Asset{
+			asset("checksums.txt"), asset("checksums.txt.pem"), asset("checksums.txt.sig"), asset(archName),
+		}}
+		dir := t.TempDir()
+		if _, _, err := downloadArtifacts(context.Background(), srv.Client(), rel, dir); err != nil {
+			t.Fatalf("downloadArtifacts: %v", err)
+		}
+		for _, name := range []string{"checksums.txt", "checksums.txt.pem", "checksums.txt.sig"} {
+			if _, err := os.Stat(filepath.Join(dir, name)); err != nil {
+				t.Errorf("expected staged %s: %v", name, err)
+			}
+		}
+		if _, err := os.Stat(filepath.Join(dir, "checksums.txt.bundle")); !os.IsNotExist(err) {
+			t.Error("bundle must not be staged when the release has none")
+		}
+	})
 }
 
 func TestVerifyChecksumsSignatureFailsClosed(t *testing.T) {

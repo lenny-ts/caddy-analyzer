@@ -173,8 +173,10 @@ func resolveTarget(installDir string) (target, destDir string, err error) {
 }
 
 // downloadArtifacts fetches checksums.txt and its signature material plus the
-// platform archive into dir. New releases use a bundle; legacy releases use
-// the .pem/.sig sidecars.
+// platform archive into dir. The legacy .pem/.sig sidecars are always
+// fetched; when a release also publishes a bundle, the bundle and its
+// trusted root are fetched too. Verification prefers the bundle only when
+// it is in the new Sigstore format, otherwise it falls back to the sidecars.
 func downloadArtifacts(ctx context.Context, client *http.Client, rel *Release, dir string) (map[string]string, string, error) {
 	checksums, err := FindAsset(rel, "checksums.txt")
 	if err != nil {
@@ -185,7 +187,7 @@ func downloadArtifacts(ctx context.Context, client *http.Client, rel *Release, d
 	}
 	verificationAssets := []string{"checksums.txt.pem", "checksums.txt.sig"}
 	if _, err := FindAsset(rel, "checksums.txt.bundle"); err == nil {
-		verificationAssets = []string{"checksums.txt.bundle", "trusted_root.json"}
+		verificationAssets = append(verificationAssets, "checksums.txt.bundle", "trusted_root.json")
 	}
 	for _, name := range verificationAssets {
 		a, err := FindAsset(rel, name)

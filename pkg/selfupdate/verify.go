@@ -6,6 +6,7 @@ import (
 	"crypto/sha256"
 	"crypto/subtle"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"io"
 	"os"
@@ -56,23 +57,41 @@ func certIdentityRegexp(repo string) string {
 // oidcIssuer is the GitHub Actions token issuer embedded in Fulcio certs.
 const oidcIssuer = "https://token.actions.githubusercontent.com"
 
+// isNewFormatBundle reports whether path holds a Sigstore protobuf bundle
+// (mediaType application/vnd.dev.sigstore.bundle...). cosign only accepts
+// --trusted-root together with --new-bundle-format when the bundle file
+// itself parses as the new format, so the updater probes the file first and
+// falls back to the legacy certificate/signature sidecars otherwise.
+func isNewFormatBundle(path string) bool {
+	data, err := os.ReadFile(path) // #nosec G304 -- path is our own staging dir
+	if err != nil {
+		return false
+	}
+	var probe struct {
+		MediaType string `json:"mediaType"`
+	}
+	if err := json.Unmarshal(data, &probe); err != nil {
+		return false
+	}
+	return strings.HasPrefix(probe.MediaType, "application/vnd.dev.sigstore.bundle")
+}
+
 // VerifyChecksumsSignature runs `cosign verify-blob` on the downloaded
 // checksums manifest. New releases use a Sigstore bundle and trusted root;
-// older releases are verified using certificate and signature sidecars.
+// older releases (or bundles not in the new format) are verified using the
+// certificate and signature sidecars.
 func VerifyChecksumsSignature(ctx context.Context, runner CommandRunner, cosignPath, dir, repo string) error {
 	if runner == nil {
 		runner = ExecRunner{}
 	}
 	bundle := filepath.Join(dir, "checksums.txt.bundle")
 	args := []string{"verify-blob"}
-	if _, err := os.Stat(bundle); err == nil {
+	if isNewFormatBundle(bundle) {
 		trustedRoot := filepath.Join(dir, "trusted_root.json")
 		if _, err := os.Stat(trustedRoot); err != nil {
 			return fmt.Errorf("cosign bundle is present but trusted root is unavailable: %w", err)
 		}
 		args = append(args, "--bundle", bundle, "--trusted-root", trustedRoot, "--new-bundle-format")
-	} else if !os.IsNotExist(err) {
-		return fmt.Errorf("inspect cosign bundle: %w", err)
 	} else {
 		args = append(args, "--certificate", filepath.Join(dir, "checksums.txt.pem"), "--signature", filepath.Join(dir, "checksums.txt.sig"))
 	}

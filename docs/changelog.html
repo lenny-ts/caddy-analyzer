@@ -82,7 +82,7 @@
 <!-- Release sections are generated from the repository CHANGELOG.md. -->
 <h2 id="072-2026-09-05">0.7.2 — 2026-09-05</h2>
 <h3>Fixed</h3>
-<ul><li><strong>Log path readability on light terminals (#100)</strong>: request paths in <code>tail</code> and the <code>--watch</code> live log stream no longer force bright white (<code>255</code>), which was unreadable on white backgrounds. Paths now use the terminal default foreground in bold, so they stay legible on both light and dark themes without any flags or configuration.</li></ul>
+<ul><li><strong>Log path readability on light terminals (#100)</strong>: request paths in <code>tail</code> and the <code>--watch</code> live log stream no longer force bright white (<code>255</code>), which was unreadable on white backgrounds. Paths now use the terminal default foreground in bold, so they stay legible on both light and dark themes without any flags or configuration.</li><li><strong>Self-update cosign verification</strong>: <code>caddy-analyze update</code> failed with <code>--trusted-root only supported with --new-bundle-format</code> because releases published old-format bundles. Releases now publish new-format Sigstore bundles, and the updater falls back to the legacy certificate/signature sidecars whenever a bundle is not in the new format.</li></ul>
 <h2 id="071-2026-09-01">0.7.1 — 2026-09-01</h2>
 <h3>Fixed</h3>
 <ul><li><strong>Progress bar for large analyses</strong>: restore deterministic progress for finite local files, including <code>--detect</code>, while retaining the animated spinner for streaming sources. The spinner now advances independently while expensive detection work is running.</li></ul>
