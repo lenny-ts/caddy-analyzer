@@ -84,6 +84,7 @@
 <h3>Corretto</h3>
 <ul>
 <li><strong>Leggibilità dei path sui terminali chiari (#100)</strong>: i path delle richieste in <code>tail</code> e nello stream live di <code>--watch</code> non usano più il bianco brillante (<code>255</code>), illeggibile su sfondo bianco. Ora usano il colore predefinito del terminale in grassetto, restando leggibili sia sui temi chiari sia su quelli scuri senza flag o configurazioni.</li>
+<li><strong>Verifica cosign del self-update</strong>: <code>caddy-analyze update</code> falliva con <code>--trusted-root only supported with --new-bundle-format</code> perché le release pubblicavano bundle nel vecchio formato. Ora le release pubblicano bundle Sigstore nel nuovo formato e l'updater ripiega sui sidecar legacy (certificato/firma) quando il bundle non è nuovo.</li>
 </ul>
 
 <h2 id="0-7-1">0.7.1 — 2026-09-01</h2>

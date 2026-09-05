@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 - **Log path readability on light terminals (#100)**: request paths in `tail` and the `--watch` live log stream no longer force bright white (`255`), which was unreadable on white backgrounds. Paths now use the terminal default foreground in bold, so they stay legible on both light and dark themes without any flags or configuration.
+- **Self-update cosign verification**: `caddy-analyze update` failed with `--trusted-root only supported with --new-bundle-format` because releases published old-format bundles. Releases now publish new-format Sigstore bundles, and the updater falls back to the legacy certificate/signature sidecars whenever a bundle is not in the new format.
 
 ## [0.7.1] - 2026-09-01
 
