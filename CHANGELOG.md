@@ -5,6 +5,11 @@ All notable changes to `caddy-analyzer` will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.2] - 2026-09-05
+
+### Fixed
+- **Log path readability on light terminals (#100)**: request paths in `tail` and the `--watch` live log stream no longer force bright white (`255`), which was unreadable on white backgrounds. Paths now use the terminal default foreground in bold, so they stay legible on both light and dark themes without any flags or configuration.
+
 ## [0.7.1] - 2026-09-01
 
 ### Fixed
