@@ -25,7 +25,7 @@ var (
 	styleTail5xx  = lipgloss.NewStyle().Foreground(lipgloss.Color("196")).Bold(true)
 	styleTailDim  = lipgloss.NewStyle().Foreground(lipgloss.Color("240"))
 	styleTailIP   = lipgloss.NewStyle().Foreground(lipgloss.Color("141"))
-	styleTailPath = lipgloss.NewStyle().Foreground(lipgloss.Color("255"))
+	styleTailPath = lipgloss.NewStyle().Bold(true)
 
 	// IP colors by severity — the IP itself changes color to signal danger
 	styleIPCritical = lipgloss.NewStyle().Foreground(lipgloss.Color("196")).Bold(true)

@@ -6,6 +6,7 @@ import (
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
 
 	"github.com/lenny-ts/caddy-analyzer/pkg/analysis"
 	"github.com/lenny-ts/caddy-analyzer/pkg/enrich"
@@ -31,6 +32,15 @@ func TestNewModelDefaults(t *testing.T) {
 	}
 	if cap(m.recentLogs) == 0 {
 		t.Error("recentLogs should be pre-allocated")
+	}
+}
+
+func TestTailPathStyleUsesTerminalForeground(t *testing.T) {
+	if !styleTailPath.GetBold() {
+		t.Fatal("path must be bold")
+	}
+	if _, ok := styleTailPath.GetForeground().(lipgloss.NoColor); !ok {
+		t.Fatalf("path foreground = %v, want terminal default", styleTailPath.GetForeground())
 	}
 }
 
