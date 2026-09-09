@@ -28,6 +28,7 @@ const (
 	viewSecurity
 	viewTopIPs
 	viewTopPaths
+	viewTopHosts
 	viewTopUA
 	viewGeo
 	viewOperational
@@ -50,6 +51,7 @@ type Model struct {
 
 	ipTable      table.Model
 	pathTable    table.Model
+	hostTable    table.Model
 	countryTable table.Model
 	cityTable    table.Model
 	asnTable     table.Model
@@ -154,11 +156,14 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.current = viewTopPaths
 			m = m.refreshTables()
 		case "6":
-			m.current = viewTopUA
+			m.current = viewTopHosts
+			m = m.refreshTables()
 		case "7":
+			m.current = viewTopUA
+		case "8":
 			m.current = viewGeo
 			m = m.refreshTables()
-		case "8":
+		case "9":
 			m.current = viewOperational
 		case "tab", "right":
 			m.current = (m.current + 1) % (viewOperational + 1)
@@ -263,6 +268,17 @@ func (m Model) initTables() Model {
 		table.WithHeight(max(1, min(15, m.height-10))),
 	)
 
+	hostCols := []table.Column{
+		{Title: "#", Width: 4},
+		{Title: "Domain", Width: 40},
+		{Title: "Requests", Width: 10},
+	}
+	m.hostTable = table.New(
+		table.WithColumns(hostCols),
+		table.WithFocused(false),
+		table.WithHeight(max(1, min(15, m.height-10))),
+	)
+
 	countryCols := []table.Column{
 		{Title: "#", Width: 4},
 		{Title: "Country", Width: 26},
@@ -318,6 +334,17 @@ func (m Model) refreshTables() Model {
 	}
 	m.pathTable.SetRows(pathRows)
 
+	hosts := analysis.TopN(s.HostCounts, 20)
+	var hostRows []table.Row
+	for i, host := range hosts {
+		hostRows = append(hostRows, table.Row{
+			fmt.Sprintf("%d", i+1),
+			truncate(host.Key, 38),
+			fmt.Sprintf("%d", host.Count),
+		})
+	}
+	m.hostTable.SetRows(hostRows)
+
 	countries := analysis.TopN(s.CountryCounts, 15)
 	var countryRows []table.Row
 	for i, c := range countries {
@@ -360,7 +387,7 @@ func (m Model) View() string {
 	var b strings.Builder
 
 	b.WriteString(styleTitle.Render("⚡ Caddy Live Dashboard"))
-	b.WriteString(styleHelp.Render("  [q] quit  [1-7] tabs  [tab] next  [r] reset"))
+	b.WriteString(styleHelp.Render("  [q] quit  [1-9] tabs  [tab] next  [r] reset"))
 	b.WriteString("\n")
 	b.WriteString(styleDimLine())
 	b.WriteString("\n\n")
@@ -376,6 +403,8 @@ func (m Model) View() string {
 		m.renderIPs(&b)
 	case viewTopPaths:
 		m.renderPaths(&b)
+	case viewTopHosts:
+		m.renderHosts(&b)
 	case viewTopUA:
 		m.renderUA(&b)
 	case viewGeo:
@@ -391,7 +420,7 @@ func (m Model) View() string {
 }
 
 func (m Model) viewTabs() string {
-	tabs := []string{"Summary", "Realtime", "Security", "Top IPs", "Top Paths", "User Agents", "Geo", "Ops"}
+	tabs := []string{"Summary", "Realtime", "Security", "Top IPs", "Top Paths", "Top Domains", "User Agents", "Geo", "Ops"}
 	var parts []string
 	for i, t := range tabs {
 		if view(i) == m.current {
@@ -505,6 +534,14 @@ func (m Model) renderPaths(b *strings.Builder) {
 	}
 	fmt.Fprintf(b, "  %s\n\n", styleLabel.Render("Top Paths"))
 	b.WriteString(m.pathTable.View())
+}
+
+func (m Model) renderHosts(b *strings.Builder) {
+	if m.stats == nil {
+		return
+	}
+	fmt.Fprintf(b, "  %s\n\n", styleLabel.Render("Top Domains"))
+	b.WriteString(m.hostTable.View())
 }
 
 func (m Model) renderUA(b *strings.Builder) {
