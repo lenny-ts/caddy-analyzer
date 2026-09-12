@@ -75,12 +75,12 @@
   <main class="wrap" id="main">
     <div class="doc-content">
       <nav class="breadcrumb" aria-label="Breadcrumb"><a href="../it/index.html">Panoramica</a><span class="sep">/</span><span>FAQ</span></nav>
-      <div class="page-meta"><a href="https://github.com/lenny-ts/caddy-analyzer/releases">v0.7.1</a> · aggiornata <time datetime="2026-09-05">2026-09-05</time> · <a href="https://github.com/lenny-ts/caddy-analyzer">GitHub</a></div>
+      <div class="page-meta"><a href="https://github.com/lenny-ts/caddy-analyzer/releases">v0.7.2</a> · aggiornata <time datetime="2026-09-12">2026-09-12</time> · <a href="https://github.com/lenny-ts/caddy-analyzer">GitHub</a></div>
       <h1>FAQ</h1>
 <p>Da issue GitHub, discussioni sulle PR e domande emerse durante la scrittura della documentazione. Meglio poche domande valide che un numero tondo di riempitivi.</p>
 
 <h2 id="watch-vs-follow">Qual e la differenza tra <code>--watch</code>, <code>--follow</code> e <code>tail</code>?</h2>
-<p><code>--watch</code> e la dashboard TUI a 8 schede (bubbles, schermo alternativo, <code>q</code> per uscire). <code>--follow</code> e lo streaming a livello root su stdout (come <code>tail -f</code>). <code>tail</code> e un sottocomando che trasmette righe di log colorate; <code>tail --detect</code> aggiunge l'evidenziazione inline della gravita. Usa <code>--watch</code> per esplorare, <code>--follow</code> o <code>tail</code> per pipe e filtri.</p>
+<p><code>--watch</code> e la dashboard TUI a 9 schede, inclusa Domini principali (bubbles, schermo alternativo, <code>q</code> per uscire). <code>--follow</code> e lo streaming a livello root su stdout (come <code>tail -f</code>). <code>tail</code> e un sottocomando che trasmette righe di log colorate; <code>tail --detect</code> aggiunge l'evidenziazione inline della gravita. Usa <code>--watch</code> per esplorare, <code>--follow</code> o <code>tail</code> per pipe e filtri.</p>
 
 <h2 id="ip-filter-zero">Perche <code>--ip 10.0.0.1</code> restituisce 0 risultati quando il log contiene chiaramente quell'IP?</h2>
 <p>Il filtro confronta <code>EffectiveClientIP</code>: l'ultimo hop pubblico <code>X-Forwarded-For</code> se e impostato <code>--trust-forwarded</code>, altrimenti <code>RemoteIP</code>. Se Caddy e dietro una CDN/proxy senza <code>--trust-forwarded</code>, stai filtrando l'IP del proxy, non del client. Controlla anche CIDR rispetto a IP singolo e se l'arricchimento GeoIP e stato eseguito prima (necessario per <code>--country</code>/<code>--asn</code>, ma non per <code>--ip</code>).</p>
