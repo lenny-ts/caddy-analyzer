@@ -103,6 +103,7 @@ caddy-analyze --against baseline.json --threshold 5 production.log
 
 # Launch interactive TUI dashboard
 caddy-analyze --watch
+# Press 6 for the domains receiving the most requests
 
 # Manage blocklist feeds (8 defaults: Spamhaus, FireHOL, CINS, Tor, ET, AbuseIPDB)
 caddy-analyze blocklist refresh
@@ -156,7 +157,7 @@ Caddy v2 uses a **structured JSON log format** that differs from the Common/Comb
 | **Traffic Analysis** | Classifies human users vs crawlers (Googlebot, Bingbot, Yandex, DuckDuckBot, GPTBot, ClaudeBot, Bytespider, CCBot, Amazonbot, and others) and automated scrapers |
 | **Diff Engine** | Side-by-side comparison of two log files detecting 5xx spikes, RPS shifts, and latency regressions |
 | **Baselines** | Versioned JSON snapshots via `baseline save`; `--against` compares HTTP and operational statistics and returns a non-zero exit status when a regression exceeds `--threshold` |
-| **TUI Dashboard** | 8-tab Bubbletea/Lipgloss interface with live streaming, security alerts, top metrics, GeoIP country/ASN, and operational (non-HTTP) events |
+| **TUI Dashboard** | 9-tab Bubbletea/Lipgloss interface with live streaming, security alerts, top IPs/paths/domains, GeoIP country/ASN, and operational (non-HTTP) events |
 | **HTML Reports** | Standalone dark-mode single-file HTML reports for sharing with your team |
 | **Data Sources** | Local files, stdin, Docker (`docker://`), Kubernetes (`k8s://`), systemd journalctl (`journalctl://`) |
 | **Filtering** | Entry-level filters auto-switch to color-coded log listings. Supports CIDR, status classes, methods, path globs, and GeoIP country/ASN |
@@ -229,7 +230,7 @@ Once installed, self-update with signature verification (cosign keyless + SHA256
 ```bash
 caddy-analyze update                     # install the latest verified release
 caddy-analyze update --check             # report availability only
-caddy-analyze update --version v0.6.1    # pin an exact release
+caddy-analyze update --version v0.7.3    # pin an exact release
 sudo caddy-analyze update                # when the binary is in a root-owned path
 ```
 
@@ -314,7 +315,7 @@ returned as a command error.
 | `--remote-retries` | | `3` | Retries after the first request |
 | `--remote-backoff` | | `250ms` | Initial exponential retry delay |
 | `--remote-timeout` | | `10s` | HTTP request timeout |
-| `--watch` | `-w` | `false` | Launch 8-tab interactive TUI dashboard (Summary, Realtime, Security, Top IPs/Paths, User Agents, Geo, Operational) |
+| `--watch` | `-w` | `false` | Launch 9-tab interactive TUI dashboard (Summary, Realtime, Security, Top IPs/Paths/Domains, User Agents, Geo, Operational) |
 | `--top` | `-t` | `10` | Max top entries in tables (0 disables) |
 | `--workers` | | `0` | Parallel parsing workers. `0` uses the available CPU count |
 | `--from` | | `""` | Time filter start (RFC3339 or relative: `5m`, `1h`, `2d`) |

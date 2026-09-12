@@ -5,6 +5,17 @@ All notable changes to `caddy-analyzer` will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.3] - 2026-09-12
+
+### Added
+- **Top domains in the live dashboard (#104)**: `--watch` now includes a dedicated ninth tab (key `6`) ranking the top 20 request hosts. User Agents, Geo, and Operational move to keys `7`, `8`, and `9` respectively.
+
+### Changed
+- **GitHub Actions dependencies (#103)**: update checkout, lint, Pages, SBOM, GoReleaser, Cosign, and release publishing actions to their current pinned revisions.
+
+### Fixed
+- **Govulncheck CI toolchain (#104)**: allow the vulnerability scan to download the Go toolchain required by the latest `govulncheck`, while the project itself remains on Go 1.25.
+
 ## [0.7.2] - 2026-09-05
 
 ### Fixed

@@ -3,6 +3,20 @@
 <p>Tutte le modifiche rilevanti a <code>caddy-analyzer</code> saranno documentate in questo file.</p>
 <p>Il formato si basa su <a href="https://keepachangelog.com/en/1.0.0/">Keep a Changelog</a> e questo progetto aderisce al <a href="https://semver.org/spec/v2.0.0.html">Semantic Versioning</a>.</p>
 
+<h2 id="0-7-3">0.7.3 — 2026-09-12</h2>
+<h3>Aggiunto</h3>
+<ul>
+<li><strong>Domini principali nella dashboard live (#104)</strong>: <code>--watch</code> include una nona scheda dedicata (tasto <code>6</code>) con i primi 20 host per numero di richieste. User agent, Geo e Operativo passano rispettivamente ai tasti <code>7</code>, <code>8</code> e <code>9</code>.</li>
+</ul>
+<h3>Modificato</h3>
+<ul>
+<li><strong>Dipendenze GitHub Actions (#103)</strong>: aggiornate alle revisioni correnti e fissate le action per checkout, lint, Pages, SBOM, GoReleaser, Cosign e pubblicazione release.</li>
+</ul>
+<h3>Corretto</h3>
+<ul>
+<li><strong>Toolchain CI di Govulncheck (#104)</strong>: la scansione puo scaricare la toolchain Go richiesta dall'ultima versione di <code>govulncheck</code>, mentre il progetto resta su Go 1.25.</li>
+</ul>
+
 <h2 id="0-7-2">0.7.2 — 2026-09-05</h2>
 <h3>Corretto</h3>
 <ul>

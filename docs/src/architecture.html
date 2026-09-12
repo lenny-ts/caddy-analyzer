@@ -20,7 +20,7 @@
                                                ┌────────────────────────┼────────────────────────┐
                                                │                        │                        │
                                             output.Report         tui.Model (watch)        guard.Guard
-                                            table/json/csv/html   8 tabs, 2s tick          ├─ Evaluate(entry) ──▶ blocklist.Manager.Contains(ip) → immediate
+                                            table/json/csv/html   9 tabs, 2s tick          ├─ Evaluate(entry) ──▶ blocklist.Manager.Contains(ip) → immediate
                                                                                             ├─ enrich.GeoIP ──▶ country-block → immediate
                                                                                             ├─ sliding window (per-sec buckets) → Tick()
                                                                                             ├─ firewall.Backend (auto → hybrid/iptables/docker/nftables)

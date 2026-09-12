@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Report TUI e HTML — caddy-analyzer</title>
-  <meta name="description" content="Dashboard live a 8 schede ed esportazione HTML autonoma: avvio, contenuto delle schede e formati di output.">
+  <meta name="description" content="Dashboard live a 9 schede ed esportazione HTML autonoma: avvio, contenuto delle schede e formati di output.">
   <meta name="theme-color" content="#09090B">
   <link rel="icon" href="../caddy-analyzer-logo.png" type="image/png">
   <link rel="canonical" href="https://lenny-ts.github.io/caddy-analyzer/it/tui-html.html">
@@ -75,7 +75,7 @@
   <main class="wrap" id="main">
     <div class="doc-content">
       <nav class="breadcrumb" aria-label="Breadcrumb"><a href="../it/index.html">Panoramica</a><span class="sep">/</span><span>Report TUI e HTML</span></nav>
-      <div class="page-meta"><a href="https://github.com/lenny-ts/caddy-analyzer/releases">v0.7.1</a> · aggiornata <time datetime="2026-09-05">2026-09-05</time> · <a href="https://github.com/lenny-ts/caddy-analyzer">GitHub</a></div>
+      <div class="page-meta"><a href="https://github.com/lenny-ts/caddy-analyzer/releases">v0.7.2</a> · aggiornata <time datetime="2026-09-12">2026-09-12</time> · <a href="https://github.com/lenny-ts/caddy-analyzer">GitHub</a></div>
       <h1>Report TUI e HTML</h1>
 <p>Due modi per visualizzare risultati live o condivisibili. Parti da <a href="quickstart.html">Avvio rapido → passaggio 5</a>; flag in <a href="reference/cli.html">Riferimento CLI</a>.</p>
 
@@ -83,7 +83,7 @@
 <pre><code>caddy-analyze --watch /var/log/caddy/access.log
 caddy-analyze --watch docker://caddy
 caddy-analyze --watch --detect /var/log/caddy/access.log  # with security tab</code></pre>
-<p>Tasti: <code>1</code>–<code>8</code> cambia scheda, <code>Tab</code>/<code>Shift+Tab</code> scorrono, <code>r</code> reimposta la finestra, <code>q</code> esce. Reimpostazione automatica ogni 5 min.</p>
+<p>Tasti: <code>1</code>–<code>9</code> cambia scheda, <code>Tab</code>/<code>Shift+Tab</code> scorrono, <code>r</code> reimposta la finestra, <code>q</code> esce. Reimpostazione automatica ogni 5 min.</p>
 
 <div class="table-wrap"><table>
 <thead><tr><th>Scheda</th><th>Mostra</th></tr></thead>
@@ -93,9 +93,10 @@ caddy-analyze --watch --detect /var/log/caddy/access.log  # with security tab</c
 <tr><td>3 Sicurezza</td><td>Primi 15 IP sospetti con confidenza e tecniche (richiede <code>--detect</code>)</td></tr>
 <tr><td>4 IP principali</td><td>Primi 20 IP per richieste</td></tr>
 <tr><td>5 Percorsi principali</td><td>Primi 20 percorsi</td></tr>
-<tr><td>6 User agent</td><td>Primi 15 UA</td></tr>
-<tr><td>7 Geo</td><td>Primi 15 paesi + primi 15 ASN (richiede GeoIP; suggerimento di download in background se in attesa)</td></tr>
-<tr><td>8 Operativo</td><td>Conteggi livello/logger/messaggio + ultimi 15 eventi operativi (richiede <code>--level</code> o log misto)</td></tr>
+<tr><td>6 Domini principali</td><td>Primi 20 host per numero di richieste</td></tr>
+<tr><td>7 User agent</td><td>Primi 15 UA</td></tr>
+<tr><td>8 Geo</td><td>Primi 15 paesi + primi 15 ASN (richiede GeoIP; suggerimento di download in background se in attesa)</td></tr>
+<tr><td>9 Operativo</td><td>Conteggi livello/logger/messaggio + ultimi 15 eventi operativi (richiede <code>--level</code> o log misto)</td></tr>
 </tbody>
 </table></div>
 <p>Combina con i filtri globali: <code>caddy-analyze --watch --from 1h --country IT --no-bots --detect</code>. Flag: <code>--watch</code> e solo root; si applicano comunque flag persistenti come <code>--top</code>/<code>--format</code>.</p>
