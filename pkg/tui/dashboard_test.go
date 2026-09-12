@@ -129,8 +129,9 @@ func TestUpdateKeyMessagesSwitchView(t *testing.T) {
 		{"3", viewSecurity},
 		{"4", viewTopIPs},
 		{"5", viewTopPaths},
-		{"6", viewTopUA},
-		{"7", viewGeo},
+		{"6", viewTopHosts},
+		{"7", viewTopUA},
+		{"8", viewGeo},
 	}
 	for _, c := range cases {
 		t.Run(c.key, func(t *testing.T) {
@@ -156,7 +157,7 @@ func TestUpdateNavigationKeysWrapViews(t *testing.T) {
 		{"right from realtime", viewRealtime, tea.KeyRight, viewSecurity},
 		{"right from operational", viewOperational, tea.KeyRight, viewSummary},
 		{"left from summary", viewSummary, tea.KeyLeft, viewOperational},
-		{"left from top ua", viewTopUA, tea.KeyLeft, viewTopPaths},
+		{"left from top ua", viewTopUA, tea.KeyLeft, viewTopHosts},
 		{"tab from geo", viewGeo, tea.KeyTab, viewOperational},
 		{"tab from security", viewSecurity, tea.KeyTab, viewTopIPs},
 		{"tab from operational", viewOperational, tea.KeyTab, viewSummary},
@@ -254,9 +255,37 @@ func TestRefreshTablesPopulatesWhenReady(t *testing.T) {
 	if len(m.ipTable.Rows()) == 0 {
 		t.Fatal("ipTable must have rows after a tick with data")
 	}
+	if len(m.hostTable.Rows()) == 0 {
+		t.Fatal("hostTable must have rows after a tick with data")
+	}
 	m = m.refreshTables()
 	if len(m.ipTable.Rows()) == 0 {
 		t.Error("ipTable must still have rows after a manual refresh")
+	}
+}
+
+func TestRefreshTablesRanksDomainsByRequestCount(t *testing.T) {
+	m := NewModel(make(chan string, 1))
+	m.ready = true
+	m.width = 120
+	m.height = 40
+	m = m.initTables()
+
+	updated, _ := m.Update(LineMsg(sampleCaddyLine))
+	m = updated.(Model)
+	updated, _ = m.Update(LineMsg(strings.Replace(sampleCaddyLine, "example.com", "api.example.com", 1)))
+	m = updated.(Model)
+	updated, _ = m.Update(LineMsg(sampleCaddyLine))
+	m = updated.(Model)
+	updated, _ = m.Update(TickMsg(time.Now()))
+	m = updated.(Model)
+
+	rows := m.hostTable.Rows()
+	if len(rows) != 2 {
+		t.Fatalf("hostTable rows = %d, want 2", len(rows))
+	}
+	if rows[0][1] != "example.com" || rows[0][2] != "2" {
+		t.Errorf("top domain row = %v, want example.com with 2 requests", rows[0])
 	}
 }
 
