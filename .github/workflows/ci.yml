@@ -100,6 +100,8 @@ jobs:
           go-version: '1.25.13'
           cache: true
       - name: Run govulncheck
+        env:
+          GOTOOLCHAIN: auto
         run: go run golang.org/x/vuln/cmd/govulncheck@latest ./...
 
   gitleaks:
