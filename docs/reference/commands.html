@@ -75,7 +75,7 @@
   <main class="wrap" id="main">
     <div class="doc-content">
       <nav class="breadcrumb" aria-label="Breadcrumb"><a href="../reference/cli.html">Reference</a><span class="sep">/</span><span>All commands</span></nav>
-      <div class="page-meta"><a href="https://github.com/lenny-ts/caddy-analyzer/releases">v0.8.0</a> · updated <time datetime="2026-10-13">2026-10-13</time> · <a href="https://github.com/lenny-ts/caddy-analyzer">GitHub</a></div>
+      <div class="page-meta"><a href="https://github.com/lenny-ts/caddy-analyzer/releases">v0.8.1</a> · updated <time datetime="2026-10-19">2026-10-19</time> · <a href="https://github.com/lenny-ts/caddy-analyzer">GitHub</a></div>
       <h1>All commands</h1>
 <p>This page explains what every command does, what it reads or changes, and which mode to choose. Use <code>caddy-analyze &lt;command&gt; --help</code> for the exact flags installed in your binary. The complete flag section separates persistent flags, root-only modes and command-specific options.</p>
 
@@ -191,7 +191,7 @@ caddy-analyze export-sigma - | sigma check</code></pre>
 <p>Checks for and installs a verified release from GitHub. Installation is fail-closed: cosign must validate the signed release manifest and the archive checksum must match it. <code>--check</code> performs no installation, <code>--version</code> pins a tag, <code>--force</code> permits reinstall or downgrade, and <code>--install-dir</code> selects a directory. If verification fails, the current binary is left untouched.</p>
 <pre><code>caddy-analyze update --check
 sudo caddy-analyze update
-caddy-analyze update --version v0.8.0 --install-dir ~/.local/bin</code></pre>
+caddy-analyze update --version v0.8.1 --install-dir ~/.local/bin</code></pre>
 
 <h2 id="completion">completion and version</h2>
 <pre><code>caddy-analyze --version

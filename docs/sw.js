@@ -1,5 +1,5 @@
 /* caddy-analyzer docs — stale-while-revalidate service worker */
-var CACHE = "caddy-docs-v30";
+var CACHE = "caddy-docs-v31";
 var ASSETS = [
     "index.html",
     "installation.html",

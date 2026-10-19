@@ -61,12 +61,12 @@ func TestSelfIPProtectionAcrossBanPaths(t *testing.T) {
 
 func TestSelfIPChangeCheckedBeforeBan(t *testing.T) {
 	current := "8.8.8.8"
-	lookup := func(context.Context) ([]string, error) { return []string{current}, nil }
 	for _, immediate := range []bool{false, true} {
 		t.Run(fmt.Sprint(immediate), func(t *testing.T) {
 			current = "8.8.8.8"
 			cfg := Config{Limit: 1, Window: time.Minute, Blocker: newFakeBlocker(),
-				SelfIPs: []string{current}, SelfIPLookup: lookup}
+				SelfIPs:      []string{current},
+				SelfIPLookup: func(context.Context) ([]string, error) { return []string{current}, nil }}
 			if immediate {
 				cfg.BlocklistMgr = newTestBlocklistMgr(t, "9.9.9.9\n8.8.8.8\n")
 			}

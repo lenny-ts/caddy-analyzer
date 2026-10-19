@@ -75,7 +75,7 @@
   <main class="wrap" id="main">
     <div class="doc-content">
       <nav class="breadcrumb" aria-label="Breadcrumb"><a href="../../it/reference/cli.html">Riferimento</a><span class="sep">/</span><span>Tutti i comandi</span></nav>
-      <div class="page-meta"><a href="https://github.com/lenny-ts/caddy-analyzer/releases">v0.8.0</a> · aggiornata <time datetime="2026-10-13">2026-10-13</time> · <a href="https://github.com/lenny-ts/caddy-analyzer">GitHub</a></div>
+      <div class="page-meta"><a href="https://github.com/lenny-ts/caddy-analyzer/releases">v0.8.1</a> · aggiornata <time datetime="2026-10-19">2026-10-19</time> · <a href="https://github.com/lenny-ts/caddy-analyzer">GitHub</a></div>
       <h1>Tutti i comandi</h1>
 <p>Questa pagina spiega cosa fa ogni comando, cosa legge o modifica e quale modalità scegliere. Usa <code>caddy-analyze &lt;comando&gt; --help</code> per vedere i flag esatti del binario installato. La sezione completa dei flag distingue opzioni persistenti, modalità solo root e opzioni proprie dei comandi.</p>
 
@@ -189,7 +189,7 @@ caddy-analyze export-sigma - | sigma check</code></pre>
 <p>Controlla e installa una release verificata da GitHub. L'installazione è fail-closed: cosign deve validare il manifest firmato e l'hash dell'archivio deve corrispondere. <code>--check</code> non installa, <code>--version</code> fissa un tag, <code>--force</code> consente reinstallazione o downgrade e <code>--install-dir</code> sceglie la directory. Se la verifica fallisce il binario corrente resta intatto.</p>
 <pre><code>caddy-analyze update --check
 sudo caddy-analyze update
-caddy-analyze update --version v0.8.0 --install-dir ~/.local/bin</code></pre>
+caddy-analyze update --version v0.8.1 --install-dir ~/.local/bin</code></pre>
 
 <h2 id="completion">completion e versione</h2>
 <pre><code>caddy-analyze --version

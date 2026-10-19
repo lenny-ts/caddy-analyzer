@@ -75,11 +75,11 @@
   <main class="wrap" id="main">
     <div class="doc-content">
       <nav class="breadcrumb" aria-label="Breadcrumb"><a href="../it/index.html">Panoramica</a><span class="sep">/</span><span>Installazione</span></nav>
-      <div class="page-meta"><a href="https://github.com/lenny-ts/caddy-analyzer/releases">v0.8.0</a> · aggiornata <time datetime="2026-10-13">2026-10-13</time> · <a href="https://github.com/lenny-ts/caddy-analyzer">GitHub</a></div>
+      <div class="page-meta"><a href="https://github.com/lenny-ts/caddy-analyzer/releases">v0.8.1</a> · aggiornata <time datetime="2026-10-19">2026-10-19</time> · <a href="https://github.com/lenny-ts/caddy-analyzer">GitHub</a></div>
       <h1>Installazione</h1>
 <p>Requisiti: <strong>Go 1.25+</strong> solo se compili dai sorgenti. Tutti gli altri metodi forniscono un binario statico (CGO_ENABLED=0) per Linux / macOS / Windows su amd64, arm64, arm. Verifica ogni metodo subito dopo l'installazione.</p>
 
-<div class="callout callout-info"><div class="callout-label">Verifica rapida (tutti i metodi)</div>Il binario della release v0.8.0 stampa <code>caddy-analyze version 0.8.0</code>; le build sorgenti possono mostrare <code>0.8.0-dev</code>. Se vedi <code>command not found</code>, verifica PATH o riapri il terminale.</div>
+<div class="callout callout-info"><div class="callout-label">Verifica rapida (tutti i metodi)</div>Il binario della release v0.8.1 stampa <code>caddy-analyze version 0.8.1</code>; le build sorgenti possono mostrare <code>0.8.1-dev</code>. Se vedi <code>command not found</code>, verifica PATH o riapri il terminale.</div>
 
 <h2 id="linux-mac">Linux / macOS — install.sh</h2>
 <p>Rileva SO/architettura, scarica tar.gz + <code>checksums.txt</code>, verifica SHA256 e cosign facoltativo.</p>
@@ -87,7 +87,7 @@
 <h3 id="verify-linux">Verifica</h3>
 <pre><code>caddy-analyze --version
 which caddy-analyze
-# atteso: /usr/local/bin/caddy-analyze  e  version 0.8.0</code></pre>
+# atteso: /usr/local/bin/caddy-analyze  e  version 0.8.1</code></pre>
 <p>Se <code>/usr/local/bin</code> non è scrivibile, lo script usa <code>sudo mv</code>. L'installer installa attualmente in <code>/usr/local/bin</code>; usa l'archivio della release o <code>go install</code> se ti serve una posizione utente.</p>
 
 <h2 id="windows">Windows — install.ps1</h2>
@@ -110,6 +110,7 @@ go env GOPATH
 
 <h2 id="docker">Docker</h2>
 <p>Go non richiesto. Immagine: <code>ghcr.io/lenny-ts/caddy-analyzer</code> (Alpine, utente non-root <code>caddy</code>).</p>
+<p>Pubblicata dalla v0.8.1 per <code>linux/amd64</code> e <code>linux/arm64</code>. Usa <code>:v0.8.1</code> (o <code>:0.8.1</code>) per fissare una release; <code>:latest</code> segue solo le release stabili. Le immagini delle versioni precedenti non erano pubblicate.</p>
 <pre><code>docker pull ghcr.io/lenny-ts/caddy-analyzer:latest
 # analyze a file
 docker run --rm -v /var/log/caddy:/logs ghcr.io/lenny-ts/caddy-analyzer /logs/access.log
@@ -118,14 +119,22 @@ docker run --rm -v /var/run/docker.sock:/var/run/docker.sock ghcr.io/lenny-ts/ca
 <h3 id="verify-docker">Verifica</h3>
 <pre><code>docker run --rm ghcr.io/lenny-ts/caddy-analyzer --version
 docker images ghcr.io/lenny-ts/caddy-analyzer --format "{{.Tag}} {{.Size}}"</code></pre>
+<h3 id="docker-local">Build locale</h3>
+<p>Richiede Git e Docker con BuildKit; Go viene eseguito nel container di build. Sostituisci la directory dei log sull'host con quella di Caddy.</p>
+<pre><code>git clone https://github.com/lenny-ts/caddy-analyzer.git
+cd caddy-analyzer
+docker build --build-arg VERSION=0.8.1-local -t caddy-analyzer:local .
+docker run --rm caddy-analyzer:local --version
+docker run --rm -v /var/log/caddy:/logs:ro caddy-analyzer:local /logs/access.log</code></pre>
+<p>Il container usa un utente non-root: i log montati devono essere leggibili da quell'utente.</p>
 
 <h2 id="binaries">Binari precompilati</h2>
 <p>Scarica da <a href="https://github.com/lenny-ts/caddy-analyzer/releases">GitHub Releases</a>. Ogni <code>*.tar.gz</code> (o <code>.zip</code> su Windows) contiene <code>caddy-analyze</code>. Scarica separatamente <code>checksums.txt</code> e firma/certificato/bundle Cosign dalla stessa release.</p>
 <pre><code># Linux amd64 — il tag ha v, la versione nell'archivio no
-curl -sSfL https://github.com/lenny-ts/caddy-analyzer/releases/download/v0.8.0/caddy-analyzer_0.8.0_linux_amd64.tar.gz -o /tmp/caddy-analyzer_0.8.0_linux_amd64.tar.gz
-curl -sSfL https://github.com/lenny-ts/caddy-analyzer/releases/download/v0.8.0/checksums.txt -o /tmp/checksums.txt
-grep caddy-analyzer_0.8.0_linux_amd64.tar.gz /tmp/checksums.txt | (cd /tmp && sha256sum -c)
-tar -xzf /tmp/caddy-analyzer_0.8.0_linux_amd64.tar.gz -C /tmp && sudo mv /tmp/caddy-analyze /usr/local/bin/</code></pre>
+curl -sSfL https://github.com/lenny-ts/caddy-analyzer/releases/download/v0.8.1/caddy-analyzer_0.8.1_linux_amd64.tar.gz -o /tmp/caddy-analyzer_0.8.1_linux_amd64.tar.gz
+curl -sSfL https://github.com/lenny-ts/caddy-analyzer/releases/download/v0.8.1/checksums.txt -o /tmp/checksums.txt
+grep caddy-analyzer_0.8.1_linux_amd64.tar.gz /tmp/checksums.txt | (cd /tmp && sha256sum -c)
+tar -xzf /tmp/caddy-analyzer_0.8.1_linux_amd64.tar.gz -C /tmp && sudo mv /tmp/caddy-analyze /usr/local/bin/</code></pre>
 <h3 id="verify-binaries">Verifica</h3>
 <pre><code>caddy-analyze --version
 ls -l /usr/local/bin/caddy-analyze
@@ -157,7 +166,7 @@ journalctl -u caddy-guard -n 20 --no-pager
 <h2 id="update">Aggiornamento</h2>
 <pre><code>caddy-analyze update --check   # check without installing
 caddy-analyze update           # install latest (cosign + SHA256 verified)
-caddy-analyze update --version v0.8.0 --force  # fissa / reinstalla</code></pre>
+caddy-analyze update --version v0.8.1 --force  # fissa / reinstalla</code></pre>
 
 <h2 id="troubleshoot">Risoluzione dei problemi</h2>
 <ul>
@@ -172,7 +181,7 @@ caddy-analyze update --version v0.8.0 --force  # fissa / reinstalla</code></pre>
 
     </div>
   </main>
-  <nav class="doc-toc" aria-label="In questa pagina"><div class="toc-label">In questa pagina</div><a href="#linux-mac" class="toc-link">Linux / macOS — install.sh</a><a href="#verify-linux" class="toc-link h3">Verifica</a><a href="#windows" class="toc-link">Windows — install.ps1</a><a href="#verify-windows" class="toc-link h3">Verifica</a><a href="#go" class="toc-link">Toolchain Go</a><a href="#verify-go" class="toc-link h3">Verifica</a><a href="#docker" class="toc-link">Docker</a><a href="#verify-docker" class="toc-link h3">Verifica</a><a href="#binaries" class="toc-link">Binari precompilati</a><a href="#verify-binaries" class="toc-link h3">Verifica</a><a href="#systemd" class="toc-link">Systemd (demone guard)</a><a href="#verify-systemd" class="toc-link h3">Verifica</a><a href="#update" class="toc-link">Aggiornamento</a><a href="#troubleshoot" class="toc-link">Risoluzione dei problemi</a></nav>
+  <nav class="doc-toc" aria-label="In questa pagina"><div class="toc-label">In questa pagina</div><a href="#linux-mac" class="toc-link">Linux / macOS — install.sh</a><a href="#verify-linux" class="toc-link h3">Verifica</a><a href="#windows" class="toc-link">Windows — install.ps1</a><a href="#verify-windows" class="toc-link h3">Verifica</a><a href="#go" class="toc-link">Toolchain Go</a><a href="#verify-go" class="toc-link h3">Verifica</a><a href="#docker" class="toc-link">Docker</a><a href="#verify-docker" class="toc-link h3">Verifica</a><a href="#docker-local" class="toc-link h3">Build locale</a><a href="#binaries" class="toc-link">Binari precompilati</a><a href="#verify-binaries" class="toc-link h3">Verifica</a><a href="#systemd" class="toc-link">Systemd (demone guard)</a><a href="#verify-systemd" class="toc-link h3">Verifica</a><a href="#update" class="toc-link">Aggiornamento</a><a href="#troubleshoot" class="toc-link">Risoluzione dei problemi</a></nav>
 </div>
 <script src="../docs.min.js?v=36"></script>
 </body>
