@@ -1,6 +1,6 @@
 <!-- fm: title=caddy-analyzer — Analisi dei log Caddy v2 e rilevamento minacce | description=caddy-analyzer analizza nativamente i log JSON di Caddy v2, rileva 26 categorie di attacchi e può bloccare le minacce tramite iptables. | breadcrumb=Panoramica -->
 <div class="hero">
-  <div class="hero-badge">v0.8.0 · Go 1.25 · Zero dipendenze · MIT</div>
+  <div class="hero-badge">v0.8.1 · Go 1.25 · Zero dipendenze · MIT</div>
   <h1>Log JSON di Caddy,<br>finalmente leggibili e protetti.</h1>
   <p>Caddy v2 scrive log JSON annidati (<code>request.uri</code>, <code>status</code>, <code>tls</code>, <code>headers</code>), non Common Log Format. <code>grep</code>, <code>goaccess</code> e <code>lnav</code> non li interpretano correttamente. <strong>caddy-analyzer</strong> li analizza nativamente, classifica il traffico e segnala gli attacchi con un motore a doppio passaggio e 26 categorie.</p>
   <div class="hero-actions">
@@ -41,7 +41,7 @@ Sospetti (rilevamento a 26 categorie)
 </div>
 
 <h2 id="cosa-risolve">Cosa risolve rispetto agli strumenti generici</h2>
-<p><strong>Novità della v0.8.0:</strong> guard protegge automaticamente gli IP delle proprie interfacce e di uscita pubblica, inclusi quelli dinamici del router casalingo. Consulta <a href="subcommands-guard.html#self-protection">protezione dall'auto-ban</a> per aggiornamento, requisiti di rete e <code>--protect-self=false</code>.</p>
+<p><strong>Novità della v0.8.1:</strong> le immagini delle release vengono pubblicate su GHCR per Linux amd64 e arm64. Consulta <a href="installation.html#docker">installazione Docker</a> per tag di versione e build locali.</p>
 <div class="table-wrap"><table>
 <thead><tr><th></th><th>caddy-analyzer</th><th>goaccess / lnav / grep</th></tr></thead>
 <tbody>

@@ -3,6 +3,17 @@
 <p>Tutte le modifiche rilevanti a <code>caddy-analyzer</code> saranno documentate in questo file.</p>
 <p>Il formato si basa su <a href="https://keepachangelog.com/en/1.0.0/">Keep a Changelog</a> e questo progetto aderisce al <a href="https://semver.org/spec/v2.0.0.html">Semantic Versioning</a>.</p>
 
+<h2 id="0-8-1">0.8.1 — 2026-10-19</h2>
+<h3>Corretto</h3>
+<ul>
+<li><strong>Immagine Docker mancante (#120)</strong>: pubblicazione su <code>ghcr.io/lenny-ts/caddy-analyzer</code> dopo i rilasci riusciti per Linux amd64 e arm64, con tag di versione con e senza <code>v</code>. Solo le release stabili aggiornano <code>latest</code>. Il workflow verifica la versione dell'immagine pubblicata.</li>
+</ul>
+<h3>Modificato</h3>
+<ul>
+<li><strong>Build Docker</strong>: cross-compilazione Go sulla piattaforma di build e cache dei layer su GitHub Actions, evitando la compilazione emulata ARM64.</li>
+<li><strong>Documentazione del rilascio</strong>: aggiunti pull Docker con versione, build locali e verifica iniziale della visibilità pubblica del package; chart Helm aggiornato all'app 0.8.1.</li>
+</ul>
+
 <h2 id="0-8-0">0.8.0 — 2026-10-13</h2>
 <h3>Aggiunto</h3>
 <ul>

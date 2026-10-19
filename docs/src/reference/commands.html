@@ -114,7 +114,7 @@ caddy-analyze export-sigma - | sigma check</code></pre>
 <p>Checks for and installs a verified release from GitHub. Installation is fail-closed: cosign must validate the signed release manifest and the archive checksum must match it. <code>--check</code> performs no installation, <code>--version</code> pins a tag, <code>--force</code> permits reinstall or downgrade, and <code>--install-dir</code> selects a directory. If verification fails, the current binary is left untouched.</p>
 <pre><code>caddy-analyze update --check
 sudo caddy-analyze update
-caddy-analyze update --version v0.8.0 --install-dir ~/.local/bin</code></pre>
+caddy-analyze update --version v0.8.1 --install-dir ~/.local/bin</code></pre>
 
 <h2 id="completion">completion and version</h2>
 <pre><code>caddy-analyze --version

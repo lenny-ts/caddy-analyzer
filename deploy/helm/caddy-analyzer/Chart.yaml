@@ -2,8 +2,8 @@ apiVersion: v2
 name: caddy-analyzer
 description: Read-only Caddy access-log analyzer
 type: application
-version: 0.1.0
-appVersion: "0.8.0"
+version: 0.1.1
+appVersion: "0.8.1"
 keywords:
   - caddy
   - logs

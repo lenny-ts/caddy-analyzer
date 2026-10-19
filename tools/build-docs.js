@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Build step: injects header/sidebar/footer/TOC into docs/*.html
 // Zero deps — Node stdlib only. Handles future docs/it/* with same layout.
-// Before tagging a release: DOCS_VERSION=v0.8.0 node tools/build-docs.js
+// Before tagging a release: DOCS_VERSION=v0.8.1 node tools/build-docs.js
 'use strict';
 const fs = require('fs');
 const path = require('path');
