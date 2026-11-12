@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"context"
 	"fmt"
+	"math"
 	"os"
 	"os/signal"
 	"strings"
@@ -23,6 +24,9 @@ var (
 	guardLimit             int
 	guardWindow            string
 	guardDuration          string
+	guardBanEscalation     bool
+	guardBanResetAfter     string
+	guardMaxBanDuration    time.Duration
 	guardAuthLimit         int
 	guardNotFoundLimit     int
 	guardDetectConfidence  int
@@ -55,6 +59,9 @@ func init() {
 		"Timeout for each iptables invocation. Raise it for a huge ruleset on a busy box")
 	guardCmd.Flags().StringVarP(&guardWindow, "window", "w", "1m", "Monitoring time window")
 	guardCmd.Flags().StringVarP(&guardDuration, "duration", "d", "10m", "Block duration (e.g. 10m, 1h). 0 = permanent")
+	guardCmd.Flags().BoolVar(&guardBanEscalation, "ban-escalation", false, "Progressively increase repeat-offender bans (requires persistent state and a finite --duration)")
+	guardCmd.Flags().StringVar(&guardBanResetAfter, "ban-reset-after", "30d", "Forget offender history after this period (supports days, e.g. 30d or 720h)")
+	guardCmd.Flags().DurationVar(&guardMaxBanDuration, "max-ban-duration", guard.DefaultMaxBanDuration, "Maximum escalated ban duration")
 	guardCmd.Flags().IntVarP(&guardAuthLimit, "auth-limit", "", 10, "Max auth failures (401/403) before blocking (0 disables)")
 	guardCmd.Flags().IntVarP(&guardNotFoundLimit, "notfound-limit", "", 50, "Max not found (404) before blocking (0 disables)")
 	guardCmd.Flags().IntVarP(&guardDetectConfidence, "detect-confidence", "", 8, "Min confidence (1-10) for pattern-detection blocking; 0 disables")
@@ -107,6 +114,14 @@ For permanent block: --duration 0. Rules live in the CADDY_ANALYZER iptables
 chain: unban only touches rules created by caddy-analyzer.
 To unblock manually: caddy-analyze unban <ip> or --all.
 
+Progressive bans (opt-in): --ban-escalation uses --duration for the first ban,
+then at least 1h, 24h, and 168h, capped by --max-ban-duration. Successful bans
+count as offenses; history expires after --ban-reset-after (default 30d).
+History is stored beside --state-file in its .offenders directory.
+Use "guard offenders", "guard offender show <ip>", or "guard offender reset <ip>".
+Resetting history does not remove an active ban. Manual unban preserves history
+unless --reset-offenses is supplied.
+
 Examples:
   caddy-analyze guard /var/log/caddy/access.log
   caddy-analyze guard docker://my-caddy --limit 200 --window 5m
@@ -141,6 +156,19 @@ func runGuard(cmd *cobra.Command, args []string) error {
 	}
 	if guardDuration == "0" {
 		duration = 0
+	}
+	resetAfter, err := parseBanResetAfter(guardBanResetAfter)
+	if err != nil {
+		return err
+	}
+	if guardMaxBanDuration <= 0 {
+		return fmt.Errorf("--max-ban-duration must be > 0")
+	}
+	if err := guard.ValidateBanEscalation(guard.Config{
+		BanEscalation: guardBanEscalation, BlockDuration: duration,
+		StatePath: guardStateFile, BanResetAfter: resetAfter, MaxBanDuration: guardMaxBanDuration,
+	}); err != nil {
+		return err
 	}
 
 	// guard drives iptables, which requires root. Without root every
@@ -312,6 +340,9 @@ func runGuard(cmd *cobra.Command, args []string) error {
 		NotFoundLimit:       guardNotFoundLimit,
 		Window:              window,
 		BlockDuration:       duration,
+		BanEscalation:       guardBanEscalation,
+		BanResetAfter:       resetAfter,
+		MaxBanDuration:      guardMaxBanDuration,
 		DetectionConfidence: guardDetectConfidence,
 		IPValidator:         validateIP,
 		OnAudit:             dispatcher.Log,
@@ -353,6 +384,9 @@ func runGuard(cmd *cobra.Command, args []string) error {
 	fmt.Fprintf(os.Stderr, "Guard %s — %s | %s | %s / %s | block: %s\n", mode,
 		thr("auth", guardAuthLimit), thr("404", guardNotFoundLimit), thr("total", guardLimit), guardWindow, durMsg)
 	fmt.Fprintf(os.Stderr, "Firewall backend: %s\n", fwBackend.Name())
+	if guardBanEscalation {
+		fmt.Fprintf(os.Stderr, "Ban escalation: on | reset: %s | maximum: %s\n", resetAfter, guardMaxBanDuration)
+	}
 	if guardProtectSelf {
 		fmt.Fprintf(os.Stderr, "Server IP protection: %s (refresh every 30s and before bans)\n", strings.Join(selfIPs, ", "))
 	}
@@ -414,6 +448,19 @@ func runGuard(cmd *cobra.Command, args []string) error {
 		fmt.Fprintf(os.Stderr, "%s: %d\n", label, n)
 	}
 	return nil
+}
+
+func parseBanResetAfter(value string) (time.Duration, error) {
+	multiplier := time.Duration(1)
+	if strings.HasSuffix(value, "d") {
+		value = strings.TrimSuffix(value, "d") + "h"
+		multiplier = 24
+	}
+	duration, err := time.ParseDuration(value)
+	if err != nil || duration <= 0 || duration > time.Duration(math.MaxInt64)/multiplier {
+		return 0, fmt.Errorf("--ban-reset-after must be a positive duration (e.g. 30d or 720h)")
+	}
+	return duration * multiplier, nil
 }
 
 func loadIPList(path string) ([]string, error) {
