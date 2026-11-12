@@ -192,10 +192,15 @@ func parseBlockedIPs(output string) []string {
 }
 
 type Config struct {
-	Limit               int
-	AuthLimit           int
-	NotFoundLimit       int
-	Window              time.Duration
+	Limit         int
+	AuthLimit     int
+	NotFoundLimit int
+	Window        time.Duration
+	// TickInterval is how often Run re-checks the blocking thresholds. It is
+	// independent of Window, which only defines how far back requests are
+	// counted. If <= 0, Run evaluates at least once a second (and never less
+	// often than Window).
+	TickInterval        time.Duration
 	BlockDuration       time.Duration
 	DetectionConfidence int
 	IPValidator         func(string) error
@@ -1198,6 +1203,19 @@ func (g *Guard) runExpiryLoop(ctx context.Context) {
 	}
 }
 
+// evalInterval is how often Run re-checks the blocking thresholds. Checking
+// only once per Window lets a short burst finish before it is ever evaluated,
+// so the cadence is capped at a second and can be set explicitly.
+func (g *Guard) evalInterval() time.Duration {
+	if g.cfg.TickInterval > 0 {
+		return g.cfg.TickInterval
+	}
+	if g.cfg.Window <= 0 || g.cfg.Window > time.Second {
+		return time.Second
+	}
+	return g.cfg.Window
+}
+
 func (g *Guard) Run(ctx context.Context, linesCh <-chan string, logf func(string, ...interface{})) {
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
@@ -1219,7 +1237,7 @@ func (g *Guard) Run(ctx context.Context, linesCh <-chan string, logf func(string
 		}()
 	}
 
-	ticker := time.NewTicker(g.cfg.Window)
+	ticker := time.NewTicker(g.evalInterval())
 	defer ticker.Stop()
 	var selfTick <-chan time.Time
 	if g.cfg.SelfIPLookup != nil {

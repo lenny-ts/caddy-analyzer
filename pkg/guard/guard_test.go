@@ -689,3 +689,78 @@ func TestCredStuffingCandidates(t *testing.T) {
 		t.Errorf("expected 0 hits with limit 5, got %d", len(hits2))
 	}
 }
+
+func TestGuardEvalIntervalDecouplesFromWindow(t *testing.T) {
+	tests := []struct {
+		name     string
+		window   time.Duration
+		interval time.Duration
+		want     time.Duration
+	}{
+		{"one-minute window checks every second", time.Minute, 0, time.Second},
+		{"short window checks at its own length", 50 * time.Millisecond, 0, 50 * time.Millisecond},
+		{"explicit interval wins", time.Minute, 100 * time.Millisecond, 100 * time.Millisecond},
+		{"unset window still ticks", 0, 0, time.Second},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			g := New(Config{Window: tt.window, TickInterval: tt.interval, IPValidator: func(string) error { return nil }})
+			if got := g.evalInterval(); got != tt.want {
+				t.Errorf("evalInterval() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+// A burst that reaches the threshold must be blocked before the counting window
+// elapses; before the fix the ticker only fired once per Window.
+func TestGuardRunBlocksBurstBeforeWindowElapses(t *testing.T) {
+	g := New(Config{
+		Limit:         5,
+		Window:        10 * time.Second,
+		BlockDuration: time.Minute,
+		IPValidator:   func(string) error { return nil },
+	})
+	blocker := newFakeBlocker()
+	g.SetBlocker(blocker)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	lines := make(chan string, 16)
+	done := make(chan struct{})
+	go func() {
+		g.Run(ctx, lines, func(string, ...interface{}) {})
+		close(done)
+	}()
+
+	start := time.Now()
+	for i := 0; i < 5; i++ {
+		lines <- caddyLine("1.2.3.4", "/missing", "GET", 200)
+	}
+
+	blocked := make(chan struct{})
+	go func() {
+		for {
+			if g.IsBlocked("1.2.3.4") {
+				close(blocked)
+				return
+			}
+			time.Sleep(10 * time.Millisecond)
+		}
+	}()
+
+	select {
+	case <-blocked:
+		if elapsed := time.Since(start); elapsed >= g.cfg.Window {
+			t.Errorf("blocked after %v, not before the %v window", elapsed, g.cfg.Window)
+		}
+	case <-time.After(3 * time.Second):
+		t.Fatal("guard did not block the burst within 3s of a 10s window")
+	}
+	cancel()
+	select {
+	case <-done:
+	case <-time.After(time.Second):
+		t.Fatal("Run did not stop")
+	}
+}
