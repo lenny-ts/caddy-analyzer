@@ -525,6 +525,81 @@ func TestGuardTickBlocksOnPatternDetection(t *testing.T) {
 	}
 }
 
+// TestGuardOneDetectionProducesOneBanWhenBlockExpiresInsideWindow guards
+// against re-banning an IP for a single detection when the block duration is
+// shorter than the counting window: the detection that caused a successful
+// block must be consumed, not re-evaluated after the ban expires.
+func TestGuardOneDetectionProducesOneBanWhenBlockExpiresInsideWindow(t *testing.T) {
+	fb := newFakeBlocker()
+	g := New(Config{
+		Window:              time.Minute,
+		BlockDuration:       50 * time.Millisecond,
+		DetectionConfidence: 8,
+		IPValidator:         func(string) error { return nil },
+		Blocker:             fb,
+	})
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	go g.runExpiryLoop(ctx)
+
+	const ip = "203.0.113.20"
+	g.Evaluate(caddyLine(ip, "/search?id=1%27%20UNION%20SELECT%20username%20FROM%20users--", "GET", 200))
+
+	if got := g.evaluate(ctx, time.Now()); len(got) != 1 {
+		t.Fatalf("expected the detection to block once, got %d", len(got))
+	}
+
+	deadline := time.Now().Add(2 * time.Second)
+	for g.IsBlocked(ip) {
+		if time.Now().After(deadline) {
+			t.Fatal("short block did not expire")
+		}
+		time.Sleep(time.Millisecond)
+	}
+
+	if got := g.evaluate(ctx, time.Now()); len(got) != 0 {
+		t.Fatalf("same detection was blocked again after the ban expired: %v", got)
+	}
+	if got := g.SessionBlocks(); got != 1 {
+		t.Fatalf("expected exactly one ban for one detection, got %d", got)
+	}
+}
+
+// TestGuardFailedBlockKeepsDetectionForRetry verifies that consuming a
+// detection is conditional on the block actually being applied: a failed
+// firewall attempt must leave the detection in place so the next evaluation
+// retries the ban.
+func TestGuardFailedBlockKeepsDetectionForRetry(t *testing.T) {
+	fb := newFakeBlocker()
+	fb.blockErr = fmt.Errorf("firewall unavailable")
+	g := New(Config{
+		Window:              time.Minute,
+		BlockDuration:       time.Hour,
+		DetectionConfidence: 8,
+		IPValidator:         func(string) error { return nil },
+		Blocker:             fb,
+	})
+
+	const ip = "203.0.113.21"
+	g.Evaluate(caddyLine(ip, "/search?id=1%27%20UNION%20SELECT%20username%20FROM%20users--", "GET", 200))
+
+	now := time.Now()
+	if got := g.evaluate(context.Background(), now); len(got) != 0 {
+		t.Fatalf("block should have failed, got %d blocked", len(got))
+	}
+
+	fb.mu.Lock()
+	fb.blockErr = nil
+	fb.mu.Unlock()
+
+	if got := g.evaluate(context.Background(), now.Add(time.Millisecond)); len(got) != 1 {
+		t.Fatalf("failed block consumed the detection; retry blocked %d", len(got))
+	}
+	if !g.IsBlocked(ip) {
+		t.Fatal("expected retry to block the IP")
+	}
+}
+
 func TestGuardDetectionConfidenceBelowThreshold(t *testing.T) {
 	fb := newFakeBlocker()
 	g := newTestGuard()

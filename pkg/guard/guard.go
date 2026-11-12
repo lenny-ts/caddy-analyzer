@@ -1032,7 +1032,9 @@ func (g *Guard) evaluate(ctx context.Context, now time.Time) []Candidate {
 
 // resetWindow clears per-window detector state and updates the anomaly
 // baseline. It runs after evaluate so no detection is dropped at the boundary.
-func (g *Guard) resetWindow(now time.Time) {
+// windows is the number of full windows that elapsed since the last reset; it
+// lets the anomaly rate use the real sample duration when ticks were missed.
+func (g *Guard) resetWindow(now time.Time, windows int64) {
 	// Credential stuffing: alert when many distinct IPs fail auth on the same path.
 	// Alert-only (audit log) — iptables blocks IPs, not paths.
 	if g.cfg.CredStuffingLimit > 0 {
@@ -1054,13 +1056,13 @@ func (g *Guard) resetWindow(now time.Time) {
 	g.mu.Unlock()
 	g.sliding.resetAuthFailPaths()
 
-	g.detectAnomaly()
+	g.detectAnomaly(windows)
 }
 
 func (g *Guard) Tick(ctx context.Context) []Candidate {
 	now := time.Now()
 	blocked := g.evaluate(ctx, now)
-	g.resetWindow(now)
+	g.resetWindow(now, 1)
 
 	// Flush any debounced state at the end of the tick so blocks from this
 	// tick are persisted even under low block volume.
@@ -1075,12 +1077,15 @@ func (g *Guard) Tick(ctx context.Context) []Candidate {
 // the current window's RPS exceeds AnomalyFactor × baseline. This catches
 // volumetric spikes / DDoS that per-IP thresholds miss. Alert-only: blocking
 // individual hosts is the wrong tool for a distributed flood.
-func (g *Guard) detectAnomaly() {
+func (g *Guard) detectAnomaly(windows int64) {
 	reqs := g.tickReqs.Swap(0)
 	if g.cfg.Window <= 0 {
 		return
 	}
-	currentRPS := float64(reqs) / g.cfg.Window.Seconds()
+	if windows < 1 {
+		windows = 1
+	}
+	currentRPS := float64(reqs) / (g.cfg.Window.Seconds() * float64(windows))
 	const alpha = 0.3
 	const minBaseline = 1.0
 	if !g.ewmaInit {
@@ -1111,6 +1116,13 @@ func (g *Guard) block(ctx context.Context, c Candidate, now time.Time) bool {
 			return false
 		}
 	}
+	// The detection behind this ban has now been acted on. Clear it so the
+	// same request cannot trigger a second ban when BlockDuration is shorter
+	// than Window and the block expires inside the still-open window. Only
+	// consume after a successful block: a failed attempt must be retried.
+	g.mu.Lock()
+	delete(g.detectCounts, c.IP)
+	g.mu.Unlock()
 	// Track subnet blocks so IsBlocked short-circuits individual hosts in a
 	// blocked /24 without re-evaluating them on every request.
 	if _, ipnet, err := net.ParseCIDR(c.IP); err == nil {
@@ -1251,12 +1263,36 @@ func (g *Guard) Run(ctx context.Context, linesCh <-chan string, logf func(string
 
 	ticker := time.NewTicker(g.evalInterval())
 	defer ticker.Stop()
-	windowStart := time.Now()
+
+	// The window boundary runs on its own deadline rather than piggy-backing
+	// on evaluation ticks. Otherwise a tick interval that does not divide the
+	// window (e.g. 40s ticks for a 1m window) stretches resets and every
+	// per-window counter past their configured duration.
+	window := g.cfg.Window
+	nextWindow := time.Now().Add(window)
+	var windowTimer *time.Timer
+	var windowTick <-chan time.Time
+	if window > 0 {
+		windowTimer = time.NewTimer(time.Until(nextWindow))
+		windowTick = windowTimer.C
+		defer windowTimer.Stop()
+	}
+
 	var selfTick <-chan time.Time
 	if g.cfg.SelfIPLookup != nil {
 		selfTicker := time.NewTicker(30 * time.Second)
 		defer selfTicker.Stop()
 		selfTick = selfTicker.C
+	}
+
+	logBlocked := func(now time.Time, blocked []Candidate) {
+		for _, c := range blocked {
+			verb := "blocked"
+			if g.cfg.DryRun {
+				verb = "would be blocked"
+			}
+			logf("[%s] + %s %s (%s)\n", now.Format("15:04:05"), c.IP, verb, c.Why)
+		}
 	}
 
 	for {
@@ -1279,21 +1315,31 @@ func (g *Guard) Run(ctx context.Context, linesCh <-chan string, logf func(string
 
 		case <-ticker.C:
 			now := time.Now()
-			blocked := g.evaluate(ctx, now)
-			for _, c := range blocked {
-				verb := "blocked"
-				if g.cfg.DryRun {
-					verb = "would be blocked"
-				}
-				logf("[%s] + %s %s (%s)\n", now.Format("15:04:05"), c.IP, verb, c.Why)
-			}
-			if now.Sub(windowStart) >= g.cfg.Window {
-				g.resetWindow(now)
-				windowStart = now
+			logBlocked(now, g.evaluate(ctx, now))
+			if window <= 0 {
+				g.resetWindow(now, 1)
 			}
 			if g.dirty.Load() {
 				g.saveState()
 			}
+
+		case <-windowTick:
+			evalNow := time.Now()
+			logBlocked(evalNow, g.evaluate(ctx, evalNow))
+			// Measure elapsed windows after evaluation too: a slow block
+			// attempt must not make the next reset lose entire windows.
+			now := time.Now()
+			windows := int64(1)
+			if !now.Before(nextWindow) {
+				windows = int64(now.Sub(nextWindow)/window) + 1
+			}
+			g.resetWindow(now, windows)
+			nextWindow = nextWindow.Add(time.Duration(windows) * window)
+			windowTimer.Reset(time.Until(nextWindow))
+			if g.dirty.Load() {
+				g.saveState()
+			}
+
 		case <-selfTick:
 			g.refreshSelfIPs(ctx)
 
