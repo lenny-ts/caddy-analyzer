@@ -197,6 +197,9 @@ type Config struct {
 	NotFoundLimit       int
 	Window              time.Duration
 	BlockDuration       time.Duration
+	BanEscalation       bool
+	BanResetAfter       time.Duration
+	MaxBanDuration      time.Duration
 	DetectionConfidence int
 	IPValidator         func(string) error
 	OnAudit             func(action, ip, reason, duration string)
@@ -296,6 +299,7 @@ type Guard struct {
 	// sessionBlocks counts successful block decisions in this run, including
 	// simulated decisions in dry-run mode.
 	sessionBlocks atomic.Int64
+	dryOffenders  map[string]Offender
 	// pendingBlock is set by checkImmediateBlock and consumed by Run to
 	// log the ban in terminal output.
 	pendingBlock *Candidate
@@ -499,6 +503,12 @@ func (sc *slidingCounters) ips() []string {
 }
 
 func New(cfg Config) *Guard {
+	if cfg.BanResetAfter == 0 {
+		cfg.BanResetAfter = DefaultBanResetAfter
+	}
+	if cfg.MaxBanDuration == 0 {
+		cfg.MaxBanDuration = DefaultMaxBanDuration
+	}
 	sf := newStateFile(cfg.StatePath)
 	blocker := cfg.Blocker
 	if cfg.FirewallBackend != nil {
@@ -525,6 +535,7 @@ func New(cfg Config) *Guard {
 		expiries:       make(map[string]time.Time),
 		allowlist:      parseCIDRList(cfg.NeverBlock),
 		detectCounts:   make(map[string]int),
+		dryOffenders:   make(map[string]Offender),
 		sliding:        newSlidingCounters(cfg.Window),
 		blocklistMgr:   cfg.BlocklistMgr,
 		countryBlock:   countryBlock,
@@ -1042,6 +1053,7 @@ func (g *Guard) Tick(ctx context.Context) []Candidate {
 	g.sliding.resetAuthFailPaths()
 
 	g.detectAnomaly()
+	g.pruneOffenders(now)
 
 	// Flush any debounced state at the end of the tick so blocks from this
 	// tick are persisted even under low block volume.
@@ -1085,12 +1097,40 @@ func (g *Guard) block(ctx context.Context, c Candidate, now time.Time) bool {
 	if !g.refreshSelfIPs(ctx) || g.isAllowlisted(c.IP) {
 		return false
 	}
+	if g.IsBlocked(c.IP) {
+		return false
+	}
+	duration := g.cfg.BlockDuration
+	var offender Offender
+	if g.cfg.BanEscalation {
+		if err := ValidateBanEscalation(g.cfg); err != nil {
+			if g.cfg.OnError != nil {
+				g.cfg.OnError(err)
+			}
+			return false
+		}
+		var err error
+		offender, duration, err = g.nextOffense(c.IP, now)
+		if err != nil {
+			if g.cfg.OnError != nil {
+				g.cfg.OnError(fmt.Errorf("load offender %s (using base ban without changing history): %w", c.IP, err))
+			}
+			duration = min(g.cfg.BlockDuration, g.cfg.MaxBanDuration)
+		}
+	}
 	g.setBlocked(c.IP)
 	if !g.cfg.DryRun {
 		if err := g.blocker.Block(c.IP); err != nil {
 			g.removeBlocked(c.IP)
 			return false
 		}
+	}
+	if g.cfg.BanEscalation {
+		if offender.Offenses > 0 {
+			g.recordOffense(offender)
+			c.Why = fmt.Sprintf("%s; offense #%d", c.Why, offender.Offenses)
+		}
+		g.forgetOffense(c.IP)
 	}
 	// Track subnet blocks so IsBlocked short-circuits individual hosts in a
 	// blocked /24 without re-evaluating them on every request.
@@ -1100,8 +1140,8 @@ func (g *Guard) block(ctx context.Context, c Candidate, now time.Time) bool {
 		g.mu.Unlock()
 	}
 	if g.cfg.OnAudit != nil {
-		dur := g.cfg.BlockDuration.String()
-		if g.cfg.BlockDuration <= 0 {
+		dur := duration.String()
+		if duration <= 0 {
 			dur = "permanent"
 		}
 		action := "block"
@@ -1111,8 +1151,8 @@ func (g *Guard) block(ctx context.Context, c Candidate, now time.Time) bool {
 		g.cfg.OnAudit(action, c.IP, c.Why, dur)
 	}
 	g.sessionBlocks.Add(1)
-	if g.cfg.BlockDuration > 0 {
-		expiry := now.Add(g.cfg.BlockDuration)
+	if duration > 0 {
+		expiry := now.Add(duration)
 		g.mu.Lock()
 		g.expiries[c.IP] = expiry
 		g.mu.Unlock()

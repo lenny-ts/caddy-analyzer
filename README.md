@@ -84,6 +84,37 @@ Discovery errors at startup and during operation include the instruction to rest
 
 ---
 
+### Progressive bans (opt-in)
+
+```bash
+sudo caddy-analyze guard /var/log/caddy/access.log \
+  --ban-escalation --ban-reset-after 30d --max-ban-duration 168h
+sudo caddy-analyze guard offenders
+sudo caddy-analyze guard offender show 203.0.113.10
+sudo caddy-analyze guard offender reset 203.0.113.10
+sudo caddy-analyze unban 203.0.113.10 --reset-offenses
+```
+
+The first successful automatic ban uses `--duration` (default 10m). Repeat bans
+use at least 1h, 24h, then 168h; the base duration is never reduced except by
+`--max-ban-duration`, which caps every level. History resets after 30 days without
+another successful ban; `--ban-reset-after` also accepts Go durations such as
+`720h`. Escalation requires a finite positive `--duration` and a non-empty
+`--state-file`. It applies to all firewall backends, feed/country matches, and
+subnet bans. Failed or allowlisted decisions do not count as offenses.
+
+History survives restarts in `<state-file>.offenders/`, with an atomic, private
+JSON file per IP/CIDR. The existing active-ban state format is unchanged; back up
+both locations. Expired history is ignored and pruned during guard ticks.
+Use the same `--state-file` on history commands when overriding its default.
+Run only one guard per state file. A history reset is read before the next ban
+and does not remove an active ban; manual `unban` preserves history unless
+`--reset-offenses` is given. As with existing manual unban state synchronization,
+restart a running guard after a manual unban to synchronize its in-memory bans.
+`--dry-run` reads existing history but simulates new offenses only in memory.
+History I/O errors are reported; corrupt history is never overwritten and the
+base ban still protects the server, capped by `--max-ban-duration`.
+
 ## Quick Start
 
 ```bash
@@ -378,6 +409,10 @@ returned as a command error.
 | `--audit-timeout` / `--audit-retries` | | `5s` / `2` | Per-delivery timeout and bounded retries (maximum 5) |
 | `--audit-rate-limit` | | `0` | Minimum interval between notifications for the same IP; `0` disables |
 | `--state-file` | | `/var/lib/caddy-analyzer/blocked.json` | Persist blocked-IP state across restarts (guard/block/unban). Empty to disable |
+| `--ban-escalation` | | `false` | Enable persistent progressive bans for repeat offenders (guard) |
+| `--ban-reset-after` | | `30d` | Forget offender history after this period; accepts days or Go durations (guard) |
+| `--max-ban-duration` | | `168h` | Cap all progressive ban levels (guard) |
+| `--reset-offenses` | | `false` | Also forget history when manually unbanning an IP (unban) |
 | `--never-block` | | `""` | Comma-separated IPs/CIDRs that should never be blocked (guard) |
 | `--never-block-file` | | `""` | File with IPs/CIDRs (one per line, `#` comments) to never block (guard) |
 | `--protect-self` | | `true` | Automatically protect the server's interface and public egress IPs, including dynamic addresses (guard) |

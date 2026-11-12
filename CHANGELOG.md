@@ -5,6 +5,11 @@ All notable changes to `caddy-analyzer` will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+- **Progressive bans (#109)**: opt-in `guard --ban-escalation` increases repeat-offender bans from the base duration to at least 1h, 24h, and 168h, with configurable retention and maximum duration. Persist offender history separately from active bans, expose list/show/reset commands, and optionally clear history with `unban --reset-offenses`. Dry-run simulates escalation without writing history.
+
 ## [0.8.1] - 2026-10-19
 
 ### Fixed

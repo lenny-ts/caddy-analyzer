@@ -16,6 +16,7 @@ var unbanCmd = &cobra.Command{
 
 Manual unbans are also reflected in the guard state file (if --state-file is
 set) so the guard does not re-block the IP on restart.
+Offender history is preserved by default. Use --reset-offenses to forget it too.
 
 Examples:
   caddy-analyze unban 192.168.1.1
@@ -27,11 +28,12 @@ Examples:
 }
 
 var (
-	unbanAll       bool
-	unbanList      bool
-	unbanAuditLog  string
-	unbanStateFile string
-	unbanNotify    auditNotifyFlags
+	unbanAll           bool
+	unbanList          bool
+	unbanAuditLog      string
+	unbanStateFile     string
+	unbanResetOffenses bool
+	unbanNotify        auditNotifyFlags
 )
 
 func init() {
@@ -40,12 +42,16 @@ func init() {
 	unbanCmd.Flags().StringVarP(&unbanAuditLog, "audit-log", "", "/var/log/caddy-analyzer-audit.jsonl", "Audit log path (empty to disable)")
 	unbanNotify.addRest(unbanCmd)
 	unbanCmd.Flags().StringVarP(&unbanStateFile, "state-file", "", "/var/lib/caddy-analyzer/blocked.json", "Guard state file to sync manual unbans (empty to disable)")
+	unbanCmd.Flags().BoolVar(&unbanResetOffenses, "reset-offenses", false, "Also forget offender history for successfully unbanned IPs")
 	rootCmd.AddCommand(unbanCmd)
 }
 
 func runUnban(cmd *cobra.Command, args []string) error {
 	if unbanAll && unbanList {
 		return fmt.Errorf("--all and --list are mutually exclusive")
+	}
+	if unbanResetOffenses && (unbanList || unbanStateFile == "") {
+		return fmt.Errorf("--reset-offenses requires --state-file and cannot be combined with --list")
 	}
 	if os.Geteuid() != 0 {
 		return fmt.Errorf("requires root: run with sudo")
@@ -90,6 +96,13 @@ func unblockIPs(ips []string, al interface {
 		if unbanStateFile != "" {
 			if err := guard.RemoveBlockFromState(unbanStateFile, ip); err != nil {
 				fmt.Fprintf(os.Stderr, "  ⚠ %s: state sync: %v\n", ip, err)
+				hadErr = true
+			}
+			if unbanResetOffenses {
+				if err := guard.ResetOffender(unbanStateFile, ip); err != nil {
+					fmt.Fprintf(os.Stderr, "  ⚠ %s: reset offenses: %v\n", ip, err)
+					hadErr = true
+				}
 			}
 		}
 	}
