@@ -104,8 +104,11 @@ another successful ban; `--ban-reset-after` also accepts Go durations such as
 subnet bans. Failed or allowlisted decisions do not count as offenses.
 
 History survives restarts in `<state-file>.offenders/`, with an atomic, private
-JSON file per IP/CIDR. The existing active-ban state format is unchanged; back up
-both locations. Expired history is ignored and pruned during guard ticks.
+JSON file per IP/CIDR. Active-ban state remains backward-compatible and stores
+optional duration metadata so unblock audits retain the effective duration even
+after a restart or history reset. Legacy entries without metadata fall back to
+the configured base duration. Back up both locations. Expired history is ignored
+and pruned during guard ticks.
 Use the same `--state-file` on history commands when overriding its default.
 Run only one guard per state file. A history reset is read before the next ban
 and does not remove an active ban; manual `unban` preserves history unless

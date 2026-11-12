@@ -274,6 +274,7 @@ type Guard struct {
 	expCh          chan expiryEntry
 	state          *stateFile
 	expiries       map[string]time.Time
+	banDurations   map[string]time.Duration
 	allowlist      []*net.IPNet
 	selfIPs        []net.IP
 	selfMu         sync.RWMutex
@@ -533,6 +534,7 @@ func New(cfg Config) *Guard {
 		expCh:          make(chan expiryEntry, 50000),
 		state:          sf,
 		expiries:       make(map[string]time.Time),
+		banDurations:   make(map[string]time.Duration),
 		allowlist:      parseCIDRList(cfg.NeverBlock),
 		detectCounts:   make(map[string]int),
 		dryOffenders:   make(map[string]Offender),
@@ -663,6 +665,7 @@ func (g *Guard) loadState() {
 			// Keep failed removals tracked for retry; never recreate this ban.
 			g.blocked[e.IP] = true
 			g.expiries[e.IP] = e.When
+			g.banDurations[e.IP] = e.Duration
 		case e.When.IsZero():
 			// Permanent block: always restore, regardless of current duration.
 			g.blocked[e.IP] = true
@@ -695,7 +698,11 @@ func (g *Guard) loadState() {
 				if g.cfg.DryRun {
 					action = "would_unblock"
 				}
-				g.cfg.OnAudit(action, e.IP, "expired during downtime", g.cfg.BlockDuration.String())
+				duration := e.Duration
+				if duration <= 0 {
+					duration = g.cfg.BlockDuration // Legacy state has no duration metadata.
+				}
+				g.cfg.OnAudit(action, e.IP, "expired during downtime", duration.String())
 			}
 		default:
 			g.blocked[e.IP] = true
@@ -706,6 +713,7 @@ func (g *Guard) loadState() {
 				}
 			}
 			g.expiries[e.IP] = e.When
+			g.banDurations[e.IP] = e.Duration
 			g.initial = append(g.initial, expiryEntry{ip: e.IP, when: e.When})
 		}
 	}
@@ -736,7 +744,7 @@ func (g *Guard) saveState() {
 	g.mu.Lock()
 	entries := make([]stateEntry, 0, len(g.expiries))
 	for ip, when := range g.expiries {
-		entries = append(entries, stateEntry{IP: ip, When: when})
+		entries = append(entries, stateEntry{IP: ip, When: when, Duration: g.banDurations[ip]})
 	}
 	permanent := make([]stateEntry, 0)
 	for ip := range g.blocked {
@@ -844,6 +852,7 @@ func (g *Guard) removeBlocked(ip string) {
 	g.mu.Lock()
 	defer g.mu.Unlock()
 	delete(g.blocked, ip)
+	delete(g.banDurations, ip)
 	// If ip is a CIDR (subnet block), also remove it from blockedSubnets so
 	// IsBlocked stops matching individual hosts inside that subnet.
 	if _, ipnet, err := net.ParseCIDR(ip); err == nil {
@@ -1155,6 +1164,7 @@ func (g *Guard) block(ctx context.Context, c Candidate, now time.Time) bool {
 		expiry := now.Add(duration)
 		g.mu.Lock()
 		g.expiries[c.IP] = expiry
+		g.banDurations[c.IP] = duration
 		g.mu.Unlock()
 		select {
 		case g.expCh <- expiryEntry{ip: c.IP, when: expiry}:
@@ -1199,7 +1209,11 @@ func (g *Guard) runExpiryLoop(ctx context.Context) {
 				e := heap.Pop(&h).(expiryEntry)
 				g.mu.Lock()
 				expiry, tracked := g.expiries[e.ip]
+				duration := g.banDurations[e.ip]
 				g.mu.Unlock()
+				if duration <= 0 {
+					duration = g.cfg.BlockDuration // Legacy state or callers without metadata.
+				}
 				if !tracked || expiry.After(e.when) {
 					continue // Removed by self-IP protection or superseded by a new ban.
 				}
@@ -1221,7 +1235,7 @@ func (g *Guard) runExpiryLoop(ctx context.Context) {
 					if g.cfg.DryRun {
 						action = "would_unblock"
 					}
-					g.cfg.OnAudit(action, e.ip, "block duration expired", g.cfg.BlockDuration.String())
+					g.cfg.OnAudit(action, e.ip, "block duration expired", duration.String())
 				}
 			}
 			for _, e := range requeue {

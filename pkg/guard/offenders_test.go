@@ -258,6 +258,14 @@ func TestEscalationRunExpiryRequiresAnotherRequest(t *testing.T) {
 	}
 	lines <- line
 	waitEvent("block", "40ms")
+	select {
+	case e := <-events:
+		if e.action != "unblock" || e.duration != "40ms" {
+			t.Fatalf("unblock audit lost escalated duration: %+v", e)
+		}
+	case <-time.After(3 * time.Second):
+		t.Fatal("timed out waiting for escalated ban expiry")
+	}
 }
 
 func TestManualUnbanPreservesOffenderHistory(t *testing.T) {

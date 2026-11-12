@@ -10,8 +10,9 @@ import (
 )
 
 type stateEntry struct {
-	IP   string    `json:"ip"`
-	When time.Time `json:"when"`
+	IP       string        `json:"ip"`
+	When     time.Time     `json:"when"`
+	Duration time.Duration `json:"duration,omitempty"`
 }
 
 type stateFile struct {
