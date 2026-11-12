@@ -22,6 +22,7 @@ import (
 var (
 	guardLimit             int
 	guardWindow            string
+	guardEvalInterval      string
 	guardDuration          string
 	guardAuthLimit         int
 	guardNotFoundLimit     int
@@ -54,6 +55,8 @@ func init() {
 	guardCmd.Flags().DurationVar(&flagIPTablesTimeout, "iptables-timeout", 10*time.Second,
 		"Timeout for each iptables invocation. Raise it for a huge ruleset on a busy box")
 	guardCmd.Flags().StringVarP(&guardWindow, "window", "w", "1m", "Monitoring time window")
+	guardCmd.Flags().StringVarP(&guardEvalInterval, "eval-interval", "", guard.DefaultEvalInterval.String(),
+		"How often to evaluate blocking thresholds (capped at --window)")
 	guardCmd.Flags().StringVarP(&guardDuration, "duration", "d", "10m", "Block duration (e.g. 10m, 1h). 0 = permanent")
 	guardCmd.Flags().IntVarP(&guardAuthLimit, "auth-limit", "", 10, "Max auth failures (401/403) before blocking (0 disables)")
 	guardCmd.Flags().IntVarP(&guardNotFoundLimit, "notfound-limit", "", 50, "Max not found (404) before blocking (0 disables)")
@@ -133,6 +136,14 @@ func runGuard(cmd *cobra.Command, args []string) error {
 	}
 	if window <= 0 {
 		return fmt.Errorf("--window must be > 0")
+	}
+
+	evalInterval, err := time.ParseDuration(guardEvalInterval)
+	if err != nil {
+		return fmt.Errorf("invalid eval-interval: %w", err)
+	}
+	if evalInterval <= 0 {
+		return fmt.Errorf("--eval-interval must be > 0")
 	}
 
 	duration, err := time.ParseDuration(guardDuration)
@@ -311,6 +322,7 @@ func runGuard(cmd *cobra.Command, args []string) error {
 		AuthLimit:           guardAuthLimit,
 		NotFoundLimit:       guardNotFoundLimit,
 		Window:              window,
+		EvalInterval:        evalInterval,
 		BlockDuration:       duration,
 		DetectionConfidence: guardDetectConfidence,
 		IPValidator:         validateIP,
