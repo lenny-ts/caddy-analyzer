@@ -84,6 +84,47 @@ Discovery errors at startup and during operation include the instruction to rest
 
 ---
 
+Guard checks thresholds every second by default (`--eval-interval`), capped at
+`--window`. The counting window and its reset cadence remain independent of the
+evaluation interval. Successful bans consume the evidence that caused them, so
+old traffic cannot trigger another ban after expiry; failed bans retain their
+evidence for retry. Anomaly RPS uses actual elapsed sample time, including delays
+from firewall operations.
+
+### Progressive bans (opt-in)
+
+```bash
+sudo caddy-analyze guard /var/log/caddy/access.log \
+  --ban-escalation --ban-reset-after 30d --max-ban-duration 168h
+sudo caddy-analyze guard offenders
+sudo caddy-analyze guard offender show 203.0.113.10
+sudo caddy-analyze guard offender reset 203.0.113.10
+sudo caddy-analyze unban 203.0.113.10 --reset-offenses
+```
+
+The first successful automatic ban uses `--duration` (default 10m). Repeat bans
+use at least 1h, 24h, then 168h; the base duration is never reduced except by
+`--max-ban-duration`, which caps every level. History resets after 30 days without
+another successful ban; `--ban-reset-after` also accepts Go durations such as
+`720h`. Escalation requires a finite positive `--duration` and a non-empty
+`--state-file`. It applies to all firewall backends, feed/country matches, and
+subnet bans. Failed or allowlisted decisions do not count as offenses.
+
+History survives restarts in `<state-file>.offenders/`, with an atomic, private
+JSON file per IP/CIDR. Active-ban state remains backward-compatible and stores
+optional duration metadata so unblock audits retain the effective duration even
+after a restart or history reset. Legacy entries without metadata fall back to
+the configured base duration. Back up both locations. Expired history is ignored
+and pruned during guard ticks.
+Use the same `--state-file` on history commands when overriding its default.
+Run only one guard per state file. A history reset is read before the next ban
+and does not remove an active ban; manual `unban` preserves history unless
+`--reset-offenses` is given. As with existing manual unban state synchronization,
+restart a running guard after a manual unban to synchronize its in-memory bans.
+`--dry-run` reads existing history but simulates new offenses only in memory.
+History I/O errors are reported; corrupt history is never overwritten and the
+base ban still protects the server, capped by `--max-ban-duration`.
+
 ## Quick Start
 
 ```bash
@@ -277,6 +318,51 @@ control over the Docker daemon.
 
 ---
 
+## Behavioral authentication-abuse detection
+
+Enable in `caddy-analyzer.json` (or `~/.config/caddy-analyzer/config.json`):
+
+```json
+{
+  "behavioral_detection": {
+    "auth_abuse": {
+      "enabled": true,
+      "block": false,
+      "endpoints": ["/login", "/api/login", "/wp-login.php"],
+      "failure_statuses": [401, 403],
+      "brute_force": {"failures": 10, "window": "1m"},
+      "credential_stuffing": {"failures": 20, "unique_uas": 5, "window": "1m"},
+      "password_spray": {"failures": 100, "unique_ips": 20, "window": "5m"}
+    }
+  }
+}
+```
+
+Use `--detect` for reports and tail, or run `guard` for audit alerts.
+Endpoints are exact, case-sensitive decoded paths (query strings ignored),
+separated by request host. Failure statuses must be 400–599. Omitted scenarios
+use the defaults above; disable one with `"failures": 0` and its `"window"`.
+Windows must be positive and at most 24h. Each failure threshold is at most
+100,000; distinct-IP/UA thresholds must be between 2 and that failure threshold.
+
+All categories are **suspected** abuse, high severity (confidence 7), not proof
+of compromised accounts. Credential stuffing uses failed requests plus distinct
+User-Agents; usernames/passwords are not extracted. Spraying is an aggregate
+alert, shown under `aggregate` in reports, never an individual-IP ban.
+Reports include failure counts, endpoint, window, status codes and distinct
+IP/UA counts. Offline windows use log timestamps; Guard uses receipt time and
+retains evidence across its normal window resets.
+
+`"block": true` opts Guard into blocking per-IP brute-force/stuffing detections,
+with the existing allowlist, self-IP protection, dry-run and ban lifecycle.
+It is independent of `--detect-confidence`. Existing `--auth-limit` remains a
+separate 401/403 threshold across **all** paths; set it to `0` if only the new
+endpoint-scoped behavior is wanted. Other Guard blocking rules remain active.
+At most 100,000 failures are retained per enabled scenario (300,000 with all
+three enabled). Counts and distinct User-Agents remain exact within that budget;
+new evidence for a scenario is dropped when its budget is full until failures
+expire. Each scenario expires its own rolling window independently.
+
 ## Documentation
 
 The full documentation is available at **[lenny-ts.github.io/caddy-analyzer](https://lenny-ts.github.io/caddy-analyzer/)**. Use the focused pages below when you need a specific workflow:
@@ -378,6 +464,11 @@ returned as a command error.
 | `--audit-timeout` / `--audit-retries` | | `5s` / `2` | Per-delivery timeout and bounded retries (maximum 5) |
 | `--audit-rate-limit` | | `0` | Minimum interval between notifications for the same IP; `0` disables |
 | `--state-file` | | `/var/lib/caddy-analyzer/blocked.json` | Persist blocked-IP state across restarts (guard/block/unban). Empty to disable |
+| `--ban-escalation` | | `false` | Enable persistent progressive bans for repeat offenders (guard) |
+| `--eval-interval` | | `1s` | How often to evaluate guard thresholds, capped at `--window` |
+| `--ban-reset-after` | | `30d` | Forget offender history after this period; accepts days or Go durations (guard) |
+| `--max-ban-duration` | | `168h` | Cap all progressive ban levels (guard) |
+| `--reset-offenses` | | `false` | Also forget history when manually unbanning an IP (unban) |
 | `--never-block` | | `""` | Comma-separated IPs/CIDRs that should never be blocked (guard) |
 | `--never-block-file` | | `""` | File with IPs/CIDRs (one per line, `#` comments) to never block (guard) |
 | `--protect-self` | | `true` | Automatically protect the server's interface and public egress IPs, including dynamic addresses (guard) |

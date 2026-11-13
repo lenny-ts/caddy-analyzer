@@ -112,14 +112,24 @@ func (e *Engine) Process(entry *types.LogEntry) {
 
 	if e.detector != nil {
 		if dets := e.detector.DetectAll(entry); len(dets) > 0 {
-			e.stats.SuspiciousIPs[entry.RemoteIP]++
+			seen := make(map[string]bool)
 			for _, det := range dets {
-				detail := fmt.Sprintf("[%s] %s %s → %s", det.Type, det.Desc, entry.Method, entry.Path())
-				if len(e.stats.SuspiciousDetails[entry.RemoteIP]) < 10 {
-					e.stats.SuspiciousDetails[entry.RemoteIP] = append(e.stats.SuspiciousDetails[entry.RemoteIP], detail)
+				// Per-request categories share the traffic counters' source key,
+				// even when the auth tracker canonicalizes an IPv6 spelling.
+				ip := entry.RemoteIP
+				if det.IP == "" {
+					ip = "aggregate"
 				}
-				if len(e.stats.SuspiciousDetections[entry.RemoteIP]) < 50 {
-					e.stats.SuspiciousDetections[entry.RemoteIP] = append(e.stats.SuspiciousDetections[entry.RemoteIP], types.DetectionRecord{
+				if !seen[ip] {
+					e.stats.SuspiciousIPs[ip]++
+					seen[ip] = true
+				}
+				detail := fmt.Sprintf("[%s] %s %s → %s", det.Type, det.Desc, entry.Method, entry.Path())
+				if len(e.stats.SuspiciousDetails[ip]) < 10 {
+					e.stats.SuspiciousDetails[ip] = append(e.stats.SuspiciousDetails[ip], detail)
+				}
+				if len(e.stats.SuspiciousDetections[ip]) < 50 {
+					e.stats.SuspiciousDetections[ip] = append(e.stats.SuspiciousDetections[ip], types.DetectionRecord{
 						Type:       string(det.Type),
 						Desc:       det.Desc,
 						Confidence: det.Confidence,

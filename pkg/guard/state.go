@@ -10,8 +10,9 @@ import (
 )
 
 type stateEntry struct {
-	IP   string    `json:"ip"`
-	When time.Time `json:"when"`
+	IP       string        `json:"ip"`
+	When     time.Time     `json:"when"`
+	Duration time.Duration `json:"duration,omitempty"`
 }
 
 type stateFile struct {
@@ -24,30 +25,41 @@ func newStateFile(path string) *stateFile {
 }
 
 func (s *stateFile) load() ([]stateEntry, error) {
-	if s == nil || s.path == "" {
-		return nil, nil
-	}
-	data, err := os.ReadFile(s.path)
-	if err != nil {
-		if os.IsNotExist(err) {
-			return nil, nil
-		}
-		return nil, err
-	}
 	var entries []stateEntry
-	if err := json.Unmarshal(data, &entries); err != nil {
-		return nil, fmt.Errorf("invalid state json: %w", err)
+	if err := s.loadJSON(&entries); err != nil {
+		return nil, err
 	}
 	return entries, nil
 }
 
+func (s *stateFile) loadJSON(value any) error {
+	if s == nil || s.path == "" {
+		return nil
+	}
+	data, err := os.ReadFile(s.path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil
+		}
+		return err
+	}
+	if err := json.Unmarshal(data, value); err != nil {
+		return fmt.Errorf("invalid state json: %w", err)
+	}
+	return nil
+}
+
 func (s *stateFile) saveEntries(entries []stateEntry) error {
+	return s.saveJSON(entries)
+}
+
+func (s *stateFile) saveJSON(value any) error {
 	if s == nil || s.path == "" {
 		return nil
 	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	data, err := json.MarshalIndent(entries, "", "  ")
+	data, err := json.MarshalIndent(value, "", "  ")
 	if err != nil {
 		return err
 	}

@@ -8,8 +8,28 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/lenny-ts/caddy-analyzer/pkg/analysis"
 	"github.com/lenny-ts/caddy-analyzer/pkg/blocklist"
 )
+
+func TestLoadAuthAbuseConfig(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "config.json")
+	data := `{"behavioral_detection":{"auth_abuse":{"enabled":true,"block":true,"endpoints":["/auth"],"failure_statuses":[429],"brute_force":{"failures":4,"window":"30s"}}}}`
+	if err := os.WriteFile(path, []byte(data), 0600); err != nil {
+		t.Fatal(err)
+	}
+	cfg, err := loadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.BehavioralDetection == nil {
+		t.Fatal("missing behavioral config")
+	}
+	auth, err := analysis.NewAuthAbuseDetector(cfg.BehavioralDetection.AuthAbuse)
+	if err != nil || !auth.BlockingEnabled() {
+		t.Fatalf("config not applied: %v", err)
+	}
+}
 
 func TestCreateDefault(t *testing.T) {
 	if runtime.GOOS == "windows" {
