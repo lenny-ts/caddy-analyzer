@@ -191,11 +191,17 @@ func parseBlockedIPs(output string) []string {
 	return ips
 }
 
+// DefaultEvalInterval is how often thresholds are evaluated when the
+// configured eval interval is unset. The sliding window still controls how
+// far back requests are counted.
+const DefaultEvalInterval = time.Second
+
 type Config struct {
 	Limit               int
 	AuthLimit           int
 	NotFoundLimit       int
 	Window              time.Duration
+	EvalInterval        time.Duration
 	BlockDuration       time.Duration
 	BanEscalation       bool
 	BanResetAfter       time.Duration
@@ -972,8 +978,9 @@ type Candidate struct {
 	Why   string
 }
 
-func (g *Guard) Tick(ctx context.Context) []Candidate {
-	now := time.Now()
+// evaluate checks every configured threshold against the current sliding
+// window and pattern-detection counters. It does not reset per-window state.
+func (g *Guard) evaluate(ctx context.Context, now time.Time) []Candidate {
 	g.sliding.expire(now)
 
 	var candidates []Candidate
@@ -1021,16 +1028,6 @@ func (g *Guard) Tick(ctx context.Context) []Candidate {
 		}
 	}
 
-	// Credential stuffing: alert when many distinct IPs fail auth on the same path.
-	// Alert-only (audit log) — iptables blocks IPs, not paths.
-	if g.cfg.CredStuffingLimit > 0 {
-		for _, cs := range g.sliding.credStuffingCandidates(g.cfg.CredStuffingLimit) {
-			if g.cfg.OnAudit != nil {
-				g.cfg.OnAudit("cred_stuffing", "-", fmt.Sprintf("%d distinct IPs failing auth on %s", cs.IPCount, cs.Path), g.cfg.BlockDuration.String())
-			}
-		}
-	}
-
 	sort.Slice(candidates, func(i, j int) bool {
 		return candidates[i].Count > candidates[j].Count
 	})
@@ -1050,6 +1047,23 @@ func (g *Guard) Tick(ctx context.Context) []Candidate {
 		}
 	}
 
+	return blocked
+}
+
+// resetWindow clears per-window detector state and updates the anomaly
+// baseline. It runs after evaluate so no detection is dropped at the boundary.
+// elapsed is the actual sample duration, including time spent applying bans.
+func (g *Guard) resetWindow(now time.Time, elapsed time.Duration) {
+	// Credential stuffing: alert when many distinct IPs fail auth on the same path.
+	// Alert-only (audit log) — iptables blocks IPs, not paths.
+	if g.cfg.CredStuffingLimit > 0 {
+		for _, cs := range g.sliding.credStuffingCandidates(g.cfg.CredStuffingLimit) {
+			if g.cfg.OnAudit != nil {
+				g.cfg.OnAudit("cred_stuffing", "-", fmt.Sprintf("%d distinct IPs failing auth on %s", cs.IPCount, cs.Path), g.cfg.BlockDuration.String())
+			}
+		}
+	}
+
 	g.mu.Lock()
 	g.detector = analysis.NewDetectorWithPatterns(g.cfg.CustomPatterns)
 	if g.cfg.UARotationThreshold > 0 {
@@ -1061,8 +1075,14 @@ func (g *Guard) Tick(ctx context.Context) []Candidate {
 	g.mu.Unlock()
 	g.sliding.resetAuthFailPaths()
 
-	g.detectAnomaly()
+	g.detectAnomaly(elapsed)
 	g.pruneOffenders(now)
+}
+
+func (g *Guard) Tick(ctx context.Context) []Candidate {
+	now := time.Now()
+	blocked := g.evaluate(ctx, now)
+	g.resetWindow(now, g.cfg.Window)
 
 	// Flush any debounced state at the end of the tick so blocks from this
 	// tick are persisted even under low block volume.
@@ -1077,12 +1097,12 @@ func (g *Guard) Tick(ctx context.Context) []Candidate {
 // the current window's RPS exceeds AnomalyFactor × baseline. This catches
 // volumetric spikes / DDoS that per-IP thresholds miss. Alert-only: blocking
 // individual hosts is the wrong tool for a distributed flood.
-func (g *Guard) detectAnomaly() {
+func (g *Guard) detectAnomaly(elapsed time.Duration) {
 	reqs := g.tickReqs.Swap(0)
-	if g.cfg.Window <= 0 {
+	if elapsed <= 0 {
 		return
 	}
-	currentRPS := float64(reqs) / g.cfg.Window.Seconds()
+	currentRPS := float64(reqs) / elapsed.Seconds()
 	const alpha = 0.3
 	const minBaseline = 1.0
 	if !g.ewmaInit {
@@ -1139,8 +1159,10 @@ func (g *Guard) block(ctx context.Context, c Candidate, now time.Time) bool {
 			g.recordOffense(offender)
 			c.Why = fmt.Sprintf("%s; offense #%d", c.Why, offender.Offenses)
 		}
-		g.forgetOffense(c.IP)
 	}
+	// Consume threshold and pattern evidence only after a successful ban,
+	// regardless of escalation. Failed blocks keep their evidence for retry.
+	g.forgetOffense(c.IP)
 	// Track subnet blocks so IsBlocked short-circuits individual hosts in a
 	// blocked /24 without re-evaluating them on every request.
 	if _, ipnet, err := net.ParseCIDR(c.IP); err == nil {
@@ -1252,6 +1274,17 @@ func (g *Guard) runExpiryLoop(ctx context.Context) {
 	}
 }
 
+func (g *Guard) evalInterval() time.Duration {
+	interval := g.cfg.EvalInterval
+	if interval <= 0 {
+		interval = DefaultEvalInterval
+	}
+	if g.cfg.Window > 0 && interval > g.cfg.Window {
+		interval = g.cfg.Window
+	}
+	return interval
+}
+
 func (g *Guard) Run(ctx context.Context, linesCh <-chan string, logf func(string, ...interface{})) {
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
@@ -1273,13 +1306,39 @@ func (g *Guard) Run(ctx context.Context, linesCh <-chan string, logf func(string
 		}()
 	}
 
-	ticker := time.NewTicker(g.cfg.Window)
+	ticker := time.NewTicker(g.evalInterval())
 	defer ticker.Stop()
+
+	// The window boundary runs on its own deadline rather than piggy-backing
+	// on evaluation ticks. Otherwise a tick interval that does not divide the
+	// window (e.g. 40s ticks for a 1m window) stretches resets and every
+	// per-window counter past their configured duration.
+	window := g.cfg.Window
+	sampleStart := time.Now()
+	nextWindow := sampleStart.Add(window)
+	var windowTimer *time.Timer
+	var windowTick <-chan time.Time
+	if window > 0 {
+		windowTimer = time.NewTimer(time.Until(nextWindow))
+		windowTick = windowTimer.C
+		defer windowTimer.Stop()
+	}
+
 	var selfTick <-chan time.Time
 	if g.cfg.SelfIPLookup != nil {
 		selfTicker := time.NewTicker(30 * time.Second)
 		defer selfTicker.Stop()
 		selfTick = selfTicker.C
+	}
+
+	logBlocked := func(now time.Time, blocked []Candidate) {
+		for _, c := range blocked {
+			verb := "blocked"
+			if g.cfg.DryRun {
+				verb = "would be blocked"
+			}
+			logf("[%s] + %s %s (%s)\n", now.Format("15:04:05"), c.IP, verb, c.Why)
+		}
 	}
 
 	for {
@@ -1301,15 +1360,33 @@ func (g *Guard) Run(ctx context.Context, linesCh <-chan string, logf func(string
 			}
 
 		case <-ticker.C:
-			blocked := g.Tick(ctx)
 			now := time.Now()
-			for _, c := range blocked {
-				verb := "blocked"
-				if g.cfg.DryRun {
-					verb = "would be blocked"
-				}
-				logf("[%s] + %s %s (%s)\n", now.Format("15:04:05"), c.IP, verb, c.Why)
+			logBlocked(now, g.evaluate(ctx, now))
+			if window <= 0 {
+				g.resetWindow(now, window)
 			}
+			if g.dirty.Load() {
+				g.saveState()
+			}
+
+		case <-windowTick:
+			evalNow := time.Now()
+			logBlocked(evalNow, g.evaluate(ctx, evalNow))
+			// Measure elapsed windows after evaluation too: a slow block
+			// attempt must not make the next reset lose entire windows.
+			now := time.Now()
+			windows := int64(1)
+			if !now.Before(nextWindow) {
+				windows = int64(now.Sub(nextWindow)/window) + 1
+			}
+			g.resetWindow(now, now.Sub(sampleStart))
+			sampleStart = now
+			nextWindow = nextWindow.Add(time.Duration(windows) * window)
+			windowTimer.Reset(time.Until(nextWindow))
+			if g.dirty.Load() {
+				g.saveState()
+			}
+
 		case <-selfTick:
 			g.refreshSelfIPs(ctx)
 

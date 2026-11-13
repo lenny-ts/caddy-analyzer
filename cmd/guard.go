@@ -23,6 +23,7 @@ import (
 var (
 	guardLimit             int
 	guardWindow            string
+	guardEvalInterval      string
 	guardDuration          string
 	guardBanEscalation     bool
 	guardBanResetAfter     string
@@ -58,6 +59,8 @@ func init() {
 	guardCmd.Flags().DurationVar(&flagIPTablesTimeout, "iptables-timeout", 10*time.Second,
 		"Timeout for each iptables invocation. Raise it for a huge ruleset on a busy box")
 	guardCmd.Flags().StringVarP(&guardWindow, "window", "w", "1m", "Monitoring time window")
+	guardCmd.Flags().StringVarP(&guardEvalInterval, "eval-interval", "", guard.DefaultEvalInterval.String(),
+		"How often to evaluate blocking thresholds (capped at --window)")
 	guardCmd.Flags().StringVarP(&guardDuration, "duration", "d", "10m", "Block duration (e.g. 10m, 1h). 0 = permanent")
 	guardCmd.Flags().BoolVar(&guardBanEscalation, "ban-escalation", false, "Progressively increase repeat-offender bans (requires persistent state and a finite --duration)")
 	guardCmd.Flags().StringVar(&guardBanResetAfter, "ban-reset-after", "30d", "Forget offender history after this period (supports days, e.g. 30d or 720h)")
@@ -110,6 +113,8 @@ Self-ban protection (enabled by default):
   • Remote administrators on another connection need their own --never-block entry
 
 Set any threshold to 0 to disable it. Blockade is temporary (default 10m).
+Thresholds are checked every --eval-interval (default 1s, capped at --window).
+The counting window and per-window resets remain independent of this cadence.
 For permanent block: --duration 0. Rules live in the CADDY_ANALYZER iptables
 chain: unban only touches rules created by caddy-analyzer.
 To unblock manually: caddy-analyze unban <ip> or --all.
@@ -148,6 +153,14 @@ func runGuard(cmd *cobra.Command, args []string) error {
 	}
 	if window <= 0 {
 		return fmt.Errorf("--window must be > 0")
+	}
+
+	evalInterval, err := time.ParseDuration(guardEvalInterval)
+	if err != nil {
+		return fmt.Errorf("invalid eval-interval: %w", err)
+	}
+	if evalInterval <= 0 {
+		return fmt.Errorf("--eval-interval must be > 0")
 	}
 
 	duration, err := time.ParseDuration(guardDuration)
@@ -339,6 +352,7 @@ func runGuard(cmd *cobra.Command, args []string) error {
 		AuthLimit:           guardAuthLimit,
 		NotFoundLimit:       guardNotFoundLimit,
 		Window:              window,
+		EvalInterval:        evalInterval,
 		BlockDuration:       duration,
 		BanEscalation:       guardBanEscalation,
 		BanResetAfter:       resetAfter,
