@@ -71,3 +71,45 @@ func TestGuardPasswordSprayIsAlertOnly(t *testing.T) {
 		t.Fatalf("want alert without blocks, got %v, alert=%v", got, spray)
 	}
 }
+
+func TestGuardSubnetBanConsumesAuthEvidence(t *testing.T) {
+	auth, err := analysis.NewAuthAbuseDetector(analysis.AuthAbuseConfig{Enabled: true, Block: true,
+		BruteForce: analysis.AuthThreshold{Failures: 3, Window: "1m"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	g := New(Config{Window: time.Minute, AuthAbuse: auth, Blocker: newFakeBlocker()})
+	for i := 0; i < 3; i++ {
+		g.Evaluate(caddyLine("203.0.113.1", "/login", "POST", 401))
+	}
+	if !g.block(context.Background(), Candidate{IP: "203.0.113.0/24", Why: "distributed scan"}, time.Now()) {
+		t.Fatal("subnet ban failed")
+	}
+	g.removeBlocked("203.0.113.0/24")
+	if got := g.Tick(context.Background()); len(got) != 0 {
+		t.Fatalf("subnet unban triggered stale per-IP ban: %v", got)
+	}
+}
+
+func TestGuardAuthAbuseCanonicalIP(t *testing.T) {
+	auth, err := analysis.NewAuthAbuseDetector(analysis.AuthAbuseConfig{Enabled: true, Block: true,
+		BruteForce: analysis.AuthThreshold{Failures: 3, Window: "1m"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	g := New(Config{Window: time.Minute, AuthAbuse: auth, Blocker: newFakeBlocker()})
+	for _, ip := range []string{"2001:db8::1", "2001:db8:0:0:0:0:0:1", "2001:db8::1"} {
+		g.Evaluate(caddyLine(ip, "/login", "POST", 401))
+	}
+	if got := g.Tick(context.Background()); len(got) != 1 {
+		t.Fatalf("IP spellings split evidence: %v", got)
+	}
+	if !g.IsBlocked("2001:db8:0:0:0:0:0:1") {
+		t.Fatal("expanded IP bypasses ban lookup")
+	}
+	before := g.Engine().Count()
+	g.Evaluate(caddyLine("2001:db8:0:0:0:0:0:1", "/login", "POST", 401))
+	if g.Engine().Count() != before {
+		t.Fatal("blocked IP added fresh evidence")
+	}
+}

@@ -1,6 +1,7 @@
 package analysis
 
 import (
+	"container/heap"
 	"fmt"
 	"net"
 	"net/url"
@@ -40,21 +41,81 @@ type AuthAbuseConfig struct {
 type authKey struct{ host, path, ip string }
 type authFailure struct {
 	at     time.Time
+	key    authKey
 	status int
 	ua     string
+}
+
+type authFailures []authFailure
+
+func (h authFailures) Len() int           { return len(h) }
+func (h authFailures) Less(i, j int) bool { return h[i].at.Before(h[j].at) }
+func (h authFailures) Swap(i, j int)      { h[i], h[j] = h[j], h[i] }
+func (h *authFailures) Push(x any)        { *h = append(*h, x.(authFailure)) }
+func (h *authFailures) Pop() any {
+	old := *h
+	event := old[len(old)-1]
+	old[len(old)-1] = authFailure{}
+	*h = old[:len(old)-1]
+	return event
+}
+
+type authEvidence struct {
+	count    int
+	ips, uas map[string]int
+	statuses map[int]int
+}
+
+// Each scenario expires its own evidence and maintains counts incrementally.
+// Heap ordering also supports out-of-order records without sorting each ingest.
+type authWindow struct {
+	duration  time.Duration
+	aggregate bool
+	events    authFailures
+	counts    map[authKey]*authEvidence
+}
+
+func (w *authWindow) group(key authKey) authKey {
+	if w.aggregate {
+		key.ip = ""
+	}
+	return key
+}
+
+func (w *authWindow) adjust(e authFailure, delta int) {
+	key := w.group(e.key)
+	counts := w.counts[key]
+	if counts == nil {
+		counts = &authEvidence{ips: make(map[string]int), uas: make(map[string]int), statuses: make(map[int]int)}
+		w.counts[key] = counts
+	}
+	counts.count += delta
+	if counts.count == 0 {
+		delete(w.counts, key)
+		return
+	}
+	counts.ips[e.key.ip] += delta
+	if counts.ips[e.key.ip] == 0 {
+		delete(counts.ips, e.key.ip)
+	}
+	if e.ua != "" {
+		counts.uas[e.ua] += delta
+		if counts.uas[e.ua] == 0 {
+			delete(counts.uas, e.ua)
+		}
+	}
+	counts.statuses[e.status] += delta
+	if counts.statuses[e.status] == 0 {
+		delete(counts.statuses, e.status)
+	}
 }
 
 // AuthAbuseDetector retains bounded failure evidence, independently of report
 // and Guard reset cadence. Like Detector, it is used by a single ingest loop.
 type AuthAbuseDetector struct {
-	cfg        AuthAbuseConfig
-	windows    [3]time.Duration
-	maxWindow  time.Duration
-	maxSamples int
-	samples    int
-	now        time.Time
-	pruned     time.Time
-	failures   map[authKey][]authFailure
+	cfg     AuthAbuseConfig
+	windows [3]*authWindow
+	now     time.Time
 }
 
 // NewSession creates independent evidence storage with the validated settings.
@@ -63,8 +124,12 @@ func (d *AuthAbuseDetector) NewSession() *AuthAbuseDetector {
 		return nil
 	}
 	copy := *d
-	copy.now, copy.pruned, copy.samples = time.Time{}, time.Time{}, 0
-	copy.failures = make(map[authKey][]authFailure)
+	copy.now = time.Time{}
+	for i, window := range d.windows {
+		if window != nil {
+			copy.windows[i] = &authWindow{duration: window.duration, aggregate: window.aggregate, counts: make(map[authKey]*authEvidence)}
+		}
+	}
 	return &copy
 }
 
@@ -111,7 +176,7 @@ func NewAuthAbuseDetector(cfg AuthAbuseConfig) (*AuthAbuseDetector, error) {
 	if cfg.PasswordSpray == (AuthThreshold{}) {
 		cfg.PasswordSpray = AuthThreshold{Failures: 100, Window: "5m", UniqueIPs: 20}
 	}
-	d := &AuthAbuseDetector{cfg: cfg, failures: make(map[authKey][]authFailure)}
+	d := &AuthAbuseDetector{cfg: cfg}
 	for i, rule := range []AuthThreshold{cfg.BruteForce, cfg.CredentialStuffing, cfg.PasswordSpray} {
 		if rule.Failures < 0 || rule.Failures > 100000 || rule.UniqueIPs < 0 || rule.UniqueUAs < 0 {
 			return nil, fmt.Errorf("auth_abuse: invalid threshold")
@@ -123,9 +188,9 @@ func NewAuthAbuseDetector(cfg AuthAbuseConfig) (*AuthAbuseDetector, error) {
 		if rule.Failures > 0 && ((i == 1 && (rule.UniqueUAs < 2 || rule.UniqueUAs > rule.Failures)) || (i == 2 && (rule.UniqueIPs < 2 || rule.UniqueIPs > rule.Failures))) {
 			return nil, fmt.Errorf("auth_abuse: distinct client/UA threshold must be 2..failures")
 		}
-		d.windows[i] = window
-		d.maxWindow = max(d.maxWindow, window)
-		d.maxSamples = max(d.maxSamples, rule.Failures)
+		if rule.Failures > 0 {
+			d.windows[i] = &authWindow{duration: window, aggregate: i == 2, counts: make(map[authKey]*authEvidence)}
+		}
 	}
 	return d, nil
 }
@@ -141,52 +206,42 @@ func (d *AuthAbuseDetector) Observe(e *types.LogEntry) []Detection {
 	if err != nil {
 		return nil
 	}
-	if !slices.Contains(d.cfg.Endpoints, path) || !slices.Contains(d.cfg.FailureStatuses, e.Status) || !e.Timestamp.After(d.now.Add(-d.maxWindow)) {
+	if !slices.Contains(d.cfg.Endpoints, path) || !slices.Contains(d.cfg.FailureStatuses, e.Status) {
 		return nil
 	}
 	key := authKey{strings.ToLower(e.Host), path, net.ParseIP(e.RemoteIP).String()}
-	events := d.failures[key]
-	// ponytail: at most 100k failure samples across all clients; use an external
-	// correlation store if campaigns exceed this in-memory evidence budget.
-	if events == nil && len(d.failures) >= DefaultIPCap {
-		return nil
+	var out []Detection
+	for i, window := range d.windows {
+		// ponytail: at most 100k failures per enabled scenario; use an external
+		// correlation store if campaigns exceed this in-memory evidence budget.
+		if window == nil || !e.Timestamp.After(d.now.Add(-window.duration)) {
+			continue
+		}
+		if len(window.events) < DefaultIPCap {
+			event := authFailure{at: e.Timestamp, key: key, status: e.Status, ua: e.UserAgent}
+			heap.Push(&window.events, event)
+			window.adjust(event, 1)
+		}
+		if det := d.detection(i, key); det != nil {
+			out = append(out, *det)
+		}
 	}
-	if d.maxSamples == 0 {
-		return nil
-	}
-	if d.samples >= DefaultIPCap {
-		return nil
-	}
-	d.samples++
-	events = append(events, authFailure{e.Timestamp, e.Status, e.UserAgent})
-	slices.SortFunc(events, func(a, b authFailure) int { return a.at.Compare(b.at) })
-	if len(events) > d.maxSamples {
-		d.samples -= len(events) - d.maxSamples
-		events = events[len(events)-d.maxSamples:]
-	}
-	d.failures[key] = events
-	return d.detections(key, true)
+	return out
 }
 
 func (d *AuthAbuseDetector) advance(now time.Time) {
 	if now.After(d.now) {
 		d.now = now
 	}
-	if d.now.Sub(d.pruned) < time.Second {
-		return
-	}
-	cutoff := d.now.Add(-d.maxWindow)
-	for key, events := range d.failures {
-		before := len(events)
-		events = slices.DeleteFunc(events, func(e authFailure) bool { return !e.at.After(cutoff) })
-		d.samples -= before - len(events)
-		if len(events) == 0 {
-			delete(d.failures, key)
-		} else {
-			d.failures[key] = events
+	for _, window := range d.windows {
+		if window == nil {
+			continue
+		}
+		cutoff := d.now.Add(-window.duration)
+		for len(window.events) > 0 && !window.events[0].at.After(cutoff) {
+			window.adjust(heap.Pop(&window.events).(authFailure), -1)
 		}
 	}
-	d.pruned = d.now
 }
 
 // Current returns per-IP detections still supported by live evidence.
@@ -196,73 +251,64 @@ func (d *AuthAbuseDetector) Current(now time.Time) []Detection {
 	}
 	d.advance(now)
 	var out []Detection
-	for key := range d.failures {
-		out = append(out, d.detections(key, false)...)
+	for i, window := range d.windows[:2] {
+		if window == nil {
+			continue
+		}
+		for key := range window.counts {
+			if det := d.detection(i, key); det != nil {
+				out = append(out, *det)
+			}
+		}
 	}
 	return out
 }
 
-// ForgetIP consumes evidence after a successful ban, avoiding stale re-bans.
+// ForgetIP consumes evidence after an IP or subnet ban, avoiding stale re-bans.
 func (d *AuthAbuseDetector) ForgetIP(ip string) {
 	if d == nil {
 		return
 	}
-	for key, events := range d.failures {
-		if key.ip == ip {
-			d.samples -= len(events)
-			delete(d.failures, key)
+	_, subnet, _ := net.ParseCIDR(ip)
+	if parsed := net.ParseIP(ip); parsed != nil {
+		ip = parsed.String()
+	}
+	// ponytail: one bounded scan per successful ban; index heap positions if
+	// mass-ban evidence removal becomes a measured bottleneck.
+	for _, window := range d.windows {
+		if window == nil {
+			continue
 		}
+		window.events = slices.DeleteFunc(window.events, func(e authFailure) bool {
+			if e.key.ip != ip && (subnet == nil || !subnet.Contains(net.ParseIP(e.key.ip))) {
+				return false
+			}
+			window.adjust(e, -1)
+			return true
+		})
+		heap.Init(&window.events)
 	}
 }
 
-func (d *AuthAbuseDetector) detections(key authKey, spray bool) []Detection {
-	// ponytail: aggregate checks scan retained evidence for this endpoint;
-	// add rolling endpoint counters if profiling shows this dominates ingest.
-	var out []Detection
-	for i, rule := range []AuthThreshold{d.cfg.BruteForce, d.cfg.CredentialStuffing, d.cfg.PasswordSpray} {
-		if rule.Failures == 0 || (i == 2 && !spray) {
-			continue
-		}
-		count := 0
-		ips, uas, statuses := map[string]bool{}, map[string]bool{}, map[int]bool{}
-		cutoff := d.now.Add(-d.windows[i])
-		evidence := d.failures
-		if i != 2 {
-			evidence = map[authKey][]authFailure{key: d.failures[key]}
-		}
-		for k, events := range evidence {
-			if k.host != key.host || k.path != key.path || (i != 2 && k.ip != key.ip) {
-				continue
-			}
-			for _, e := range events {
-				if !e.at.After(cutoff) {
-					continue
-				}
-				count++
-				ips[k.ip] = true
-				if e.ua != "" {
-					uas[e.ua] = true
-				}
-				statuses[e.status] = true
-			}
-		}
-		if count < rule.Failures || (i == 1 && len(uas) < rule.UniqueUAs) || (i == 2 && len(ips) < rule.UniqueIPs) {
-			continue
-		}
-		dt, ip, technique := DetBruteForce, key.ip, "T1110.001"
-		if i == 1 {
-			dt, technique = DetCredentialStuffing, "T1110.004"
-		}
-		if i == 2 {
-			dt, ip, technique = DetPasswordSpray, "", "T1110.003"
-		}
-		codes := make([]int, 0, len(statuses))
-		for code := range statuses {
-			codes = append(codes, code)
-		}
-		slices.Sort(codes)
-		desc := fmt.Sprintf("Suspected %s: %d failures on %s%s in %s; %d IPs, %d User-Agents; status codes %v", dt, count, key.host, key.path, d.windows[i], len(ips), len(uas), codes)
-		out = append(out, Detection{Type: dt, IP: ip, URI: key.path, Desc: desc, Confidence: 7, Techniques: []string{technique}})
+func (d *AuthAbuseDetector) detection(i int, key authKey) *Detection {
+	window := d.windows[i]
+	counts := window.counts[window.group(key)]
+	rule := []AuthThreshold{d.cfg.BruteForce, d.cfg.CredentialStuffing, d.cfg.PasswordSpray}[i]
+	if counts == nil || counts.count < rule.Failures || (i == 1 && len(counts.uas) < rule.UniqueUAs) || (i == 2 && len(counts.ips) < rule.UniqueIPs) {
+		return nil
 	}
-	return out
+	dt, ip, technique := DetBruteForce, key.ip, "T1110.001"
+	if i == 1 {
+		dt, technique = DetCredentialStuffing, "T1110.004"
+	}
+	if i == 2 {
+		dt, ip, technique = DetPasswordSpray, "", "T1110.003"
+	}
+	codes := make([]int, 0, len(counts.statuses))
+	for code := range counts.statuses {
+		codes = append(codes, code)
+	}
+	slices.Sort(codes)
+	desc := fmt.Sprintf("Suspected %s: %d failures on %s%s in %s; %d IPs, %d User-Agents; status codes %v", dt, counts.count, key.host, key.path, window.duration, len(counts.ips), len(counts.uas), codes)
+	return &Detection{Type: dt, IP: ip, URI: key.path, Desc: desc, Confidence: 7, Techniques: []string{technique}}
 }

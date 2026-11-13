@@ -358,9 +358,10 @@ with the existing allowlist, self-IP protection, dry-run and ban lifecycle.
 It is independent of `--detect-confidence`. Existing `--auth-limit` remains a
 separate 401/403 threshold across **all** paths; set it to `0` if only the new
 endpoint-scoped behavior is wanted. Other Guard blocking rules remain active.
-At most 100,000 failure samples are retained globally, with the newest samples
-per host/endpoint/IP capped at the largest configured failure threshold; new
-evidence is dropped when the global budget is full until samples expire.
+At most 100,000 failures are retained per enabled scenario (300,000 with all
+three enabled). Counts and distinct User-Agents remain exact within that budget;
+new evidence for a scenario is dropped when its budget is full until failures
+expire. Each scenario expires its own rolling window independently.
 
 ## Documentation
 

@@ -841,6 +841,9 @@ func (g *Guard) IsBlocked(ip string) bool {
 	if parsed == nil {
 		return false
 	}
+	if g.blocked[parsed.String()] {
+		return true
+	}
 	for _, n := range g.blockedSubnets {
 		if n.Contains(parsed) {
 			return true
@@ -906,6 +909,10 @@ func (g *Guard) Evaluate(line string) {
 		if ip := le.EffectiveClientIP(true); ip != "" {
 			le.RemoteIP = ip
 		}
+	}
+	// Share one key across counters, signature detections and auth evidence.
+	if ip := net.ParseIP(le.RemoteIP); ip != nil {
+		le.RemoteIP = ip.String()
 	}
 	if g.IsBlocked(le.RemoteIP) {
 		return

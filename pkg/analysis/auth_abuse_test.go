@@ -71,8 +71,13 @@ func TestAuthAbuse(t *testing.T) {
 			if tt.want != "" && !found {
 				t.Fatalf("missing %s", tt.want)
 			}
-			if got := auth.Current(base.Add(2 * time.Hour)); len(got) != 0 || len(auth.failures) != 0 || auth.samples != 0 {
+			if got := auth.Current(base.Add(2 * time.Hour)); len(got) != 0 {
 				t.Fatalf("expired evidence retained: %v", got)
+			}
+			for _, window := range auth.windows {
+				if window != nil && (len(window.events) != 0 || len(window.counts) != 0) {
+					t.Fatal("expired storage not reclaimed")
+				}
 			}
 		})
 	}
@@ -104,8 +109,10 @@ func TestAuthAbuseWindowAndReports(t *testing.T) {
 	if len(auth.Current(base.Add(time.Minute+time.Second))) != 0 {
 		t.Fatal("consumed evidence retained")
 	}
-	if len(auth.NewSession().failures) != 0 {
-		t.Fatal("sessions share evidence")
+	for _, window := range auth.NewSession().windows {
+		if window != nil && (len(window.events) != 0 || len(window.counts) != 0) {
+			t.Fatal("sessions share evidence")
+		}
 	}
 
 	engine := New(types.Filters{})
@@ -149,13 +156,10 @@ func TestAuthAbuseConfig(t *testing.T) {
 	for i := 0; i < 200; i++ {
 		d.Observe(&types.LogEntry{Timestamp: now, RemoteIP: "203.0.113.1", URI: "/login", Status: 401})
 	}
-	if d.samples != d.maxSamples {
-		t.Fatalf("per-client cap exceeded: %d", d.samples)
-	}
-	d.samples = DefaultIPCap
-	d.Observe(&types.LogEntry{Timestamp: now, RemoteIP: "203.0.113.2", URI: "/login", Status: 401})
-	if len(d.failures) != 1 {
-		t.Fatal("global budget exceeded")
+	for _, window := range d.windows {
+		if len(window.events) != 200 {
+			t.Fatalf("live failures discarded: %d", len(window.events))
+		}
 	}
 }
 
@@ -178,7 +182,105 @@ func TestAuthAbuseCustomEndpointAndDisabledRule(t *testing.T) {
 		t.Fatalf("custom endpoint: %v", got)
 	}
 	d.advance(now.Add(2 * time.Minute))
-	if len(d.failures) != 0 || d.samples != 0 {
-		t.Fatal("bounded evidence not reclaimed")
+	for _, window := range d.windows {
+		if window != nil && (len(window.events) != 0 || len(window.counts) != 0) {
+			t.Fatal("bounded evidence not reclaimed")
+		}
+	}
+}
+
+func TestAuthAbuseRetainsWindowDiversity(t *testing.T) {
+	d, err := NewAuthAbuseDetector(AuthAbuseConfig{Enabled: true,
+		BruteForce: AuthThreshold{Window: "1m"}, PasswordSpray: AuthThreshold{Window: "1m"},
+		CredentialStuffing: AuthThreshold{Failures: 3, Window: "1m", UniqueUAs: 3}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	now := time.Now()
+	var got []Detection
+	for i, ua := range []string{"a", "b", "b", "b", "c"} {
+		got = d.Observe(&types.LogEntry{Timestamp: now.Add(time.Duration(i) * time.Second),
+			RemoteIP: "203.0.113.1", URI: "/login", Status: 401, UserAgent: ua})
+	}
+	if len(got) != 1 || got[0].Type != DetCredentialStuffing || !strings.Contains(got[0].Desc, "5 failures") {
+		t.Fatalf("live diversity/counts lost: %+v", got)
+	}
+	d.ForgetIP("203.0.113.0/24")
+	if got := d.Current(now.Add(5 * time.Second)); len(got) != 0 {
+		t.Fatalf("subnet ban left stale evidence: %+v", got)
+	}
+}
+
+func BenchmarkAuthAbuseDistributed(b *testing.B) {
+	for _, clients := range []int{100, 10000} {
+		b.Run(fmt.Sprint(clients), func(b *testing.B) {
+			d, err := NewAuthAbuseDetector(AuthAbuseConfig{Enabled: true})
+			if err != nil {
+				b.Fatal(err)
+			}
+			now := time.Now()
+			for i := 0; i < clients; i++ {
+				d.Observe(&types.LogEntry{Timestamp: now, RemoteIP: fmt.Sprintf("10.%d.%d.%d", i>>16, (i>>8)&255, i&255), URI: "/login", Status: 401})
+			}
+			entry := &types.LogEntry{Timestamp: now, RemoteIP: "203.0.113.1", URI: "/login", Status: 401}
+			b.ResetTimer()
+			for i := 0; i < b.N; i++ {
+				d.Observe(entry)
+			}
+		})
+	}
+}
+
+func TestAuthAbuseScenarioExpiryAndBudget(t *testing.T) {
+	d, err := NewAuthAbuseDetector(AuthAbuseConfig{Enabled: true,
+		BruteForce:         AuthThreshold{Failures: 3, Window: "250ms"},
+		CredentialStuffing: AuthThreshold{Failures: 3, Window: "500ms", UniqueUAs: 2},
+		PasswordSpray:      AuthThreshold{Failures: 3, Window: "1s", UniqueIPs: 2}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	base := time.Now()
+	var got []Detection
+	for i, ip := range []string{"203.0.113.1", "203.0.113.2", "203.0.113.1", "203.0.113.1"} {
+		status, ua := 401, "a"
+		if i == 1 {
+			status, ua = 403, "b"
+		}
+		if i == 3 {
+			ua = "c"
+		}
+		got = d.Observe(&types.LogEntry{Timestamp: base.Add(time.Duration(i) * 100 * time.Millisecond), RemoteIP: ip, URI: "/login", Status: status, UserAgent: ua})
+	}
+	if len(got) != 2 || got[0].Type != DetCredentialStuffing || got[1].Type != DetPasswordSpray {
+		t.Fatalf("scenario windows mixed: %+v", got)
+	}
+	if got := d.Current(base.Add(500 * time.Millisecond)); len(got) != 0 {
+		t.Fatalf("credential window retained expired event: %+v", got)
+	}
+	d.advance(base.Add(1100 * time.Millisecond))
+	counts := d.windows[2].counts[authKey{"", "/login", ""}]
+	if counts.count != 2 || len(counts.ips) != 1 || len(counts.uas) != 2 || counts.statuses[403] != 0 {
+		t.Fatalf("expired dimensions retained: %+v", counts)
+	}
+	session := d.NewSession()
+	if len(session.windows[2].events) != 0 || len(d.windows[2].events) != 2 {
+		t.Fatal("session storage not independent")
+	}
+
+	d, err = NewAuthAbuseDetector(AuthAbuseConfig{Enabled: true,
+		BruteForce:         AuthThreshold{Failures: DefaultIPCap, Window: "1m"},
+		CredentialStuffing: AuthThreshold{Window: "1m"}, PasswordSpray: AuthThreshold{Window: "1m"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for i := 0; i < DefaultIPCap+1; i++ {
+		d.Observe(&types.LogEntry{Timestamp: base, RemoteIP: "203.0.113.1", URI: "/login", Status: 401})
+	}
+	if len(d.windows[0].events) != DefaultIPCap {
+		t.Fatal("failure budget exceeded")
+	}
+	d.Observe(&types.LogEntry{Timestamp: base.Add(time.Minute), RemoteIP: "203.0.113.2", URI: "/login", Status: 401})
+	if len(d.windows[0].events) != 1 || len(d.windows[0].counts) != 1 {
+		t.Fatal("budget not reclaimed at expiry")
 	}
 }
