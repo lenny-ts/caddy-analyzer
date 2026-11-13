@@ -2,9 +2,72 @@ package guard
 
 import (
 	"context"
+	"strings"
 	"testing"
 	"time"
 )
+
+// Reproduce #124 with its real window, 404 threshold and default evaluation
+// cadence. Stop once blocked rather than spending the full 20s on the scan.
+func TestGuardIssue124Blocks404ScanBeforeBurstEnds(t *testing.T) {
+	events := make(chan string, 1)
+	g := New(Config{
+		Limit: 100, AuthLimit: 10, NotFoundLimit: 50,
+		Window: time.Minute, BlockDuration: 10 * time.Minute,
+		Blocker: newFakeBlocker(),
+		OnAudit: func(action, _, reason, _ string) {
+			if action == "block" {
+				events <- reason
+			}
+		},
+	})
+	start := time.Now()
+	lines := startGuardRunForEvalTest(t, g)
+	requests := time.NewTicker(20 * time.Second / 221)
+	defer requests.Stop()
+	deadline := time.NewTimer(10 * time.Second)
+	defer deadline.Stop()
+	sent := 0
+	for {
+		select {
+		case <-requests.C:
+			status := 404
+			if sent < 5 {
+				status = 200
+			}
+			sent++
+			lines <- caddyLine("203.0.113.124", "/missing", "GET", status)
+		case reason := <-events:
+			elapsed := time.Since(start)
+			if !strings.Contains(reason, "not found") || sent >= 221 || elapsed >= 20*time.Second {
+				t.Fatalf("scan was not stopped promptly by the 404 threshold: %d requests, %s, %q", sent, elapsed, reason)
+			}
+			t.Logf("#124: blocked after %s, at request %d/221; %s; window=1m, default eval=1s", elapsed, sent, reason)
+			return
+		case <-deadline.C:
+			t.Fatalf("404 scan still unblocked after 10s (%d requests); evaluation must not wait for the 1m window", sent)
+		}
+	}
+}
+
+func TestGuardEvalIntervalDefaultsAndClamping(t *testing.T) {
+	for _, tt := range []struct {
+		name                   string
+		window, interval, want time.Duration
+	}{
+		{"default", time.Minute, 0, time.Second},
+		{"short window", 50 * time.Millisecond, 0, 50 * time.Millisecond},
+		{"explicit", time.Minute, 10 * time.Millisecond, 10 * time.Millisecond},
+		{"capped", time.Second, 5 * time.Second, time.Second},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			g := New(Config{Window: tt.window, EvalInterval: tt.interval, Blocker: newFakeBlocker()})
+			if got := g.evalInterval(); got != tt.want {
+				t.Fatalf("evalInterval=%s, want %s", got, tt.want)
+			}
+		})
+	}
+}
 
 func startGuardRunForEvalTest(t *testing.T, g *Guard) chan string {
 	t.Helper()
