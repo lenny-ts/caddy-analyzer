@@ -14,7 +14,7 @@ import (
 
 const (
 	DetBruteForce         DetectionType = "brute_force"
-	DetCredentialStuffing DetectionType = "credential_stuffing"
+	DetCredentialStuffing DetectionType = "credential_stuffing" // #nosec G101 -- Detection category, not a credential.
 	DetPasswordSpray      DetectionType = "password_spray"
 )
 

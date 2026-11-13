@@ -114,8 +114,10 @@ func (e *Engine) Process(entry *types.LogEntry) {
 		if dets := e.detector.DetectAll(entry); len(dets) > 0 {
 			seen := make(map[string]bool)
 			for _, det := range dets {
-				ip := det.IP
-				if ip == "" {
+				// Per-request categories share the traffic counters' source key,
+				// even when the auth tracker canonicalizes an IPv6 spelling.
+				ip := entry.RemoteIP
+				if det.IP == "" {
 					ip = "aggregate"
 				}
 				if !seen[ip] {

@@ -126,6 +126,16 @@ func TestAuthAbuseWindowAndReports(t *testing.T) {
 	if engine.Stats().SuspiciousIPs["203.0.113.3"] != 0 {
 		t.Fatal("aggregate attack blamed on last client")
 	}
+	engine = New(types.Filters{})
+	engine.SetDetector(NewDetectorWithPatterns(nil, auth.NewSession()))
+	for i := 0; i < 3; i++ {
+		e := entry("2001:db8:0:0:0:0:0:1", time.Duration(i)*time.Second)
+		e.UserAgent = "sqlmap"
+		engine.Process(e)
+	}
+	if len(engine.Stats().SuspiciousIPs) != 1 || engine.Stats().SuspiciousIPs["2001:db8:0:0:0:0:0:1"] != 3 {
+		t.Fatalf("signature/auth IP aliases counted separately: %v", engine.Stats().SuspiciousIPs)
+	}
 }
 
 func TestAuthAbuseConfig(t *testing.T) {
