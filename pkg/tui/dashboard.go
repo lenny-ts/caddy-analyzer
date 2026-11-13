@@ -89,8 +89,8 @@ func NewModelWithGeoIP(linesCh chan string, g *enrich.GeoIP) Model {
 	return NewModelWithGeoIPAndPatterns(linesCh, g, nil)
 }
 
-func NewModelWithGeoIPAndPatterns(linesCh chan string, g *enrich.GeoIP, custom []analysis.DetectionPattern) Model {
-	det := analysis.NewDetectorWithPatterns(custom)
+func NewModelWithGeoIPAndPatterns(linesCh chan string, g *enrich.GeoIP, custom []analysis.DetectionPattern, auth ...*analysis.AuthAbuseDetector) Model {
+	det := analysis.NewDetectorWithPatterns(custom, auth...)
 	eng := analysis.New(types.Filters{})
 	eng.SetDetector(det)
 	opEng := analysis.NewOperationalEngine(types.Filters{})

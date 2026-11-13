@@ -6,12 +6,14 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/lenny-ts/caddy-analyzer/pkg/analysis"
 	"github.com/lenny-ts/caddy-analyzer/pkg/blocklist"
 )
 
 type Config struct {
-	Source    string `json:"source,omitempty"`
-	Namespace string `json:"namespace,omitempty"`
+	BehavioralDetection *BehavioralDetectionConfig `json:"behavioral_detection,omitempty"`
+	Source              string                     `json:"source,omitempty"`
+	Namespace           string                     `json:"namespace,omitempty"`
 	// Blocklist configuration. When present, the guard and blocklist
 	// subcommand read these settings automatically so the user does
 	// not need to pass --blocklist-config / --no-default-blocklists on
@@ -21,6 +23,10 @@ type Config struct {
 	// constants. Absent means "use the built-in defaults"; a CLI flag
 	// overrides whatever is here.
 	Tuning *TuningConfig `json:"tuning,omitempty"`
+}
+
+type BehavioralDetectionConfig struct {
+	AuthAbuse analysis.AuthAbuseConfig `json:"auth_abuse"`
 }
 
 // TuningConfig carries the three operational values that were hardcoded

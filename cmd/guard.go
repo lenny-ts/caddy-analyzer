@@ -372,6 +372,7 @@ func runGuard(cmd *cobra.Command, args []string) error {
 		AnomalyFactor:       guardAnomalyFactor,
 		UARotationThreshold: guardUARotation,
 		CustomPatterns:      customPatterns,
+		AuthAbuse:           authAbuse.NewSession(),
 		CredStuffingLimit:   guardCredStuffingLimit,
 		BlocklistMgr:        blMgr,
 		BlocklistRefresh:    blocklistRefresh,

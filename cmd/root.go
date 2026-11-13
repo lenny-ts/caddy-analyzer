@@ -83,6 +83,7 @@ var (
 	flagOpsOnly        bool
 	flagCustomPatterns []string
 	customPatterns     []analysis.DetectionPattern
+	authAbuse          *analysis.AuthAbuseDetector
 )
 
 var Version = "0.8.1-dev"
@@ -152,6 +153,13 @@ Examples:
 		}
 		if err := loadCustomPatterns(); err != nil {
 			return err
+		}
+		authAbuse = nil
+		if cfg != nil && cfg.BehavioralDetection != nil {
+			authAbuse, err = analysis.NewAuthAbuseDetector(cfg.BehavioralDetection.AuthAbuse)
+			if err != nil {
+				return err
+			}
 		}
 		f := cmd.Flags()
 		return applyTuning(cfg,
@@ -271,8 +279,12 @@ func loadCustomPatterns() error {
 	return nil
 }
 
-func newDetector() *analysis.Detector {
-	det := analysis.NewDetectorWithPatterns(customPatterns)
+func newDetector(session ...*analysis.AuthAbuseDetector) *analysis.Detector {
+	auth := authAbuse.NewSession()
+	if len(session) > 0 {
+		auth = session[0]
+	}
+	det := analysis.NewDetectorWithPatterns(customPatterns, auth)
 	det.SetUARotationThreshold(flagUARotation)
 	return det
 }
@@ -718,6 +730,7 @@ func fanInFollow(ctx context.Context, sources []types.LogSource) <-chan string {
 }
 
 func runFollowMode(ctx context.Context, sources []types.LogSource, filters types.Filters) error {
+	authSession := authAbuse.NewSession()
 	sections := types.DefaultTopSections()
 	last := time.Now()
 	// Windowing: reset the engine every 5 minutes so maps and the histogram
@@ -727,7 +740,7 @@ func runFollowMode(ctx context.Context, sources []types.LogSource, filters types
 	engine := analysis.New(filters)
 	opEngine := analysis.NewOperationalEngine(filters)
 	if flagDetect {
-		det := newDetector()
+		det := newDetector(authSession)
 		engine.SetDetector(det)
 	}
 	engine.Stats().MaxCardinality = flagMaxCard
@@ -756,7 +769,7 @@ func runFollowMode(ctx context.Context, sources []types.LogSource, filters types
 		engine = analysis.New(filters)
 		opEngine = analysis.NewOperationalEngine(filters)
 		if flagDetect {
-			det := newDetector()
+			det := newDetector(authSession)
 			engine.SetDetector(det)
 		}
 		engine.Stats().MaxCardinality = flagMaxCard
@@ -810,6 +823,7 @@ func runFollowMode(ctx context.Context, sources []types.LogSource, filters types
 }
 
 func runIntervalMode(ctx context.Context, sources []types.LogSource, filters types.Filters, interval time.Duration) error {
+	authSession := authAbuse.NewSession()
 	var current time.Time
 	var engine *analysis.Engine
 	var opEngine *analysis.OperationalEngine
@@ -855,7 +869,7 @@ func runIntervalMode(ctx context.Context, sources []types.LogSource, filters typ
 		engine = analysis.New(filters)
 		opEngine = analysis.NewOperationalEngine(filters)
 		if flagDetect {
-			det := newDetector()
+			det := newDetector(authSession)
 			engine.SetDetector(det)
 		}
 	}
@@ -952,7 +966,7 @@ func runWatch(ctx context.Context, sources []types.LogSource) error {
 		defer func() { _ = geoip.Close() }()
 	}
 
-	p := tea.NewProgram(tui.NewModelWithGeoIPAndPatterns(linesCh, geoip, customPatterns), tea.WithAltScreen())
+	p := tea.NewProgram(tui.NewModelWithGeoIPAndPatterns(linesCh, geoip, customPatterns, authAbuse.NewSession()), tea.WithAltScreen())
 	_, err = p.Run()
 	return err
 }
