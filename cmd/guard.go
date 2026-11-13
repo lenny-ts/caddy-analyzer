@@ -50,7 +50,10 @@ var (
 	guardNotify            auditNotifyFlags
 )
 
-const minBlocklistRefresh = 1 * time.Hour
+const (
+	minBlocklistRefresh = 1 * time.Hour
+	neverBlockRefresh   = 30 * time.Second
+)
 
 func init() {
 	guardCmd.Flags().IntVarP(&guardLimit, "limit", "l", 100, "Max requests before blocking (0 disables)")
@@ -216,34 +219,16 @@ func runGuard(cmd *cobra.Command, args []string) error {
 	defer func() { _ = dispatcher.Close() }()
 
 	neverBlock := guardNeverBlock
-	// Load the whitelist file (managed by `caddy-analyze whitelist`).
-	// This is always loaded unless --never-block-file overrides it.
+	// --never-block-file overrides the whitelist managed by the whitelist
+	// command. The guard reloads whichever file is selected while running.
+	neverBlockFile := guardNeverBlockFile
+	if neverBlockFile == "" {
+		neverBlockFile = WhitelistPath()
+	}
 	if guardNeverBlockFile != "" {
-		ips, err := loadIPList(guardNeverBlockFile)
-		if err != nil {
+		// Keep the existing fail-fast behavior for an explicit override.
+		if _, err := loadIPList(guardNeverBlockFile); err != nil {
 			return fmt.Errorf("never-block-file: %w", err)
-		}
-		for _, ip := range ips {
-			if err := validateIP(ip); err != nil {
-				fmt.Fprintf(os.Stderr, "warning: skipping invalid allowlist entry %q: %v\n", ip, err)
-				continue
-			}
-			neverBlock = append(neverBlock, ip)
-		}
-	} else if wlPath := WhitelistPath(); wlPath != "" {
-		if _, err := os.Stat(wlPath); err == nil {
-			ips, err := loadIPList(wlPath)
-			if err != nil {
-				fmt.Fprintf(os.Stderr, "warning: whitelist load: %v\n", err)
-			} else {
-				for _, ip := range ips {
-					if err := validateIP(ip); err != nil {
-						fmt.Fprintf(os.Stderr, "warning: skipping invalid whitelist entry %q: %v\n", ip, err)
-						continue
-					}
-					neverBlock = append(neverBlock, ip)
-				}
-			}
 		}
 	}
 
@@ -365,6 +350,8 @@ func runGuard(cmd *cobra.Command, args []string) error {
 		},
 		StatePath:           guardStateFile,
 		NeverBlock:          neverBlock,
+		NeverBlockFile:      neverBlockFile,
+		NeverBlockRefresh:   neverBlockRefresh,
 		SelfIPs:             selfIPs,
 		SelfIPLookup:        selfLookup,
 		TrustForwarded:      flagTrustXFF,
@@ -422,8 +409,8 @@ func runGuard(cmd *cobra.Command, args []string) error {
 	if len(guardCountryBlock) > 0 && geoip != nil {
 		fmt.Fprintf(os.Stderr, "Country block: %s\n", strings.Join(guardCountryBlock, ", "))
 	}
-	if len(neverBlock) > 0 {
-		fmt.Fprintf(os.Stderr, "Whitelist: %d entries (%s)\n", len(neverBlock), whitelistFile)
+	if n := g.AllowlistCount(); n > 0 {
+		fmt.Fprintf(os.Stderr, "Whitelist: %d entries (%s)\n", n, neverBlockFile)
 	}
 	fmt.Fprintf(os.Stderr, "Ctrl+C to stop\n\n")
 
