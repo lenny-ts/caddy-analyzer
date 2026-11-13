@@ -139,32 +139,35 @@ func LoadCustomPatterns(path string) ([]DetectionPattern, error) {
 // analysts build ATT&CK Navigator coverage layers from caddy-analyzer output
 // and export detections as Sigma rules with proper tags.
 var detectionTechniques = map[DetectionType][]string{
-	DetSQLInjection:   {"T1190"},
-	DetNoSQLi:         {"T1190"},
-	DetXSS:            {"T1059.007", "T1189"},
-	DetSSTI:           {"T1190"},
-	DetSSRF:           {"T1190"},
-	DetRCE:            {"T1059", "T1190"},
-	DetPathTraversal:  {"T1083"},
-	DetLFIWrapper:     {"T1083", "T1190"},
-	DetGraphQL:        {"T1595.002"},
-	DetLog4j:          {"T1190", "T1059"},
-	DetSensitiveFile:  {"T1083", "T1552.001"},
-	DetAdminProbe:     {"T1595.002"},
-	DetWPProbe:        {"T1595.002"},
-	DetCGIProbe:       {"T1595.002"},
-	DetScanner:        {"T1595"},
-	DetXXE:            {"T1190"},
-	DetOpenRedirect:   {"T1566.002"},
-	DetLDAPInjection:  {"T1190"},
-	DetXPathInjection: {"T1190"},
-	DetCRLFInjection:  {"T1190", "T1059"},
-	DetProtoPollution: {"T1190", "T1059.007"},
-	DetSSIInjection:   {"T1190", "T1059"},
-	DetUARotation:     {"T1595.001"},
-	DetJWTAbuse:       {"T1550.001", "T1190"},
-	DetObjectEnum:     {"T1595.002", "T1190"},
-	DetBeaconing:      {"T1071.001", "T1573"},
+	DetBruteForce:         {"T1110.001"},
+	DetCredentialStuffing: {"T1110.004"},
+	DetPasswordSpray:      {"T1110.003"},
+	DetSQLInjection:       {"T1190"},
+	DetNoSQLi:             {"T1190"},
+	DetXSS:                {"T1059.007", "T1189"},
+	DetSSTI:               {"T1190"},
+	DetSSRF:               {"T1190"},
+	DetRCE:                {"T1059", "T1190"},
+	DetPathTraversal:      {"T1083"},
+	DetLFIWrapper:         {"T1083", "T1190"},
+	DetGraphQL:            {"T1595.002"},
+	DetLog4j:              {"T1190", "T1059"},
+	DetSensitiveFile:      {"T1083", "T1552.001"},
+	DetAdminProbe:         {"T1595.002"},
+	DetWPProbe:            {"T1595.002"},
+	DetCGIProbe:           {"T1595.002"},
+	DetScanner:            {"T1595"},
+	DetXXE:                {"T1190"},
+	DetOpenRedirect:       {"T1566.002"},
+	DetLDAPInjection:      {"T1190"},
+	DetXPathInjection:     {"T1190"},
+	DetCRLFInjection:      {"T1190", "T1059"},
+	DetProtoPollution:     {"T1190", "T1059.007"},
+	DetSSIInjection:       {"T1190", "T1059"},
+	DetUARotation:         {"T1595.001"},
+	DetJWTAbuse:           {"T1550.001", "T1190"},
+	DetObjectEnum:         {"T1595.002", "T1190"},
+	DetBeaconing:          {"T1071.001", "T1573"},
 }
 
 // TechniquesFor returns the MITRE ATT&CK technique IDs for a detection type.
@@ -241,6 +244,7 @@ func getCompiledPatterns() []compiledPattern {
 }
 
 type Detector struct {
+	authAbuse           *AuthAbuseDetector
 	patterns            []compiledPattern
 	customPatterns      []compiledPattern
 	ipStats             map[string]*IPDetStats
@@ -261,7 +265,11 @@ func NewDetector() *Detector {
 
 // NewDetectorWithPatterns keeps custom signatures local while sharing the
 // built-in compiled slice and its sync.Once cache.
-func NewDetectorWithPatterns(custom []DetectionPattern) *Detector {
+func NewDetectorWithPatterns(custom []DetectionPattern, auth ...*AuthAbuseDetector) *Detector {
+	var authAbuse *AuthAbuseDetector
+	if len(auth) > 0 {
+		authAbuse = auth[0]
+	}
 	compiled := make([]compiledPattern, 0, len(custom))
 	for _, p := range custom {
 		compiled = append(compiled, compiledPattern{
@@ -275,6 +283,7 @@ func NewDetectorWithPatterns(custom []DetectionPattern) *Detector {
 		})
 	}
 	return &Detector{
+		authAbuse:           authAbuse,
 		patterns:            getCompiledPatterns(),
 		customPatterns:      compiled,
 		ipStats:             make(map[string]*IPDetStats),
@@ -1218,7 +1227,7 @@ func (d *Detector) DetectAll(entry *types.LogEntry) []Detection {
 		}
 	}
 
-	return dets
+	return append(dets, d.authAbuse.Observe(entry)...)
 }
 
 // extractIDFromPath extracts the trailing numeric ID from a path.

@@ -318,6 +318,50 @@ control over the Docker daemon.
 
 ---
 
+## Behavioral authentication-abuse detection
+
+Enable in `caddy-analyzer.json` (or `~/.config/caddy-analyzer/config.json`):
+
+```json
+{
+  "behavioral_detection": {
+    "auth_abuse": {
+      "enabled": true,
+      "block": false,
+      "endpoints": ["/login", "/api/login", "/wp-login.php"],
+      "failure_statuses": [401, 403],
+      "brute_force": {"failures": 10, "window": "1m"},
+      "credential_stuffing": {"failures": 20, "unique_uas": 5, "window": "1m"},
+      "password_spray": {"failures": 100, "unique_ips": 20, "window": "5m"}
+    }
+  }
+}
+```
+
+Use `--detect` for reports and tail, or run `guard` for audit alerts.
+Endpoints are exact, case-sensitive decoded paths (query strings ignored),
+separated by request host. Failure statuses must be 400–599. Omitted scenarios
+use the defaults above; disable one with `"failures": 0` and its `"window"`.
+Windows must be positive and at most 24h. Each failure threshold is at most
+100,000; distinct-IP/UA thresholds must be between 2 and that failure threshold.
+
+All categories are **suspected** abuse, high severity (confidence 7), not proof
+of compromised accounts. Credential stuffing uses failed requests plus distinct
+User-Agents; usernames/passwords are not extracted. Spraying is an aggregate
+alert, shown under `aggregate` in reports, never an individual-IP ban.
+Reports include failure counts, endpoint, window, status codes and distinct
+IP/UA counts. Offline windows use log timestamps; Guard uses receipt time and
+retains evidence across its normal window resets.
+
+`"block": true` opts Guard into blocking per-IP brute-force/stuffing detections,
+with the existing allowlist, self-IP protection, dry-run and ban lifecycle.
+It is independent of `--detect-confidence`. Existing `--auth-limit` remains a
+separate 401/403 threshold across **all** paths; set it to `0` if only the new
+endpoint-scoped behavior is wanted. Other Guard blocking rules remain active.
+At most 100,000 failure samples are retained globally, with the newest samples
+per host/endpoint/IP capped at the largest configured failure threshold; new
+evidence is dropped when the global budget is full until samples expire.
+
 ## Documentation
 
 The full documentation is available at **[lenny-ts.github.io/caddy-analyzer](https://lenny-ts.github.io/caddy-analyzer/)**. Use the focused pages below when you need a specific workflow:

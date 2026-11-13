@@ -197,6 +197,7 @@ func parseBlockedIPs(output string) []string {
 const DefaultEvalInterval = time.Second
 
 type Config struct {
+	AuthAbuse           *analysis.AuthAbuseDetector
 	Limit               int
 	AuthLimit           int
 	NotFoundLimit       int
@@ -917,6 +918,15 @@ func (g *Guard) Evaluate(line string) {
 		return
 	}
 	g.tickReqs.Add(1)
+	// Live Guard windows use receipt time, just like its request counters.
+	// Do not let stale or forged log timestamps extend automatic blocking.
+	authEntry := *le
+	authEntry.Timestamp = time.Now()
+	for _, det := range g.cfg.AuthAbuse.Observe(&authEntry) {
+		if g.cfg.OnAudit != nil {
+			g.cfg.OnAudit(string(det.Type), det.IP, det.Desc, "")
+		}
+	}
 	g.sliding.add(le.RemoteIP, time.Now(), le.Status == 401 || le.Status == 403, le.Status == 404, le.Path())
 	if g.cfg.DetectionConfidence > 0 {
 		for _, det := range g.detector.DetectAll(le) {
@@ -1015,6 +1025,15 @@ func (g *Guard) evaluate(ctx context.Context, now time.Time) []Candidate {
 		candidates = append(candidates, Candidate{ip, int64(count), fmt.Sprintf("%d malicious request(s)", count)})
 	}
 	g.mu.Unlock()
+
+	if g.cfg.AuthAbuse.BlockingEnabled() {
+		for _, det := range g.cfg.AuthAbuse.Current(now) {
+			if !seen[det.IP] && !g.IsBlocked(det.IP) {
+				seen[det.IP] = true
+				candidates = append(candidates, Candidate{det.IP, 1, det.Desc})
+			}
+		}
+	}
 
 	if g.cfg.SubnetLimit > 0 {
 		for _, subnet := range g.sliding.subnets() {
@@ -1163,6 +1182,7 @@ func (g *Guard) block(ctx context.Context, c Candidate, now time.Time) bool {
 	// Consume threshold and pattern evidence only after a successful ban,
 	// regardless of escalation. Failed blocks keep their evidence for retry.
 	g.forgetOffense(c.IP)
+	g.cfg.AuthAbuse.ForgetIP(c.IP)
 	// Track subnet blocks so IsBlocked short-circuits individual hosts in a
 	// blocked /24 without re-evaluating them on every request.
 	if _, ipnet, err := net.ParseCIDR(c.IP); err == nil {
