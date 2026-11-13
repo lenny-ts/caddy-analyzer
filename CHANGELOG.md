@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Progressive bans (#109)**: opt-in `guard --ban-escalation` increases repeat-offender bans from the base duration to at least 1h, 24h, and 168h, with configurable retention and maximum duration. Persist offender history separately from active bans, expose list/show/reset commands, and optionally clear history with `unban --reset-offenses`. Dry-run simulates escalation without writing history.
 
 ### Fixed
+- **Guard burst latency (#124)**: evaluate blocking thresholds every second by default, independently of `--window`, with configurable `--eval-interval`. Keep window resets on an independent deadline, consume threshold and pattern evidence after successful bans to prevent re-banning old traffic, and calculate anomaly RPS from the actual sample duration, including slow firewall operations.
 - **Progressive-ban audit durations**: unblock events report the effective ban duration, including after a restart or offender-history reset. Persist optional duration metadata in active-ban state; legacy entries retain the configured-duration fallback.
 
 ## [0.8.1] - 2026-10-19

@@ -84,6 +84,13 @@ Discovery errors at startup and during operation include the instruction to rest
 
 ---
 
+Guard checks thresholds every second by default (`--eval-interval`), capped at
+`--window`. The counting window and its reset cadence remain independent of the
+evaluation interval. Successful bans consume the evidence that caused them, so
+old traffic cannot trigger another ban after expiry; failed bans retain their
+evidence for retry. Anomaly RPS uses actual elapsed sample time, including delays
+from firewall operations.
+
 ### Progressive bans (opt-in)
 
 ```bash
@@ -413,6 +420,7 @@ returned as a command error.
 | `--audit-rate-limit` | | `0` | Minimum interval between notifications for the same IP; `0` disables |
 | `--state-file` | | `/var/lib/caddy-analyzer/blocked.json` | Persist blocked-IP state across restarts (guard/block/unban). Empty to disable |
 | `--ban-escalation` | | `false` | Enable persistent progressive bans for repeat offenders (guard) |
+| `--eval-interval` | | `1s` | How often to evaluate guard thresholds, capped at `--window` |
 | `--ban-reset-after` | | `30d` | Forget offender history after this period; accepts days or Go durations (guard) |
 | `--max-ban-duration` | | `168h` | Cap all progressive ban levels (guard) |
 | `--reset-offenses` | | `false` | Also forget history when manually unbanning an IP (unban) |
