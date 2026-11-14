@@ -78,7 +78,7 @@ sudo caddy-analyze guard /var/log/caddy/access.log \
   --protect-self=false --never-block 203.0.113.10
 ```
 
-Replace `203.0.113.10` with the trusted server or administrator IP. On a remote VPS, the administrator's home/mobile IP is usually different from the server's IP and must be allowlisted separately. With shared NAT, every client arriving from the protected public IP receives the same exemption. Server addresses are kept in memory, not added to the whitelist file; file changes still require restarting guard.
+Replace `203.0.113.10` with the trusted server or administrator IP. On a remote VPS, the administrator's home/mobile IP is usually different from the server's IP and must be allowlisted separately. With shared NAT, every client arriving from the protected public IP receives the same exemption. Server addresses are kept in memory, not added to the whitelist file; whitelist file changes are reloaded automatically every 30 seconds.
 
 Discovery errors at startup and during operation include the instruction to restart with `--protect-self=false` to disable server IP checks. Offline installations can disable discovery with this flag and supply an explicit `--never-block` list. Protection applies to this guard, not Fail2Ban or explicit manual `block` commands. Clients using another public connection, or another device's distinct IPv6 address, still need their own whitelist entry. With multiple WAN routes, run guard on the same egress path as the processes you want to protect.
 

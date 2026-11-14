@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"os"
 	"os/exec"
 	"sort"
 	"strings"
@@ -213,6 +214,13 @@ type Config struct {
 	OnError             func(error)
 	StatePath           string
 	NeverBlock          []string
+	// NeverBlockFile is a file of IPs/CIDRs that are never blocked. It is
+	// loaded at startup and reloaded every NeverBlockRefresh while Run is
+	// active so `whitelist --add/--remove` takes effect without a restart.
+	NeverBlockFile string
+	// NeverBlockRefresh is the interval between NeverBlockFile reloads.
+	// If <= 0, the file is loaded once at startup and never reloaded.
+	NeverBlockRefresh time.Duration
 	// SelfIPs seeds server address protection before restoring saved bans.
 	SelfIPs []string
 	// SelfIPLookup refreshes server addresses before each new ban and every
@@ -283,6 +291,8 @@ type Guard struct {
 	expiries       map[string]time.Time
 	banDurations   map[string]time.Duration
 	allowlist      []*net.IPNet
+	baseAllowlist  []*net.IPNet
+	allowlistMu    sync.RWMutex
 	selfIPs        []net.IP
 	selfMu         sync.RWMutex
 	detectCounts   map[string]int
@@ -553,6 +563,12 @@ func New(cfg Config) *Guard {
 	if cfg.UARotationThreshold > 0 {
 		g.detector.SetUARotationThreshold(cfg.UARotationThreshold)
 	}
+	g.baseAllowlist = g.allowlist
+	if cfg.NeverBlockFile != "" {
+		if err := g.reloadAllowlist(); err != nil && !errors.Is(err, os.ErrNotExist) && cfg.OnError != nil {
+			cfg.OnError(fmt.Errorf("whitelist load: %w", err))
+		}
+	}
 	for _, s := range cfg.SelfIPs {
 		if ip := net.ParseIP(s); ip != nil {
 			g.selfIPs = append(g.selfIPs, ip)
@@ -608,17 +624,21 @@ func (g *Guard) isAllowlisted(ip string) bool {
 	if g.isSelfIP(ip) {
 		return true
 	}
+	g.allowlistMu.RLock()
+	defer g.allowlistMu.RUnlock()
 	if len(g.allowlist) == 0 {
 		return false
 	}
 	// Candidate IPs from the subnet-limit path are CIDRs (e.g.
 	// "10.0.0.0/24"), not bare addresses. A bare net.ParseIP returns nil
 	// for a CIDR string and the allowlist would be silently bypassed.
-	// If the candidate is a CIDR, treat it as allowlisted when it is a
-	// subset of any allowlist CIDR (covers both v4 and v6).
+	// If the candidate is a CIDR, treat it as allowlisted when it overlaps
+	// an allowlist entry: either the candidate is fully allowlisted, or it
+	// contains an allowlisted address and must not be blocked (covers both
+	// v4 and v6).
 	if _, ipnet, err := net.ParseCIDR(ip); err == nil {
 		for _, n := range g.allowlist {
-			if cidrSubset(ipnet, n) {
+			if cidrSubset(ipnet, n) || cidrSubset(n, ipnet) {
 				return true
 			}
 		}
@@ -1357,6 +1377,12 @@ func (g *Guard) Run(ctx context.Context, linesCh <-chan string, logf func(string
 		defer selfTicker.Stop()
 		selfTick = selfTicker.C
 	}
+	var allowlistTick <-chan time.Time
+	if g.cfg.NeverBlockFile != "" && g.cfg.NeverBlockRefresh > 0 {
+		allowlistTicker := time.NewTicker(g.cfg.NeverBlockRefresh)
+		defer allowlistTicker.Stop()
+		allowlistTick = allowlistTicker.C
+	}
 
 	logBlocked := func(now time.Time, blocked []Candidate) {
 		for _, c := range blocked {
@@ -1416,6 +1442,11 @@ func (g *Guard) Run(ctx context.Context, linesCh <-chan string, logf func(string
 
 		case <-selfTick:
 			g.refreshSelfIPs(ctx)
+
+		case <-allowlistTick:
+			if err := g.reloadAllowlist(); err != nil && g.cfg.OnError != nil {
+				g.cfg.OnError(fmt.Errorf("whitelist reload: %w", err))
+			}
 
 		case <-ctx.Done():
 			wg.Wait()
