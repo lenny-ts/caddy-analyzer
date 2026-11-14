@@ -154,11 +154,13 @@ func caddyChecks(env Env) []Check {
 		checks = append(checks, Warning("caddy.executable", "executable not found in PATH (Docker/remote deployments may still work)"))
 	}
 
-	candidates := env.AccessLogCandidates
-	if env.AccessLog != "" {
-		candidates = append([]string{env.AccessLog}, candidates...)
+	var logCheck Check
+	var fieldsCheck *Check
+	if explicit := strings.TrimSpace(env.AccessLog); explicit != "" {
+		logCheck, fieldsCheck = inspectExplicitAccessLog(explicit)
+	} else {
+		logCheck, fieldsCheck = inspectAccessLogs(env.AccessLogCandidates)
 	}
-	logCheck, fieldsCheck := inspectAccessLogs(candidates)
 	checks = append(checks, logCheck)
 	if fieldsCheck != nil {
 		checks = append(checks, *fieldsCheck)
@@ -166,9 +168,20 @@ func caddyChecks(env Env) []Check {
 	return checks
 }
 
-// inspectAccessLogs checks candidates in order and returns the log and sample
-// field checks. It only opens files for reading; nothing is created or modified.
+// inspectAccessLogs checks auto-discovered candidates in order and returns the
+// log and sample field checks. It only opens regular files for reading; nothing
+// is created or modified.
 func inspectAccessLogs(candidates []string) (Check, *Check) {
+	return inspectAccessLogCandidates(candidates, false)
+}
+
+// inspectExplicitAccessLog diagnoses a user-supplied --log path directly:
+// failures are critical and there is no fallback to auto-discovery.
+func inspectExplicitAccessLog(path string) (Check, *Check) {
+	return inspectAccessLogCandidates([]string{path}, true)
+}
+
+func inspectAccessLogCandidates(candidates []string, explicit bool) (Check, *Check) {
 	var (
 		foundPath        string
 		openErr          error
@@ -185,12 +198,21 @@ func inspectAccessLogs(candidates []string) (Check, *Check) {
 
 		info, err := os.Stat(candidate)
 		if err != nil {
-			if !os.IsNotExist(err) && openErr == nil {
+			if openErr == nil && (explicit || !os.IsNotExist(err)) {
 				openErr = fmt.Errorf("%s: %w", candidate, err)
 			}
 			continue
 		}
 		if info.IsDir() {
+			if explicit && openErr == nil {
+				openErr = fmt.Errorf("%s: is a directory", candidate)
+			}
+			continue
+		}
+		if !info.Mode().IsRegular() {
+			if openErr == nil {
+				openErr = fmt.Errorf("%s: not a regular file (%s); refusing to open", candidate, info.Mode().Type())
+			}
 			continue
 		}
 		if foundPath == "" {
@@ -236,7 +258,13 @@ func inspectAccessLogs(candidates []string) (Check, *Check) {
 		return CriticalFailure("caddy.access_log", fmt.Sprintf("access log %s is not readable: %v", foundPath, openErr)), nil
 	}
 	if openErr != nil {
+		if explicit {
+			return CriticalFailure("caddy.access_log", fmt.Sprintf("explicit access log is not usable: %v", openErr)), nil
+		}
 		return Warning("caddy.access_log", fmt.Sprintf("no JSON access log found (%v)", openErr)), nil
+	}
+	if explicit {
+		return CriticalFailure("caddy.access_log", "explicit access log path is empty"), nil
 	}
 	return Warning("caddy.access_log", "no JSON access log found; pass a source, --log, or configure caddy-analyzer.json"), nil
 }
@@ -320,11 +348,10 @@ func guardChecks(env Env) []Check {
 	probes := []firewallProbe{
 		{id: "guard.iptables", label: "iptables", bin: "iptables", args: []string{"-S"}},
 		{id: "guard.nftables", label: "nftables", bin: "nft", args: []string{"list", "tables"}},
-		{id: "guard.docker", label: "docker", bin: "docker", args: []string{"info", "--format", "{{.ServerVersion}}"}},
 	}
 
-	checks := make([]Check, 0, len(probes)+1)
-	usable := make([]string, 0, len(probes))
+	checks := make([]Check, 0, len(probes)+2)
+	usable := make([]string, 0, len(probes)+1)
 	for _, probe := range probes {
 		path, err := env.lookPath(probe.bin)
 		if err != nil {
@@ -343,12 +370,47 @@ func guardChecks(env Env) []Check {
 		checks = append(checks, Pass(probe.id, fmt.Sprintf("%s available and usable (%s)", probe.label, path)))
 	}
 
+	dockerCheck, dockerUsable := dockerBackendCheck(env)
+	checks = append(checks, dockerCheck)
+	if dockerUsable {
+		usable = append(usable, "docker")
+	}
+
 	if len(usable) == 0 {
 		checks = append(checks, CriticalFailure("guard.backend", "no usable firewall backend; guard cannot block IPs"))
 	} else {
 		checks = append(checks, Pass("guard.backend", fmt.Sprintf("usable firewall backend(s): %s", strings.Join(usable, ", "))))
 	}
 	return checks
+}
+
+// dockerBackendCheck verifies that the Docker firewall backend can actually
+// apply rules, not merely that the daemon is reachable. DockerBackend uses the
+// host iptables binary and the DOCKER-USER chain, so both are required.
+func dockerBackendCheck(env Env) (Check, bool) {
+	path, err := env.lookPath("docker")
+	if err != nil {
+		return Warning("guard.docker", "docker not installed"), false
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), commandTimeout)
+	out, err := env.run(ctx, "docker", "info", "--format", "{{.ServerVersion}}")
+	cancel()
+	if err != nil {
+		return Warning("guard.docker", fmt.Sprintf("docker found at %s but not usable: %s", path, commandError(err, out))), false
+	}
+
+	iptablesPath, err := env.lookPath("iptables")
+	if err != nil {
+		return Warning("guard.docker", "docker daemon is accessible but local iptables is not installed; Docker firewall backend unusable"), false
+	}
+	ctx, cancel = context.WithTimeout(context.Background(), commandTimeout)
+	out, err = env.run(ctx, "iptables", "-S", "DOCKER-USER")
+	cancel()
+	if err != nil {
+		return Warning("guard.docker", fmt.Sprintf("docker daemon is accessible but DOCKER-USER chain is not usable via %s: %s", iptablesPath, commandError(err, out))), false
+	}
+	return Pass("guard.docker", fmt.Sprintf("docker daemon accessible and DOCKER-USER chain usable (%s)", iptablesPath)), true
 }
 
 func commandError(err error, out []byte) string {

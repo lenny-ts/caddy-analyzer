@@ -119,6 +119,30 @@ func TestCaddyChecksMissingFields(t *testing.T) {
 	}
 }
 
+func TestCaddyChecksExplicitLogDoesNotFallBack(t *testing.T) {
+	dir := t.TempDir()
+	fallback := filepath.Join(dir, "access.log")
+	line := `{"level":"info","ts":1.5,"msg":"handled request","request":{"method":"GET","uri":"/","remote_ip":"1.2.3.4"},"status":200,"duration":0.01}`
+	if err := os.WriteFile(fallback, []byte(line+"\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	explicit := filepath.Join(dir, "missing.log")
+
+	checks := caddyChecks(Env{
+		AccessLog:           explicit,
+		AccessLogCandidates: []string{fallback},
+		LookPath:            func(string) (string, error) { return "", errors.New("not found") },
+	})
+
+	logCheck := checkByID(t, checks, "caddy.access_log")
+	if logCheck.Status == StatusOK {
+		t.Fatalf("explicit missing log reported OK via fallback: %+v", logCheck)
+	}
+	if !strings.Contains(logCheck.Message, explicit) {
+		t.Errorf("explicit log failure does not name %s: %s", explicit, logCheck.Message)
+	}
+}
+
 func TestCaddyChecksNoLog(t *testing.T) {
 	checks := caddyChecks(Env{
 		LookPath: func(string) (string, error) { return "", errors.New("not found") },
@@ -152,8 +176,8 @@ func TestGuardChecksReadOnlyProbes(t *testing.T) {
 		}
 	}
 
-	if len(calls) != 3 {
-		t.Fatalf("probe calls = %d, want 3", len(calls))
+	if len(calls) != 4 {
+		t.Fatalf("probe calls = %d, want 4", len(calls))
 	}
 	for _, call := range calls {
 		joined := strings.Join(call, " ")
@@ -162,6 +186,60 @@ func TestGuardChecksReadOnlyProbes(t *testing.T) {
 				t.Errorf("probe used mutating firewall command: %s", joined)
 			}
 		}
+	}
+}
+
+func TestGuardChecksDockerDaemonAloneIsNotBackend(t *testing.T) {
+	checks := guardChecks(Env{
+		GOOS: "linux",
+		LookPath: func(name string) (string, error) {
+			if name == "docker" {
+				return "/usr/bin/docker", nil
+			}
+			return "", errors.New("not found")
+		},
+		RunCommand: func(_ context.Context, name string, _ ...string) ([]byte, error) {
+			if name == "docker" {
+				return []byte("27.0.0"), nil
+			}
+			return nil, errors.New("not found")
+		},
+	})
+
+	docker := checkByID(t, checks, "guard.docker")
+	if docker.Status == StatusOK {
+		t.Errorf("docker daemon access alone must not pass: %+v", docker)
+	}
+	aggregate := checkByID(t, checks, "guard.backend")
+	if aggregate.Status != StatusFail || !aggregate.Critical {
+		t.Errorf("aggregate check = %+v", aggregate)
+	}
+	if strings.Contains(aggregate.Message, "docker") {
+		t.Errorf("docker counted as a usable backend without local firewall: %s", aggregate.Message)
+	}
+}
+
+func TestGuardChecksDockerRequiresDockerUserChain(t *testing.T) {
+	checks := guardChecks(Env{
+		GOOS:     "linux",
+		LookPath: func(name string) (string, error) { return "/usr/sbin/" + name, nil },
+		RunCommand: func(_ context.Context, name string, args ...string) ([]byte, error) {
+			if name == "docker" {
+				return []byte("27.0.0"), nil
+			}
+			if name == "iptables" && len(args) == 2 && args[1] == "DOCKER-USER" {
+				return []byte("iptables: No chain/target/match by that name."), errors.New("exit status 1")
+			}
+			return nil, nil
+		},
+	})
+
+	docker := checkByID(t, checks, "guard.docker")
+	if docker.Status == StatusOK {
+		t.Errorf("docker backend passed without DOCKER-USER chain: %+v", docker)
+	}
+	if !strings.Contains(docker.Message, "DOCKER-USER") {
+		t.Errorf("docker message = %s", docker.Message)
 	}
 }
 
