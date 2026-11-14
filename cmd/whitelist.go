@@ -4,7 +4,9 @@ import (
 	"bufio"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/spf13/cobra"
 )
@@ -137,11 +139,15 @@ func addWhitelist(ips []string) error {
 		existSet[e] = true
 	}
 
-	f, err := os.OpenFile(whitelistFile, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0600)
-	if err != nil {
-		return fmt.Errorf("open whitelist: %w", err)
+	raw, err := os.ReadFile(whitelistFile)
+	if err != nil && !os.IsNotExist(err) {
+		return fmt.Errorf("read whitelist: %w", err)
 	}
-	defer func() { _ = f.Close() }()
+	var content strings.Builder
+	content.Write(raw)
+	if len(raw) > 0 && raw[len(raw)-1] != '\n' {
+		content.WriteByte('\n')
+	}
 
 	added := 0
 	for _, ip := range ips {
@@ -157,15 +163,16 @@ func addWhitelist(ips []string) error {
 			fmt.Fprintf(os.Stderr, "  - %s (already in whitelist)\n", ip)
 			continue
 		}
-		if _, err := fmt.Fprintf(f, "%s\n", ip); err != nil {
-			return fmt.Errorf("write whitelist: %w", err)
-		}
+		fmt.Fprintf(&content, "%s\n", ip)
 		fmt.Printf("  ✓ %s added\n", ip)
 		existSet[ip] = true
 		added++
 	}
 
 	if added > 0 {
+		if err := writeWhitelistAtomic(whitelistFile, []byte(content.String())); err != nil {
+			return err
+		}
 		fmt.Printf("Whitelist updated: %s (%d entries)\n", whitelistFile, len(existing)+added)
 	}
 	return nil
@@ -211,14 +218,58 @@ func removeWhitelist(ips []string) error {
 		content.WriteString("\n")
 	}
 
-	if err := os.WriteFile(whitelistFile, []byte(content.String()), 0600); err != nil {
-		return fmt.Errorf("write whitelist: %w", err)
+	if err := writeWhitelistAtomic(whitelistFile, []byte(content.String())); err != nil {
+		return err
 	}
 
 	if removed > 0 {
 		fmt.Printf("Whitelist updated: %s (%d entries)\n", whitelistFile, len(kept))
 	}
 	return nil
+}
+
+// writeWhitelistAtomic writes content to a temporary file in the target
+// directory and renames it into place. A guard reload can then only observe
+// the old complete file or the new complete file, never a truncated one.
+func writeWhitelistAtomic(path string, content []byte) error {
+	mode := os.FileMode(0600)
+	if info, err := os.Stat(path); err == nil {
+		mode = info.Mode().Perm()
+	}
+
+	f, err := os.CreateTemp(filepath.Dir(path), ".whitelist-*.tmp")
+	if err != nil {
+		return fmt.Errorf("create temporary whitelist: %w", err)
+	}
+	tmp := f.Name()
+	defer func() {
+		if tmp != "" {
+			_ = os.Remove(tmp)
+		}
+	}()
+
+	if err := f.Chmod(mode); err != nil {
+		_ = f.Close()
+		return fmt.Errorf("set whitelist permissions: %w", err)
+	}
+	if _, err := f.Write(content); err != nil {
+		_ = f.Close()
+		return fmt.Errorf("write whitelist: %w", err)
+	}
+	if err := f.Close(); err != nil {
+		return fmt.Errorf("close whitelist: %w", err)
+	}
+	// On Windows a concurrent reader can briefly hold the target and make the
+	// replace fail; retry so an active guard reload does not fail the command.
+	var renameErr error
+	for attempt := 0; attempt < 50; attempt++ {
+		if renameErr = os.Rename(tmp, path); renameErr == nil {
+			tmp = ""
+			return nil
+		}
+		time.Sleep(2 * time.Millisecond)
+	}
+	return fmt.Errorf("replace whitelist: %w", renameErr)
 }
 
 func loadWhitelist() ([]string, error) {

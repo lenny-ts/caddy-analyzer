@@ -197,3 +197,69 @@ func TestAllowlistReloadUnblocksNewlyProtectedIP(t *testing.T) {
 		t.Error("firewall rule for newly allowlisted IP was not removed")
 	}
 }
+
+func TestAllowlistReloadUnblocksCoveringSubnetBan(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "whitelist.txt")
+	writeAllowlistFile(t, path, "10.0.0.0/8\n")
+
+	fb := newFakeBlocker()
+	g := New(Config{
+		SubnetLimit:    1,
+		Window:         time.Minute,
+		BlockDuration:  0,
+		Blocker:        fb,
+		NeverBlockFile: path,
+	})
+
+	g.Evaluate(caddyLine("203.0.113.7", "/", "GET", 200))
+	g.Tick(context.Background())
+	if !g.IsBlocked("203.0.113.0/24") {
+		t.Fatal("expected 203.0.113.0/24 to be blocked before the reload")
+	}
+
+	writeAllowlistFile(t, path, "10.0.0.0/8\n203.0.113.7\n")
+	if err := g.reloadAllowlist(); err != nil {
+		t.Fatalf("reload: %v", err)
+	}
+	if g.IsBlocked("203.0.113.7") || g.IsBlocked("203.0.113.0/24") {
+		t.Error("newly allowlisted IP is still covered by the subnet ban")
+	}
+	if fb.blocked["203.0.113.0/24"] {
+		t.Error("firewall rule for the covering subnet was not removed")
+	}
+
+	// The sliding counters still hold traffic for this subnet; a later Tick
+	// must not reapply the ban over the newly protected address.
+	g.Tick(context.Background())
+	if g.IsBlocked("203.0.113.7") || g.IsBlocked("203.0.113.0/24") || fb.blocked["203.0.113.0/24"] {
+		t.Error("later tick reintroduced the subnet ban over the allowlisted IP")
+	}
+}
+
+func TestSubnetBanNotAppliedWhenItContainsAllowlistedIP(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "whitelist.txt")
+	writeAllowlistFile(t, path, "10.0.0.0/8\n203.0.113.7\n")
+
+	fb := newFakeBlocker()
+	g := New(Config{
+		SubnetLimit:    1,
+		Window:         time.Minute,
+		BlockDuration:  0,
+		Blocker:        fb,
+		NeverBlockFile: path,
+	})
+
+	g.Evaluate(caddyLine("203.0.113.8", "/", "GET", 200))
+	blocked := g.Tick(context.Background())
+	for _, c := range blocked {
+		if c.IP == "203.0.113.0/24" {
+			t.Fatal("applied a subnet ban containing an allowlisted IP")
+		}
+	}
+	if g.IsBlocked("203.0.113.8") || g.IsBlocked("203.0.113.0/24") {
+		t.Error("subnet ban containing an allowlisted IP was applied")
+	}
+	if fb.blocked["203.0.113.0/24"] {
+		t.Error("firewall rule for subnet containing an allowlisted IP was applied")
+	}
+}

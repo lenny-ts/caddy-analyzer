@@ -632,11 +632,13 @@ func (g *Guard) isAllowlisted(ip string) bool {
 	// Candidate IPs from the subnet-limit path are CIDRs (e.g.
 	// "10.0.0.0/24"), not bare addresses. A bare net.ParseIP returns nil
 	// for a CIDR string and the allowlist would be silently bypassed.
-	// If the candidate is a CIDR, treat it as allowlisted when it is a
-	// subset of any allowlist CIDR (covers both v4 and v6).
+	// If the candidate is a CIDR, treat it as allowlisted when it overlaps
+	// an allowlist entry: either the candidate is fully allowlisted, or it
+	// contains an allowlisted address and must not be blocked (covers both
+	// v4 and v6).
 	if _, ipnet, err := net.ParseCIDR(ip); err == nil {
 		for _, n := range g.allowlist {
-			if cidrSubset(ipnet, n) {
+			if cidrSubset(ipnet, n) || cidrSubset(n, ipnet) {
 				return true
 			}
 		}
