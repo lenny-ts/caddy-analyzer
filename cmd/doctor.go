@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"os"
-	"path/filepath"
 	"runtime"
 	"time"
 
@@ -63,7 +62,7 @@ func runDoctor(cmd *cobra.Command, _ []string) error {
 		AccessLog:           doctorLog,
 		AccessLogCandidates: doctorAccessLogCandidates(),
 		GeoIPDB:             flagGeoIPDB,
-		BlocklistCacheDir:   filepath.Clean(doctorCacheDir),
+		BlocklistCacheDir:   doctorCacheDir,
 		Now:                 time.Now(),
 	}
 

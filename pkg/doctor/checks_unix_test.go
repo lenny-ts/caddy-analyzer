@@ -38,3 +38,20 @@ func TestCaddyChecksFIFOLogDoesNotHang(t *testing.T) {
 		t.Fatal("caddyChecks hung on FIFO access log")
 	}
 }
+
+func TestGeoIPCheckFIFODoesNotHang(t *testing.T) {
+	fifo := filepath.Join(t.TempDir(), "GeoIP.mmdb")
+	if err := syscall.Mkfifo(fifo, 0o600); err != nil {
+		t.Skipf("cannot create FIFO: %v", err)
+	}
+	done := make(chan Check, 1)
+	go func() { done <- geoIPCheck(Env{GeoIPDB: fifo}) }()
+	select {
+	case check := <-done:
+		if check.Status != StatusWarn || !strings.Contains(check.Message, "regular file") {
+			t.Fatalf("FIFO GeoIP check = %+v", check)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("GeoIP check hung on FIFO")
+	}
+}

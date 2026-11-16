@@ -323,9 +323,9 @@ func TestGeoIPCheck(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	present := geoIPCheck(Env{GeoIPDB: path})
-	if present.Status != StatusOK {
-		t.Errorf("present GeoIP check = %+v", present)
+	corrupt := geoIPCheck(Env{GeoIPDB: path})
+	if corrupt.Status != StatusWarn || !strings.Contains(corrupt.Message, "unusable") {
+		t.Errorf("corrupt GeoIP check = %+v", corrupt)
 	}
 	missing := geoIPCheck(Env{GeoIPDB: filepath.Join(t.TempDir(), "missing.mmdb")})
 	if missing.Status != StatusWarn || missing.Critical {

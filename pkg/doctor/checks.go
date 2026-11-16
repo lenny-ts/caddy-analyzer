@@ -12,6 +12,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/oschwald/maxminddb-golang"
+
 	"github.com/lenny-ts/caddy-analyzer/pkg/enrich"
 )
 
@@ -444,14 +446,14 @@ func geoIPCheck(env Env) Check {
 	if err != nil {
 		return Warning("optional.geoip", fmt.Sprintf("GeoIP database not found: %s", path))
 	}
-	if info.IsDir() {
-		return Warning("optional.geoip", fmt.Sprintf("GeoIP database path is a directory: %s", path))
+	if !info.Mode().IsRegular() {
+		return Warning("optional.geoip", fmt.Sprintf("GeoIP database is not a regular file: %s", path))
 	}
-	f, err := os.Open(path)
+	db, err := maxminddb.Open(path)
 	if err != nil {
-		return Warning("optional.geoip", fmt.Sprintf("GeoIP database not readable: %s", path))
+		return Warning("optional.geoip", fmt.Sprintf("GeoIP database unusable: %s: %v", path, err))
 	}
-	_ = f.Close()
+	_ = db.Close()
 	return Pass("optional.geoip", fmt.Sprintf("GeoIP database present: %s", path))
 }
 
