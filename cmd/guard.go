@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"bufio"
 	"context"
 	"fmt"
 	"math"
@@ -196,6 +195,19 @@ func runGuard(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("guard requires root: run with sudo (iptables needs CAP_NET_ADMIN)")
 	}
 
+	// Validate before starting readers or touching the firewall. At startup
+	// there is no last good file-derived list to retain on a malformed file.
+	neverBlockFile := guardNeverBlockFile
+	if neverBlockFile == "" {
+		neverBlockFile = WhitelistPath()
+	}
+	if neverBlockFile != "" {
+		if _, err := guard.LoadAllowlistFile(neverBlockFile); err != nil &&
+			(guardNeverBlockFile != "" || !os.IsNotExist(err)) {
+			return fmt.Errorf("never-block-file: %w", err)
+		}
+	}
+
 	sources, err := resolveSources(args)
 	if err != nil {
 		return err
@@ -219,18 +231,6 @@ func runGuard(cmd *cobra.Command, args []string) error {
 	defer func() { _ = dispatcher.Close() }()
 
 	neverBlock := guardNeverBlock
-	// --never-block-file overrides the whitelist managed by the whitelist
-	// command. The guard reloads whichever file is selected while running.
-	neverBlockFile := guardNeverBlockFile
-	if neverBlockFile == "" {
-		neverBlockFile = WhitelistPath()
-	}
-	if guardNeverBlockFile != "" {
-		// Keep the existing fail-fast behavior for an explicit override.
-		if _, err := loadIPList(guardNeverBlockFile); err != nil {
-			return fmt.Errorf("never-block-file: %w", err)
-		}
-	}
 
 	// Blocklist manager: load cached feeds first, then start background
 	// refresh. If --no-blocklist is set, skip entirely. Source list is
@@ -463,23 +463,4 @@ func parseBanResetAfter(value string) (time.Duration, error) {
 		return 0, fmt.Errorf("--ban-reset-after must be a positive duration (e.g. 30d or 720h)")
 	}
 	return duration * multiplier, nil
-}
-
-func loadIPList(path string) ([]string, error) {
-	f, err := os.Open(path)
-	if err != nil {
-		return nil, err
-	}
-	defer func() { _ = f.Close() }()
-
-	var ips []string
-	scanner := bufio.NewScanner(f)
-	for scanner.Scan() {
-		line := strings.TrimSpace(scanner.Text())
-		if line == "" || strings.HasPrefix(line, "#") {
-			continue
-		}
-		ips = append(ips, line)
-	}
-	return ips, scanner.Err()
 }

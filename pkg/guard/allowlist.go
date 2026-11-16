@@ -8,9 +8,16 @@ import (
 	"strings"
 )
 
-// loadAllowlistFile reads one IP/CIDR per line, ignoring blank lines and
-// comments. The format matches the file managed by `caddy-analyze whitelist`.
-func loadAllowlistFile(path string) ([]string, error) {
+// LoadAllowlistFile reads and validates a regular IP/CIDR file, ignoring blank
+// lines and comments. It is shared by startup validation and live reloads.
+func LoadAllowlistFile(path string) ([]*net.IPNet, error) {
+	info, err := os.Stat(path)
+	if err != nil {
+		return nil, err
+	}
+	if !info.Mode().IsRegular() {
+		return nil, fmt.Errorf("%s: not a regular file", path)
+	}
 	f, err := os.Open(path)
 	if err != nil {
 		return nil, err
@@ -29,7 +36,7 @@ func loadAllowlistFile(path string) ([]string, error) {
 	if err := scanner.Err(); err != nil {
 		return nil, err
 	}
-	return entries, nil
+	return parseAllowlistEntries(entries)
 }
 
 func parseAllowlistEntries(entries []string) ([]*net.IPNet, error) {
@@ -51,11 +58,7 @@ func (g *Guard) reloadAllowlist() error {
 	if g.cfg.NeverBlockFile == "" {
 		return nil
 	}
-	entries, err := loadAllowlistFile(g.cfg.NeverBlockFile)
-	if err != nil {
-		return err
-	}
-	fileNets, err := parseAllowlistEntries(entries)
+	fileNets, err := LoadAllowlistFile(g.cfg.NeverBlockFile)
 	if err != nil {
 		return err
 	}
