@@ -152,7 +152,7 @@ sudo caddy-analyze guard docker://caddy \
 sudo caddy-analyze unban --list
 cat /var/log/caddy-analyzer-audit.jsonl | tail</code></pre>
 
-<div class="callout callout-warning"><div class="callout-label">Accesso amministratore remoto</div>La protezione automatica copre il server, non ogni connessione amministratore. Rileva l'IP pubblico sulla tua postazione e passalo con <code>--never-block</code>. Usa <code>--dry-run</code> per un'anteprima; esegue comunque il rilevamento degli IP salvo disabilitazione. Le modifiche al file whitelist richiedono il riavvio di guard.</div>
+<div class="callout callout-warning"><div class="callout-label">Accesso amministratore remoto</div>La protezione automatica copre il server, non ogni connessione amministratore. Rileva l'IP pubblico sulla tua postazione e passalo con <code>--never-block</code>. Usa <code>--dry-run</code> per un'anteprima; esegue comunque il rilevamento degli IP salvo disabilitazione. Le modifiche al file whitelist vengono ricaricate automaticamente ogni 30 secondi; non è necessario riavviare guard.</div>
       <footer class="footer">
   <p>caddy-analyzer è open-source sotto licenza <a href="https://github.com/lenny-ts/caddy-analyzer/blob/main/LICENSE">MIT</a> · <a href="https://github.com/lenny-ts/caddy-analyzer">GitHub</a> · <a href="../it/changelog.html">Registro modifiche</a></p>
 </footer>

@@ -157,7 +157,7 @@ sudo caddy-analyze guard docker://caddy \
 sudo caddy-analyze unban --list
 cat /var/log/caddy-analyzer-audit.jsonl | tail</code></pre>
 
-<div class="callout callout-warning"><div class="callout-label">Remote administrator access</div>Automatic protection covers the server, not every administrator connection. Obtain your workstation's public IP on that workstation and pass it with <code>--never-block</code>. Use <code>--dry-run</code> to preview decisions; it still performs self-IP discovery unless disabled. Whitelist-file changes require restarting guard.</div>
+<div class="callout callout-warning"><div class="callout-label">Remote administrator access</div>Automatic protection covers the server, not every administrator connection. Obtain your workstation's public IP on that workstation and pass it with <code>--never-block</code>. Use <code>--dry-run</code> to preview decisions; it still performs self-IP discovery unless disabled. Whitelist-file changes are reloaded automatically every 30 seconds; no guard restart is needed.</div>
       <footer class="footer">
   <p>caddy-analyzer is open-source under <a href="https://github.com/lenny-ts/caddy-analyzer/blob/main/LICENSE">MIT</a> · <a href="https://github.com/lenny-ts/caddy-analyzer">GitHub</a> · <a href="changelog.html">Changelog</a></p>
 </footer>

@@ -2,8 +2,47 @@ package cmd
 
 import (
 	"os"
+	"path/filepath"
+	"strings"
 	"testing"
 )
+
+func TestRunGuardRejectsInvalidWhitelistAtStartup(t *testing.T) {
+	oldFile, oldWhitelist := guardNeverBlockFile, whitelistFile
+	oldDryRun, oldNoBlocklist, oldProtectSelf := guardDryRun, guardNoBlocklist, guardProtectSelf
+	oldBackend := guardFirewallBackend
+	oldAuditLog, oldNotify := guardAuditLog, guardNotify
+	t.Cleanup(func() {
+		guardNeverBlockFile, whitelistFile = oldFile, oldWhitelist
+		guardDryRun, guardNoBlocklist, guardProtectSelf = oldDryRun, oldNoBlocklist, oldProtectSelf
+		guardFirewallBackend = oldBackend
+		guardAuditLog, guardNotify = oldAuditLog, oldNotify
+	})
+	dir := t.TempDir()
+	log := filepath.Join(dir, "access.log")
+	if err := os.WriteFile(log, nil, 0600); err != nil {
+		t.Fatal(err)
+	}
+	path := filepath.Join(dir, "whitelist.txt")
+	if err := os.WriteFile(path, []byte("203.0.113.7\nnot-an-ip\n"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	guardDryRun, guardNoBlocklist, guardProtectSelf = true, true, false
+	guardAuditLog = ""
+	// If validation is bypassed, stop before any firewall or network access.
+	guardFirewallBackend = "review-invalid"
+	whitelistFile = path
+	for _, explicit := range []bool{true, false} {
+		guardNeverBlockFile = ""
+		if explicit {
+			guardNeverBlockFile = path
+		}
+		err := runGuard(nil, []string{log})
+		if err == nil || !strings.Contains(err.Error(), "invalid IP or CIDR") {
+			t.Errorf("explicit=%v: expected whitelist validation failure, got %v", explicit, err)
+		}
+	}
+}
 
 func TestRunGuardInvalidDuration(t *testing.T) {
 	old := guardDuration
