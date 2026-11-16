@@ -172,6 +172,10 @@ caddy-analyze blocklist init --no-default-blocklists --blocklist-config mylist.t
 sudo caddy-analyze guard --country-block CN,RU,IR docker://my-caddy
 ```
 
+The default `netapi-honeypot` feed is provided by
+[NetAPI](https://netapi.com/compromised-ips/) under
+[CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).
+
 The baseline is a versioned JSON file containing the analyzed HTTP and
 operational aggregates plus creation time, tool version, sources, filters,
 and detection metadata. `--against` applies the current filters and exits
