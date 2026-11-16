@@ -1,13 +1,62 @@
 package cmd
 
 import (
+	"bytes"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"sync"
 	"testing"
 )
+
+func TestWhitelistConcurrentAdds(t *testing.T) {
+	if ip := os.Getenv("CADDY_TEST_WHITELIST_IP"); ip != "" {
+		whitelistFile = os.Getenv("CADDY_TEST_WHITELIST_FILE")
+		whitelistAdd = []string{ip}
+		if err := runWhitelist(nil, nil); err != nil {
+			t.Fatal(err)
+		}
+		return
+	}
+	path := filepath.Join(t.TempDir(), "whitelist.txt")
+	if err := os.WriteFile(path, []byte("203.0.113.7\n"+strings.Repeat("# padding\n", 100000)), 0600); err != nil {
+		t.Fatal(err)
+	}
+	const writers = 8
+	var commands [writers]*exec.Cmd
+	var output [writers]bytes.Buffer
+	for i := range commands {
+		commands[i] = exec.Command(os.Args[0], "-test.run=^TestWhitelistConcurrentAdds$")
+		commands[i].Env = append(os.Environ(),
+			"CADDY_TEST_WHITELIST_FILE="+path,
+			fmt.Sprintf("CADDY_TEST_WHITELIST_IP=198.51.100.%d", i+1))
+		commands[i].Stdout, commands[i].Stderr = &output[i], &output[i]
+		if err := commands[i].Start(); err != nil {
+			t.Fatal(err)
+		}
+	}
+	for i, command := range commands {
+		if err := command.Wait(); err != nil {
+			t.Errorf("writer %d: %v: %s", i, err, output[i].String())
+		}
+	}
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	content := "\n" + string(raw)
+	if !strings.Contains(content, "\n203.0.113.7\n") {
+		t.Fatal("concurrent update lost the retained whitelist entry")
+	}
+	for i := range writers {
+		ip := fmt.Sprintf("198.51.100.%d", i+1)
+		if !strings.Contains(content, "\n"+ip+"\n") {
+			t.Errorf("concurrent update lost %s", ip)
+		}
+	}
+}
 
 func TestWhitelistInit(t *testing.T) {
 	dir := t.TempDir()

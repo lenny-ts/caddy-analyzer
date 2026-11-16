@@ -51,6 +51,24 @@ func init() {
 }
 
 func runWhitelist(cmd *cobra.Command, args []string) error {
+	if whitelistInit || !whitelistList && (len(whitelistAdd) > 0 || len(whitelistRem) > 0) {
+		if whitelistInit {
+			if err := os.MkdirAll(filepath.Dir(whitelistFile), 0750); err != nil {
+				return fmt.Errorf("create whitelist dir: %w", err)
+			}
+		}
+		// Lock a stable sidecar, not the whitelist inode replaced by rename.
+		// Keep the sidecar: removing it could let writers lock different files.
+		lock, err := os.OpenFile(whitelistFile+".lock", os.O_CREATE|os.O_RDWR, 0600)
+		if err != nil {
+			return fmt.Errorf("open whitelist lock: %w", err)
+		}
+		defer func() { _ = lock.Close() }()
+		if err := lockWhitelistFile(lock); err != nil {
+			return fmt.Errorf("lock whitelist: %w", err)
+		}
+	}
+
 	// --init: create the whitelist file with a header.
 	if whitelistInit {
 		return initWhitelist()
