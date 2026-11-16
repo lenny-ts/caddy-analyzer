@@ -196,7 +196,7 @@ sudo caddy-analyze guard access.log --never-block-file whitelist.txt</code></pre
 <h3 id="blocklist-flag">blocklist</h3>
 <div class="table-wrap"><table><thead><tr><th>Flag</th><th>Uso</th></tr></thead><tbody>
 <tr><td><code>--cache-dir</code></td><td>Directory in cui salvare i file dei feed scaricati.</td></tr>
-<tr><td><code>--no-default-blocklists</code></td><td>Disabilita gli otto feed predefiniti; utile con una configurazione solo custom.</td></tr>
+<tr><td><code>--no-default-blocklists</code></td><td>Disabilita i nove feed predefiniti; utile con una configurazione solo custom.</td></tr>
 <tr><td><code>--blocklist-config FILE</code></td><td>Aggiunge file JSON con sorgenti <code>name</code>, <code>url</code> e, se necessario, <code>format</code>; ripetibile.</td></tr>
 <tr><td><code>--blocklist-remove NAME</code></td><td>Rimuove sorgenti nominate dalla configurazione; accetta valori separati da virgole.</td></tr>
 <tr><td><code>--format table|json</code></td><td>Formato di <code>list</code> e <code>config</code>.</td></tr>
@@ -213,7 +213,7 @@ sudo caddy-analyze guard access.log --never-block-file whitelist.txt</code></pre
 <tr><td><code>--firewall-backend</code></td><td>auto</td><td>Backend <code>auto</code>, <code>iptables</code>, <code>docker</code>, <code>nftables</code> o <code>hybrid</code>.</td></tr>
 <tr><td><code>--dry-run</code></td><td>false</td><td>Valuta e registra i blocchi possibili senza modificare firewall o state file.</td></tr>
 <tr><td><code>--country-block</code></td><td>nessuno</td><td>Blocca immediatamente i paesi ISO indicati tramite GeoIP.</td></tr>
-<tr><td><code>--no-blocklist</code></td><td>false</td><td>Disabilita il controllo degli otto feed.</td></tr>
+<tr><td><code>--no-blocklist</code></td><td>false</td><td>Disabilita il controllo dei nove feed.</td></tr>
 <tr><td><code>--blocklist-refresh</code></td><td>6h</td><td>Intervallo di refresh dei feed; minimo 1h, <code>0</code> disabilita.</td></tr>
 <tr><td><code>--cache-dir</code></td><td>cache utente</td><td>Directory dei feed cache.</td></tr>
 <tr><td><code>--never-block</code></td><td>nessuno</td><td>IP/CIDR da proteggere sempre; ripetibile.</td></tr>

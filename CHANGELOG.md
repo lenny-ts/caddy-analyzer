@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - **Behavioral authentication abuse (#110)**: opt-in, configurable rolling-window brute-force, suspected credential-stuffing (User-Agent diversity), and aggregate password-spray detection. Include evidence in reports and Guard audit events; optionally block per-IP attackers while keeping aggregate campaigns alert-only.
 - **Progressive bans (#109)**: opt-in `guard --ban-escalation` increases repeat-offender bans from the base duration to at least 1h, 24h, and 168h, with configurable retention and maximum duration. Persist offender history separately from active bans, expose list/show/reset commands, and optionally clear history with `unban --reset-offenses`. Dry-run simulates escalation without writing history.
+- **NetAPI honeypot attackers blocklist**: ninth default feed `netapi-honeypot`, the IPv4 addresses that attacked the NetAPI honeypot sensors in the last 48 hours, rebuilt hourly (plain text, CC BY 4.0, no API key). Disable with `--blocklist-remove netapi-honeypot`.
 
 ### Fixed
 - **Guard burst latency (#124)**: evaluate blocking thresholds every second by default, independently of `--window`, with configurable `--eval-interval`. Keep window resets on an independent deadline, consume threshold and pattern evidence after successful bans to prevent re-banning old traffic, and calculate anomaly RPS from the actual sample duration, including slow firewall operations.

@@ -63,7 +63,7 @@ Output example:
        [scanner] Scanner / automated tool detected GET /admin
 ```
 
-> **Guard mode** (`caddy-analyze guard`) extends detection with automatic firewall blocking — blocks offending IPs via `iptables`, Docker `DOCKER-USER` chain, or `nftables` depending on the environment. **Auto-detection** selects the right backend: when Docker containers with Caddy are found, rules are applied to both `INPUT` and `DOCKER-USER` chains so traffic is blocked regardless of network path. Uses a **sliding window** (per-IP, per-second buckets) so attackers cannot evade limits by straddling a tick boundary. Supports audit logging (`--audit-log`), state persistence across restarts (`--state-file`), an IP allowlist (`--never-block` / `--never-block-file` or `whitelist` command), distributed-scan defense (`--subnet-limit`), RPS anomaly alerting (`--rps-anomaly`), and `--trust-forwarded` for deployments behind a reverse proxy/CDN. Pattern-detection blocks are filtered by confidence via `--detect-confidence` (default 8, `0` disables). **Blocklist feeds** (Spamhaus DROP, FireHOL, CINS, Tor, Emerging Threats, AbuseIPDB) trigger immediate blocks via a CIDR trie; `--country-block CN,RU,IR` blocks by GeoIP country code.
+> **Guard mode** (`caddy-analyze guard`) extends detection with automatic firewall blocking — blocks offending IPs via `iptables`, Docker `DOCKER-USER` chain, or `nftables` depending on the environment. **Auto-detection** selects the right backend: when Docker containers with Caddy are found, rules are applied to both `INPUT` and `DOCKER-USER` chains so traffic is blocked regardless of network path. Uses a **sliding window** (per-IP, per-second buckets) so attackers cannot evade limits by straddling a tick boundary. Supports audit logging (`--audit-log`), state persistence across restarts (`--state-file`), an IP allowlist (`--never-block` / `--never-block-file` or `whitelist` command), distributed-scan defense (`--subnet-limit`), RPS anomaly alerting (`--rps-anomaly`), and `--trust-forwarded` for deployments behind a reverse proxy/CDN. Pattern-detection blocks are filtered by confidence via `--detect-confidence` (default 8, `0` disables). **Blocklist feeds** (Spamhaus DROP, FireHOL, CINS, Tor, Emerging Threats, AbuseIPDB, NetAPI honeypot) trigger immediate blocks via a CIDR trie; `--country-block CN,RU,IR` blocks by GeoIP country code.
 
 ### Automatic self-ban protection
 
@@ -163,7 +163,7 @@ caddy-analyze --against baseline.json --threshold 5 production.log
 caddy-analyze --watch
 # Press 6 for the domains receiving the most requests
 
-# Manage blocklist feeds (8 defaults: Spamhaus, FireHOL, CINS, Tor, ET, AbuseIPDB)
+# Manage blocklist feeds (9 defaults: Spamhaus, FireHOL, CINS, Tor, ET, AbuseIPDB, NetAPI)
 caddy-analyze blocklist refresh
 caddy-analyze blocklist list
 caddy-analyze blocklist init --no-default-blocklists --blocklist-config mylist.txt
@@ -171,6 +171,10 @@ caddy-analyze blocklist init --no-default-blocklists --blocklist-config mylist.t
 # Real-time guard with blocklist + country-block
 sudo caddy-analyze guard --country-block CN,RU,IR docker://my-caddy
 ```
+
+The default `netapi-honeypot` feed is provided by
+[NetAPI](https://netapi.com/compromised-ips/) under
+[CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).
 
 The baseline is a versioned JSON file containing the analyzed HTTP and
 operational aggregates plus creation time, tool version, sources, filters,
@@ -210,7 +214,7 @@ Caddy v2 uses a **structured JSON log format** that differs from the Common/Comb
 | **Parsing** | Native Caddy v2 structured JSON — no regex, no config required |
 | **Security** | 26 attack categories: SQLi, NoSQLi, XSS, SSTI, SSRF, RCE, path traversal/LFI, LFI wrapper abuse, GraphQL introspection, Log4j/JNDI, XXE/XInclude, open redirect, LDAP injection, XPath injection, CRLF injection, prototype pollution, SSI injection, UA rotation, JWT abuse, object enumeration (BOLA/IDOR), beaconing (C2), sensitive file probes, WordPress probes, CGI probes, admin probes, scanner tools |
 | **Detection Accuracy** | Dual-pass engine: URL-unescaped + raw URI matching catches multibyte-encoded and double-encoded bypass attempts. Confidence scoring (1-10) per detection. LRU IP eviction (100K cap) bounds memory on huge logs |
-| **Firewall** | `guard` daemon auto-blocks malicious IPs via `iptables` with configurable thresholds, ban duration, audit logging, state persistence (survives restarts), IP allowlist, `block`/`unban` state sync, 8 default blocklist feeds (Spamhaus, FireHOL, CINS, Tor, ET, AbuseIPDB) with CIDR-trie lookup, and `--country-block` GeoIP filtering |
+| **Firewall** | `guard` daemon auto-blocks malicious IPs via `iptables` with configurable thresholds, ban duration, audit logging, state persistence (survives restarts), IP allowlist, `block`/`unban` state sync, 9 default blocklist feeds (Spamhaus, FireHOL, CINS, Tor, ET, AbuseIPDB, NetAPI) with CIDR-trie lookup, and `--country-block` GeoIP filtering |
 | **Threat Intel** | Offline GeoIP enrichment (MaxMind GeoLite2 / DB-IP mmdb, no API key) with auto-download of Country, ASN, and City databases. `top country` / `top city` / `top asn` dimensions. Country, city, coordinates, and heatmap sections in HTML reports. Auto-discovery in cwd, `~/.config/caddy-analyzer/`, `/var/lib/caddy-analyzer/`, `/usr/share/GeoIP/` |
 | **Traffic Analysis** | Classifies human users vs crawlers (Googlebot, Bingbot, Yandex, DuckDuckBot, GPTBot, ClaudeBot, Bytespider, CCBot, Amazonbot, and others) and automated scrapers |
 | **Diff Engine** | Side-by-side comparison of two log files detecting 5xx spikes, RPS shifts, and latency regressions |
