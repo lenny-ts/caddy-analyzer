@@ -49,7 +49,7 @@ code, _ := enrich.CountryCodeFromName("Italy") // "IT"</code></pre>
 <pre><code>import "github.com/lenny-ts/caddy-analyzer/pkg/blocklist"
 
 mgr := blocklist.NewManager("~/.cache/caddy-analyzer/blocklists")
-mgr.Refresh(context.Background()) // download 8 feeds
+mgr.Refresh(context.Background()) // download 9 feeds
 hit := mgr.Contains("198.51.100.23") // O(1) via cidranger.PCTrie
 sources := mgr.ListSources() // name, URL, count, age, status</code></pre>
 <p>Aggiunta personalizzata: <code>mgr.AddSource(blocklist.Source{Name:"My",URL:"https://…/list.txt"})</code>. TTL cache 7d.</p>

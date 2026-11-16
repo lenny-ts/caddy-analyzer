@@ -320,8 +320,8 @@ func TestManagerContainsInvalidIP(t *testing.T) {
 }
 
 func TestDefaultSources(t *testing.T) {
-	if len(DefaultSources) < 8 {
-		t.Fatalf("expected at least 8 default sources, got %d", len(DefaultSources))
+	if len(DefaultSources) < 9 {
+		t.Fatalf("expected at least 9 default sources, got %d", len(DefaultSources))
 	}
 	names := map[string]bool{}
 	for _, s := range DefaultSources {
@@ -339,6 +339,7 @@ func TestDefaultSources(t *testing.T) {
 		"tor-exit-nodes",
 		"emerging-threats",
 		"abuseipdb",
+		"netapi-honeypot",
 	}
 	for _, e := range expected {
 		if !names[e] {

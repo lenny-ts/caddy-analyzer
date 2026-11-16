@@ -102,7 +102,7 @@ Detection:
   • 404 surge — directory scanning / enumeration
   • Request threshold — generic high-volume
   • Pattern detection — 26 categories: SQLi, NoSQLi, XSS, SSTI, SSRF, RCE, path traversal, LFI wrappers, GraphQL, Log4j/JNDI, XXE, open redirect, LDAP/XPath/CRLF/SSI injection, prototype pollution, probes, scanners, UA rotation, JWT abuse, object enumeration, beaconing (confidence >= --detect-confidence)
-  • Blocklist feeds (Spamhaus DROP, FireHOL, CINS, Tor, Emerging Threats, AbuseIPDB) — immediate block
+  • Blocklist feeds (Spamhaus DROP, FireHOL, CINS, Tor, Emerging Threats, AbuseIPDB, NetAPI honeypot) — immediate block
   • Country block (--country-block) — immediate block by GeoIP country code
 
 Self-ban protection (enabled by default):

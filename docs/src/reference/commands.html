@@ -198,7 +198,7 @@ sudo caddy-analyze guard access.log --never-block-file whitelist.txt</code></pre
 <h3 id="blocklist-flags">blocklist</h3>
 <div class="table-wrap"><table><thead><tr><th>Flag</th><th>What it does</th></tr></thead><tbody>
 <tr><td><code>--cache-dir</code></td><td>Directory for downloaded feed files.</td></tr>
-<tr><td><code>--no-default-blocklists</code></td><td>Disables the eight built-in feeds for a custom-only setup.</td></tr>
+<tr><td><code>--no-default-blocklists</code></td><td>Disables the nine built-in feeds for a custom-only setup.</td></tr>
 <tr><td><code>--blocklist-config FILE</code></td><td>Adds JSON sources with <code>name</code>, <code>url</code> and optional <code>format</code>; repeatable.</td></tr>
 <tr><td><code>--blocklist-remove NAME</code></td><td>Removes named sources; accepts comma-separated names.</td></tr>
 <tr><td><code>--format table|json</code></td><td>Output format for <code>list</code> and <code>config</code>.</td></tr>
@@ -215,7 +215,7 @@ sudo caddy-analyze guard access.log --never-block-file whitelist.txt</code></pre
 <tr><td><code>--firewall-backend</code></td><td>auto</td><td>Selects <code>auto</code>, <code>iptables</code>, <code>docker</code>, <code>nftables</code> or <code>hybrid</code>.</td></tr>
 <tr><td><code>--dry-run</code></td><td>false</td><td>Reports and audits would-be blocks without changing firewall or state.</td></tr>
 <tr><td><code>--country-block</code></td><td>none</td><td>Immediately blocks listed ISO countries through GeoIP.</td></tr>
-<tr><td><code>--no-blocklist</code></td><td>false</td><td>Disables checking the eight feeds.</td></tr>
+<tr><td><code>--no-blocklist</code></td><td>false</td><td>Disables checking the nine feeds.</td></tr>
 <tr><td><code>--blocklist-refresh</code></td><td>6h</td><td>Feed refresh interval; minimum 1h, <code>0</code> disables.</td></tr>
 <tr><td><code>--cache-dir</code></td><td>user cache</td><td>Blocklist cache directory.</td></tr>
 <tr><td><code>--never-block</code></td><td>none</td><td>Protected IPs/CIDRs; repeatable.</td></tr>

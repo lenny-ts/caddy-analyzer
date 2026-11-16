@@ -61,6 +61,7 @@ var DefaultSources = []Source{
 	{Name: "tor-exit-nodes", URL: "https://check.torproject.org/torbulkexitlist"},
 	{Name: "emerging-threats", URL: "https://rules.emergingthreats.net/blockrules/compromised-ips.txt"},
 	{Name: "abuseipdb", URL: "https://raw.githubusercontent.com/borestad/blocklist-abuseipdb/main/abuseipdb-s100-7d.ipv4"},
+	{Name: "netapi-honeypot", URL: "https://netapi.com/api2/?method=compromised&dataset_type=ip"},
 }
 
 // Manager coordinates fetching, caching, and lookups across multiple
