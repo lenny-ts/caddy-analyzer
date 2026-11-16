@@ -42,6 +42,7 @@
 </table></div>
 
 <h2 id="memory">Memory bounds</h2>
+<p>Optional authentication-abuse tracking keeps up to 100,000 failures per scenario (300,000 total). Guard evaluates thresholds every second by default, resets windows independently, refreshes whitelist/self-IP data every 30 seconds, and stores escalation history beside active-ban state. Read-only diagnostics live in <code>pkg/doctor</code>; see the <a href="reference/api.html#doctor">API reference</a>.</p>
 <p><code>MaxCardinality 100k</code> per counter, IPs LRU 100k, histogram 1000 buckets (log10, 1µs–10s), GeoIP LRU 50k. No unbounded maps.</p>
 
 <h2 id="self-ip">Guard self-IP flow</h2>

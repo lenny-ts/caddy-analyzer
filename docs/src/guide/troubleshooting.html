@@ -1,6 +1,18 @@
 <!-- fm: title=Troubleshooting — caddy-analyzer | description=Fix permission denied, docker.sock, kubectl, journalctl, GeoIP and iptables issues. | breadcrumb=Guide > Troubleshooting -->
 <h1>Troubleshooting</h1>
 
+<h2 id="doctor">Start with doctor</h2>
+<pre><code>caddy-analyze doctor --log /var/log/caddy/access.log
+caddy-analyze doctor --json --log /var/log/caddy/access.log &gt; doctor.json
+caddy-analyze doctor --geoip-db /usr/share/GeoIP/GeoLite2-Country.mmdb
+caddy-analyze blocklist refresh  # separate write operation to repair a missing/stale cache</code></pre>
+<p><code>doctor</code> is read-only; run it as the same user and with the same paths as the service. Warnings alone return 0; critical configuration, explicit-log, Linux state-directory or missing-firewall-backend failures return 1. On macOS/Windows, unsupported firewall checks warn instead. See <a href="../reference/commands.html#doctor">flags and JSON schema</a>.</p>
+<p>Fix explicit log paths rather than expecting auto-discovery fallback. For an unusable GeoIP database, replace it with a valid MMDB; doctor never downloads one. Docker daemon access alone is insufficient for guard: local iptables and a usable <code>DOCKER-USER</code> chain are also required.</p>
+
+<h2 id="upgrade-090">Upgrading to v0.9.0</h2>
+<p>Back up the state file and its <code>.offenders/</code> history directory, then restart guard after upgrading the binary. Progressive bans and behavioral authentication-abuse detection remain opt-in. Expect one-second threshold evaluation, not a guaranteed one-second ban: self-IP discovery/firewall latency still applies.</p>
+<p>Malformed/unreadable whitelist files now stop CLI startup; correct the file before restarting. Runtime reload failures keep the last good list. Edits propagate every 30 seconds and new exemptions can remove covering subnet bans. Keep the adjacent <code>.lock</code> file in place while writers run. See <a href="../subcommands-guard.html#whitelist-reload">reload safety</a>.</p>
+
 <h2 id="permission-denied">permission denied reading /var/log/caddy/access.log</h2>
 <p>Caddy writes as <code>caddy:caddy 0600</code>.</p>
 <pre><code>sudo caddy-analyze /var/log/caddy/access.log

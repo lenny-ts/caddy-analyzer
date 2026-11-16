@@ -75,8 +75,20 @@
   <main class="wrap" id="main">
     <div class="doc-content">
       <nav class="breadcrumb" aria-label="Breadcrumb"><a href="../../it/guide/configuration.html">Guida</a><span class="sep">/</span><span>Risoluzione dei problemi</span></nav>
-      <div class="page-meta"><a href="https://github.com/lenny-ts/caddy-analyzer/releases">v0.8.1</a> · aggiornata <time datetime="2026-10-19">2026-10-19</time> · <a href="https://github.com/lenny-ts/caddy-analyzer">GitHub</a></div>
+      <div class="page-meta"><a href="https://github.com/lenny-ts/caddy-analyzer/releases">v0.9.0</a> · aggiornata <time datetime="2026-11-16">2026-11-16</time> · <a href="https://github.com/lenny-ts/caddy-analyzer">GitHub</a></div>
       <h1>Risoluzione dei problemi</h1>
+
+<h2 id="doctor">Inizia con doctor</h2>
+<pre><code>caddy-analyze doctor --log /var/log/caddy/access.log
+caddy-analyze doctor --json --log /var/log/caddy/access.log &gt; doctor.json
+caddy-analyze doctor --geoip-db /usr/share/GeoIP/GeoLite2-Country.mmdb
+caddy-analyze blocklist refresh  # operazione separata di scrittura per riparare la cache</code></pre>
+<p><code>doctor</code> è in sola lettura: usa lo stesso utente e gli stessi percorsi del servizio. I soli warning restituiscono 0; errori critici di configurazione, log esplicito, directory di stato Linux o backend firewall assenti restituiscono 1. Su macOS/Windows il firewall non supportato è un warning. Consulta <a href="../reference/commands.html#doctor">flag e schema JSON</a>.</p>
+<p>Correggi i percorsi log espliciti senza aspettarti fallback automatici. Sostituisci un GeoIP inutilizzabile con un MMDB valido: doctor non scarica database. L'accesso al demone Docker da solo non basta per guard: servono anche iptables locale e una catena <code>DOCKER-USER</code> utilizzabile.</p>
+
+<h2 id="upgrade-090">Aggiornamento alla v0.9.0</h2>
+<p>Salva file di stato e directory di storico <code>.offenders/</code>, poi riavvia guard dopo l'aggiornamento del binario. Ban progressivi e abusi comportamentali restano opt-in. Le soglie vengono valutate ogni secondo, ma la latenza di rilevamento IP/firewall non garantisce ban entro un secondo.</p>
+<p>Whitelist malformate/illeggibili ora impediscono l'avvio CLI: correggi il file prima del riavvio. Gli errori di reload conservano l'ultima lista valida. Le modifiche si propagano ogni 30 secondi e nuove esenzioni possono rimuovere ban di intere subnet. Non eliminare il file adiacente <code>.lock</code> mentre i writer sono attivi. Consulta <a href="../subcommands-guard.html#whitelist-reload">sicurezza del reload</a>.</p>
 
 <h2 id="permission-denied">permission denied durante la lettura di /var/log/caddy/access.log</h2>
 <p>Caddy scrive come <code>caddy:caddy 0600</code>.</p>
@@ -162,7 +174,7 @@ caddy-analyze --country IT testdata/sample.log  # if 0, GeoIP missing</code></pr
 
     </div>
   </main>
-  <nav class="doc-toc" aria-label="In questa pagina"><div class="toc-label">In questa pagina</div><a href="#permission-denied" class="toc-link">permission denied durante la lettura di /var/log/caddy/access.log</a><a href="#docker-sock" class="toc-link">Impossibile connettersi al demone Docker / docker.sock: permission denied</a><a href="#k8s" class="toc-link">k8s:// — pod inesistente / impossibile elencare la risorsa</a><a href="#journalctl" class="toc-link">journalctl:// — Nessun file journal</a><a href="#geoip" class="toc-link">GeoIP — country/asn vuoti o download non riuscito</a><a href="#iptables" class="toc-link">guard — iptables: permission denied / Nessuna chain/target</a><a href="#self-ip" class="toc-link">guard — server IP protection / new bans suspended</a><a href="#blocklist" class="toc-link">Aggiornamento blocklist lento / non riuscito</a><a href="#no-output" class="toc-link">Nessun output / report vuoto</a><a href="#still-stuck" class="toc-link">Problema non risolto?</a></nav>
+  <nav class="doc-toc" aria-label="In questa pagina"><div class="toc-label">In questa pagina</div><a href="#doctor" class="toc-link">Inizia con doctor</a><a href="#upgrade-090" class="toc-link">Aggiornamento alla v0.9.0</a><a href="#permission-denied" class="toc-link">permission denied durante la lettura di /var/log/caddy/access.log</a><a href="#docker-sock" class="toc-link">Impossibile connettersi al demone Docker / docker.sock: permission denied</a><a href="#k8s" class="toc-link">k8s:// — pod inesistente / impossibile elencare la risorsa</a><a href="#journalctl" class="toc-link">journalctl:// — Nessun file journal</a><a href="#geoip" class="toc-link">GeoIP — country/asn vuoti o download non riuscito</a><a href="#iptables" class="toc-link">guard — iptables: permission denied / Nessuna chain/target</a><a href="#self-ip" class="toc-link">guard — server IP protection / new bans suspended</a><a href="#blocklist" class="toc-link">Aggiornamento blocklist lento / non riuscito</a><a href="#no-output" class="toc-link">Nessun output / report vuoto</a><a href="#still-stuck" class="toc-link">Problema non risolto?</a></nav>
 </div>
 <script src="../../docs.min.js?v=36"></script>
 </body>

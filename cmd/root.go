@@ -86,7 +86,7 @@ var (
 	authAbuse          *analysis.AuthAbuseDetector
 )
 
-var Version = "0.8.1-dev"
+var Version = "0.9.0-dev"
 
 var rootCmd = &cobra.Command{
 	Use:          "caddy-analyze [flags] [source...]",
