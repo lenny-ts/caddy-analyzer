@@ -55,3 +55,20 @@ func TestGeoIPCheckFIFODoesNotHang(t *testing.T) {
 		t.Fatal("GeoIP check hung on FIFO")
 	}
 }
+
+func TestBlocklistCacheFIFODoesNotHang(t *testing.T) {
+	dir := t.TempDir()
+	if err := syscall.Mkfifo(filepath.Join(dir, "feed.json"), 0600); err != nil {
+		t.Skipf("cannot create FIFO: %v", err)
+	}
+	done := make(chan Check, 1)
+	go func() { done <- blocklistCacheCheck(Env{BlocklistCacheDir: dir}) }()
+	select {
+	case check := <-done:
+		if check.Status != StatusWarn {
+			t.Fatalf("FIFO cache check = %+v", check)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("blocklist cache check hung on FIFO")
+	}
+}

@@ -38,10 +38,12 @@ Examples:
   caddy-analyze doctor --json
   caddy-analyze doctor --log /var/log/caddy/access.log
 `,
-	Args:          cobra.NoArgs,
-	RunE:          runDoctor,
-	SilenceUsage:  true,
-	SilenceErrors: true,
+	Args: cobra.NoArgs,
+	// Configuration failures belong in the report, not before RunE.
+	PersistentPreRunE: func(*cobra.Command, []string) error { return nil },
+	RunE:              runDoctor,
+	SilenceUsage:      true,
+	SilenceErrors:     true,
 }
 
 func init() {
@@ -66,7 +68,11 @@ func runDoctor(cmd *cobra.Command, _ []string) error {
 		Now:                 time.Now(),
 	}
 
-	report := doctor.NewReport(doctor.Collect(env))
+	groups := doctor.Collect(env)
+	if err := rootCmd.PersistentPreRunE(cmd, nil); err != nil {
+		groups[0].Checks = append(groups[0].Checks, doctor.CriticalFailure("runtime.configuration", err.Error()))
+	}
+	report := doctor.NewReport(groups)
 	out := cmd.OutOrStdout()
 	if doctorJSON {
 		if err := report.WriteJSON(out); err != nil {
