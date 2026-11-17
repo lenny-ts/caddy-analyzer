@@ -1,5 +1,9 @@
 BIN=caddy-analyze
 
+GOMU_VERSION ?= v0.3.0
+MUTATION_TARGET ?= .
+MUTATION_WORKERS ?= 4
+
 default: clean lint test build
 
 help:
@@ -8,6 +12,7 @@ help:
 	@echo "  make run      Build and run (ARGS=...)"
 	@echo "  make install  Install via go install"
 	@echo "  make test     Run all tests"
+	@echo "  make mutation  Run mutation testing with gomu (targeted with MUTATION_TARGET=./pkg/...)"
 	@echo "  make lint     Run go vet"
 	@echo "  make clean    Remove binary"
 
@@ -52,10 +57,13 @@ completion: $(BIN)
 test:
 	go test ./...
 
+mutation:
+	go run github.com/sivchari/gomu/cmd/gomu@$(GOMU_VERSION) run $(MUTATION_TARGET) --incremental=false --threshold 0 --fail-on-gate=false --workers $(MUTATION_WORKERS) --output json
+
 lint:
 	go vet ./...
 
 clean:
 	rm -f $(BIN)
 
-.PHONY: help build run install completion test lint clean
+.PHONY: help build run install completion test mutation lint clean
