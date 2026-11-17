@@ -7,12 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.9.0] - 2026-11-16
+
 ### Added
+- **Installation diagnostics (#113, #132)**: add read-only `doctor` and `doctor --json` reports for runtime, Caddy logs, firewall backends, GeoIP and blocklist cache, with non-zero exit status for critical failures.
 - **Behavioral authentication abuse (#110)**: opt-in, configurable rolling-window brute-force, suspected credential-stuffing (User-Agent diversity), and aggregate password-spray detection. Include evidence in reports and Guard audit events; optionally block per-IP attackers while keeping aggregate campaigns alert-only.
 - **Progressive bans (#109)**: opt-in `guard --ban-escalation` increases repeat-offender bans from the base duration to at least 1h, 24h, and 168h, with configurable retention and maximum duration. Persist offender history separately from active bans, expose list/show/reset commands, and optionally clear history with `unban --reset-offenses`. Dry-run simulates escalation without writing history.
 - **NetAPI honeypot attackers blocklist**: ninth default feed `netapi-honeypot`, the IPv4 addresses that attacked the NetAPI honeypot sensors in the last 48 hours, rebuilt hourly (plain text, CC BY 4.0, no API key). Disable with `--blocklist-remove netapi-honeypot`.
 
+### Changed
+- **Live whitelist reload (#118, #130)**: guard reloads the selected whitelist every 30 seconds, keeps explicit `--never-block` entries, and removes existing IP or subnet bans covering newly protected addresses. Malformed or unreadable files stop CLI startup; failed runtime reloads retain the last good list.
+- **CI and release tooling**: run CI on `develop` and update pinned GitHub Actions, including compatible toolchain selection for security scanners.
+
 ### Fixed
+- **Concurrent whitelist edits**: serialize CLI writers across processes and replace the file atomically, preventing lost entries and partial reads during reload.
+- **Doctor failure reporting**: diagnose explicit log paths without fallback, verify Docker's local iptables/`DOCKER-USER` prerequisites, reject corrupt GeoIP databases and non-regular log/GeoIP/cache files, and include configuration-validation failures in the report.
+- **Whitelist stream inputs**: reject non-regular files before opening them so a FIFO cannot stall the guard reload loop.
+- **Release documentation**: document new diagnostics, guard options, authentication rules and upgrade paths in English and Italian; correct Go API examples and generate unique changelog anchors with a runnable documentation check.
 - **Guard burst latency (#124)**: evaluate blocking thresholds every second by default, independently of `--window`, with configurable `--eval-interval`. Keep window resets on an independent deadline, consume threshold and pattern evidence after successful bans to prevent re-banning old traffic, and calculate anomaly RPS from the actual sample duration, including slow firewall operations.
 - **Progressive-ban audit durations**: unblock events report the effective ban duration, including after a restart or offender-history reset. Persist optional duration metadata in active-ban state; legacy entries retain the configured-duration fallback.
 

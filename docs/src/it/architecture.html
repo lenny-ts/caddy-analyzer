@@ -42,6 +42,7 @@
 </table></div>
 
 <h2 id="memory">Limiti di memoria</h2>
+<p>Il rilevamento opzionale degli abusi conserva fino a 100.000 fallimenti per scenario (300.000 totali). Guard valuta le soglie ogni secondo per default, resetta le finestre indipendentemente, aggiorna whitelist/IP del server ogni 30 secondi e conserva lo storico accanto allo stato dei ban. La diagnostica in sola lettura è in <code>pkg/doctor</code>: consulta il <a href="reference/api.html#doctor">riferimento API</a>.</p>
 <p><code>MaxCardinality 100k</code> per contatore, LRU IP da 100k, istogramma da 1000 bucket (log10, 1µs–10s), LRU GeoIP da 50k. Nessuna mappa senza limiti.</p>
 
 <h2 id="self-ip">Flusso degli IP del server in guard</h2>

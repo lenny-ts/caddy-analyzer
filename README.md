@@ -128,6 +128,10 @@ base ban still protects the server, capped by `--max-ban-duration`.
 ## Quick Start
 
 ```bash
+# Diagnose installation and runtime settings without changing the system
+caddy-analyze doctor
+caddy-analyze doctor --json --log /var/log/caddy/access.log
+
 # Set default log source once (persistent config)
 caddy-analyze config /var/log/caddy/access.log
 
@@ -219,6 +223,7 @@ Caddy v2 uses a **structured JSON log format** that differs from the Common/Comb
 | **Traffic Analysis** | Classifies human users vs crawlers (Googlebot, Bingbot, Yandex, DuckDuckBot, GPTBot, ClaudeBot, Bytespider, CCBot, Amazonbot, and others) and automated scrapers |
 | **Diff Engine** | Side-by-side comparison of two log files detecting 5xx spikes, RPS shifts, and latency regressions |
 | **Baselines** | Versioned JSON snapshots via `baseline save`; `--against` compares HTTP and operational statistics and returns a non-zero exit status when a regression exceeds `--threshold` |
+| **Diagnostics** | Read-only `doctor` reports for configuration, logs, firewall access, GeoIP and cache; `--json` supports automation and critical failures return a non-zero exit code |
 | **TUI Dashboard** | 9-tab Bubbletea/Lipgloss interface with live streaming, security alerts, top IPs/paths/domains, GeoIP country/ASN, and operational (non-HTTP) events |
 | **HTML Reports** | Standalone dark-mode single-file HTML reports for sharing with your team |
 | **Data Sources** | Local files, stdin, Docker (`docker://`), Kubernetes (`k8s://`), systemd journalctl (`journalctl://`) |
@@ -294,9 +299,14 @@ Once installed, self-update with signature verification (cosign keyless + SHA256
 ```bash
 caddy-analyze update                     # install the latest verified release
 caddy-analyze update --check             # report availability only
-caddy-analyze update --version v0.8.1    # pin an exact release
+caddy-analyze update --version v0.9.0    # pin an exact release
 sudo caddy-analyze update                # when the binary is in a root-owned path
 ```
+
+For v0.9.0, validate the whitelist before restarting guard: invalid selected files
+now stop startup. Back up active-ban state and any `.offenders/` history.
+Progressive bans and authentication-abuse rules remain opt-in; NetAPI is enabled
+by default. See [release notes and upgrade steps](release-notes-v0.9.0.md).
 
 ### Local Docker and Kubernetes demos
 
@@ -373,6 +383,7 @@ The full documentation is available at **[lenny-ts.github.io/caddy-analyzer](htt
 
 | Need | Start here |
 |---|---|
+| Diagnose an installation or plan a v0.9.0 upgrade | [Troubleshooting](https://lenny-ts.github.io/caddy-analyzer/guide/troubleshooting.html#doctor) and [release notes](release-notes-v0.9.0.md) |
 | Install and run your first analysis | [Quickstart](https://lenny-ts.github.io/caddy-analyzer/quickstart.html) |
 | Configure sources and defaults | [Configuration guide](https://lenny-ts.github.io/caddy-analyzer/guide/configuration.html) |
 | Connect files, Docker, Kubernetes, or journalctl | [Log sources](https://lenny-ts.github.io/caddy-analyzer/sources.html) |

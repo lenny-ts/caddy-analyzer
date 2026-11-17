@@ -75,9 +75,9 @@
   <main class="wrap" id="main">
     <div class="doc-content">
       <nav class="breadcrumb" aria-label="Breadcrumb"><span>Panoramica</span></nav>
-      <div class="page-meta"><a href="https://github.com/lenny-ts/caddy-analyzer/releases">v0.8.1</a> · aggiornata <time datetime="2026-10-19">2026-10-19</time> · <a href="https://github.com/lenny-ts/caddy-analyzer">GitHub</a></div>
+      <div class="page-meta"><a href="https://github.com/lenny-ts/caddy-analyzer/releases">v0.9.0</a> · aggiornata <time datetime="2026-11-16">2026-11-16</time> · <a href="https://github.com/lenny-ts/caddy-analyzer">GitHub</a></div>
       <div class="hero">
-  <div class="hero-badge">v0.8.1 · Go 1.25 · Zero dipendenze · MIT</div>
+  <div class="hero-badge">v0.9.0 · Go 1.25 · Binario statico · MIT</div>
   <h1>Log JSON di Caddy,<br>finalmente leggibili e protetti.</h1>
   <p>Caddy v2 scrive log JSON annidati (<code>request.uri</code>, <code>status</code>, <code>tls</code>, <code>headers</code>), non Common Log Format. <code>grep</code>, <code>goaccess</code> e <code>lnav</code> non li interpretano correttamente. <strong>caddy-analyzer</strong> li analizza nativamente, classifica il traffico e segnala gli attacchi con un motore a doppio passaggio e 26 categorie.</p>
   <div class="hero-actions">
@@ -114,11 +114,11 @@ Sospetti (rilevamento a 26 categorie)
   <div class="stat"><div class="stat-num">26</div><div class="stat-label">Categorie</div></div>
   <div class="stat"><div class="stat-num">~70K</div><div class="stat-label">Parse / sec</div></div>
   <div class="stat"><div class="stat-num">~7K</div><div class="stat-label">Detect / sec</div></div>
-  <div class="stat"><div class="stat-num">0</div><div class="stat-label">Dipendenze</div></div>
+  <div class="stat"><div class="stat-num">0</div><div class="stat-label">Dipendenze runtime per report offline</div></div>
 </div>
 
 <h2 id="cosa-risolve">Cosa risolve rispetto agli strumenti generici</h2>
-<p><strong>Novità della v0.8.1:</strong> le immagini delle release vengono pubblicate su GHCR per Linux amd64 e arm64. Consulta <a href="installation.html#docker">installazione Docker</a> per tag di versione e build locali.</p>
+<p><strong>Novità della v0.9.0:</strong> <a href="reference/commands.html#doctor">diagnostica doctor</a>, <a href="subcommands-guard.html#progressive-bans">ban progressivi</a>, <a href="guide/configuration.html#auth-abuse">rilevamento degli abusi di autenticazione</a>, reload della whitelist e nove feed di threat intelligence. Consulta il <a href="changelog.html">changelog</a> per l'aggiornamento.</p>
 <div class="table-wrap"><table>
 <thead><tr><th></th><th>caddy-analyzer</th><th>goaccess / lnav / grep</th></tr></thead>
 <tbody>
