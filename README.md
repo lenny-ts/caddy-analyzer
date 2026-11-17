@@ -63,7 +63,7 @@ Output example:
        [scanner] Scanner / automated tool detected GET /admin
 ```
 
-> **Guard mode** (`caddy-analyze guard`) extends detection with automatic firewall blocking — blocks offending IPs via `iptables`, Docker `DOCKER-USER` chain, or `nftables` depending on the environment. **Auto-detection** selects the right backend: when Docker containers with Caddy are found, rules are applied to both `INPUT` and `DOCKER-USER` chains so traffic is blocked regardless of network path. Uses a **sliding window** (per-IP, per-second buckets) so attackers cannot evade limits by straddling a tick boundary. Supports audit logging (`--audit-log`), state persistence across restarts (`--state-file`), an IP allowlist (`--never-block` / `--never-block-file` or `whitelist` command), distributed-scan defense (`--subnet-limit`), RPS anomaly alerting (`--rps-anomaly`), and `--trust-forwarded` for deployments behind a reverse proxy/CDN. Pattern-detection blocks are filtered by confidence via `--detect-confidence` (default 8, `0` disables). **Blocklist feeds** (Spamhaus DROP, FireHOL, CINS, Tor, Emerging Threats, AbuseIPDB) trigger immediate blocks via a CIDR trie; `--country-block CN,RU,IR` blocks by GeoIP country code.
+> **Guard mode** (`caddy-analyze guard`) extends detection with automatic firewall blocking — blocks offending IPs via `iptables`, Docker `DOCKER-USER` chain, or `nftables` depending on the environment. **Auto-detection** selects the right backend: when Docker containers with Caddy are found, rules are applied to both `INPUT` and `DOCKER-USER` chains so traffic is blocked regardless of network path. Uses a **sliding window** (per-IP, per-second buckets) so attackers cannot evade limits by straddling a tick boundary. Supports audit logging (`--audit-log`), state persistence across restarts (`--state-file`), an IP allowlist (`--never-block` / `--never-block-file` or `whitelist` command), distributed-scan defense (`--subnet-limit`), RPS anomaly alerting (`--rps-anomaly`), and `--trust-forwarded` for deployments behind a reverse proxy/CDN. Pattern-detection blocks are filtered by confidence via `--detect-confidence` (default 8, `0` disables). **Blocklist feeds** (Spamhaus DROP, FireHOL, CINS, Tor, Emerging Threats, AbuseIPDB, NetAPI honeypot) trigger immediate blocks via a CIDR trie; `--country-block CN,RU,IR` blocks by GeoIP country code.
 
 ### Automatic self-ban protection
 
@@ -78,7 +78,7 @@ sudo caddy-analyze guard /var/log/caddy/access.log \
   --protect-self=false --never-block 203.0.113.10
 ```
 
-Replace `203.0.113.10` with the trusted server or administrator IP. On a remote VPS, the administrator's home/mobile IP is usually different from the server's IP and must be allowlisted separately. With shared NAT, every client arriving from the protected public IP receives the same exemption. Server addresses are kept in memory, not added to the whitelist file; file changes still require restarting guard.
+Replace `203.0.113.10` with the trusted server or administrator IP. On a remote VPS, the administrator's home/mobile IP is usually different from the server's IP and must be allowlisted separately. With shared NAT, every client arriving from the protected public IP receives the same exemption. Server addresses are kept in memory, not added to the whitelist file; whitelist file changes are reloaded automatically every 30 seconds.
 
 Discovery errors at startup and during operation include the instruction to restart with `--protect-self=false` to disable server IP checks. Offline installations can disable discovery with this flag and supply an explicit `--never-block` list. Protection applies to this guard, not Fail2Ban or explicit manual `block` commands. Clients using another public connection, or another device's distinct IPv6 address, still need their own whitelist entry. With multiple WAN routes, run guard on the same egress path as the processes you want to protect.
 
@@ -128,6 +128,10 @@ base ban still protects the server, capped by `--max-ban-duration`.
 ## Quick Start
 
 ```bash
+# Diagnose installation and runtime settings without changing the system
+caddy-analyze doctor
+caddy-analyze doctor --json --log /var/log/caddy/access.log
+
 # Set default log source once (persistent config)
 caddy-analyze config /var/log/caddy/access.log
 
@@ -163,7 +167,7 @@ caddy-analyze --against baseline.json --threshold 5 production.log
 caddy-analyze --watch
 # Press 6 for the domains receiving the most requests
 
-# Manage blocklist feeds (8 defaults: Spamhaus, FireHOL, CINS, Tor, ET, AbuseIPDB)
+# Manage blocklist feeds (9 defaults: Spamhaus, FireHOL, CINS, Tor, ET, AbuseIPDB, NetAPI)
 caddy-analyze blocklist refresh
 caddy-analyze blocklist list
 caddy-analyze blocklist init --no-default-blocklists --blocklist-config mylist.txt
@@ -171,6 +175,10 @@ caddy-analyze blocklist init --no-default-blocklists --blocklist-config mylist.t
 # Real-time guard with blocklist + country-block
 sudo caddy-analyze guard --country-block CN,RU,IR docker://my-caddy
 ```
+
+The default `netapi-honeypot` feed is provided by
+[NetAPI](https://netapi.com/compromised-ips/) under
+[CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).
 
 The baseline is a versioned JSON file containing the analyzed HTTP and
 operational aggregates plus creation time, tool version, sources, filters,
@@ -210,11 +218,12 @@ Caddy v2 uses a **structured JSON log format** that differs from the Common/Comb
 | **Parsing** | Native Caddy v2 structured JSON — no regex, no config required |
 | **Security** | 26 attack categories: SQLi, NoSQLi, XSS, SSTI, SSRF, RCE, path traversal/LFI, LFI wrapper abuse, GraphQL introspection, Log4j/JNDI, XXE/XInclude, open redirect, LDAP injection, XPath injection, CRLF injection, prototype pollution, SSI injection, UA rotation, JWT abuse, object enumeration (BOLA/IDOR), beaconing (C2), sensitive file probes, WordPress probes, CGI probes, admin probes, scanner tools |
 | **Detection Accuracy** | Dual-pass engine: URL-unescaped + raw URI matching catches multibyte-encoded and double-encoded bypass attempts. Confidence scoring (1-10) per detection. LRU IP eviction (100K cap) bounds memory on huge logs |
-| **Firewall** | `guard` daemon auto-blocks malicious IPs via `iptables` with configurable thresholds, ban duration, audit logging, state persistence (survives restarts), IP allowlist, `block`/`unban` state sync, 8 default blocklist feeds (Spamhaus, FireHOL, CINS, Tor, ET, AbuseIPDB) with CIDR-trie lookup, and `--country-block` GeoIP filtering |
+| **Firewall** | `guard` daemon auto-blocks malicious IPs via `iptables` with configurable thresholds, ban duration, audit logging, state persistence (survives restarts), IP allowlist, `block`/`unban` state sync, 9 default blocklist feeds (Spamhaus, FireHOL, CINS, Tor, ET, AbuseIPDB, NetAPI) with CIDR-trie lookup, and `--country-block` GeoIP filtering |
 | **Threat Intel** | Offline GeoIP enrichment (MaxMind GeoLite2 / DB-IP mmdb, no API key) with auto-download of Country, ASN, and City databases. `top country` / `top city` / `top asn` dimensions. Country, city, coordinates, and heatmap sections in HTML reports. Auto-discovery in cwd, `~/.config/caddy-analyzer/`, `/var/lib/caddy-analyzer/`, `/usr/share/GeoIP/` |
 | **Traffic Analysis** | Classifies human users vs crawlers (Googlebot, Bingbot, Yandex, DuckDuckBot, GPTBot, ClaudeBot, Bytespider, CCBot, Amazonbot, and others) and automated scrapers |
 | **Diff Engine** | Side-by-side comparison of two log files detecting 5xx spikes, RPS shifts, and latency regressions |
 | **Baselines** | Versioned JSON snapshots via `baseline save`; `--against` compares HTTP and operational statistics and returns a non-zero exit status when a regression exceeds `--threshold` |
+| **Diagnostics** | Read-only `doctor` reports for configuration, logs, firewall access, GeoIP and cache; `--json` supports automation and critical failures return a non-zero exit code |
 | **TUI Dashboard** | 9-tab Bubbletea/Lipgloss interface with live streaming, security alerts, top IPs/paths/domains, GeoIP country/ASN, and operational (non-HTTP) events |
 | **HTML Reports** | Standalone dark-mode single-file HTML reports for sharing with your team |
 | **Data Sources** | Local files, stdin, Docker (`docker://`), Kubernetes (`k8s://`), systemd journalctl (`journalctl://`) |
@@ -290,9 +299,14 @@ Once installed, self-update with signature verification (cosign keyless + SHA256
 ```bash
 caddy-analyze update                     # install the latest verified release
 caddy-analyze update --check             # report availability only
-caddy-analyze update --version v0.8.1    # pin an exact release
+caddy-analyze update --version v0.9.0    # pin an exact release
 sudo caddy-analyze update                # when the binary is in a root-owned path
 ```
+
+For v0.9.0, validate the whitelist before restarting guard: invalid selected files
+now stop startup. Back up active-ban state and any `.offenders/` history.
+Progressive bans and authentication-abuse rules remain opt-in; NetAPI is enabled
+by default. See [release notes and upgrade steps](release-notes-v0.9.0.md).
 
 ### Local Docker and Kubernetes demos
 
@@ -369,6 +383,7 @@ The full documentation is available at **[lenny-ts.github.io/caddy-analyzer](htt
 
 | Need | Start here |
 |---|---|
+| Diagnose an installation or plan a v0.9.0 upgrade | [Troubleshooting](https://lenny-ts.github.io/caddy-analyzer/guide/troubleshooting.html#doctor) and [release notes](release-notes-v0.9.0.md) |
 | Install and run your first analysis | [Quickstart](https://lenny-ts.github.io/caddy-analyzer/quickstart.html) |
 | Configure sources and defaults | [Configuration guide](https://lenny-ts.github.io/caddy-analyzer/guide/configuration.html) |
 | Connect files, Docker, Kubernetes, or journalctl | [Log sources](https://lenny-ts.github.io/caddy-analyzer/sources.html) |

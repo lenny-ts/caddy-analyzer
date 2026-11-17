@@ -75,7 +75,7 @@
   <main class="wrap" id="main">
     <div class="doc-content">
       <nav class="breadcrumb" aria-label="Breadcrumb"><a href="reference/cli.html">Reference</a><span class="sep">/</span><span>guard</span></nav>
-      <div class="page-meta"><a href="https://github.com/lenny-ts/caddy-analyzer/releases">v0.8.1</a> · updated <time datetime="2026-10-19">2026-10-19</time> · <a href="https://github.com/lenny-ts/caddy-analyzer">GitHub</a></div>
+      <div class="page-meta"><a href="https://github.com/lenny-ts/caddy-analyzer/releases">v0.9.0</a> · updated <time datetime="2026-11-16">2026-11-16</time> · <a href="https://github.com/lenny-ts/caddy-analyzer">GitHub</a></div>
       <h1>guard</h1>
 <p>Tail a log source and auto-block IPs that exceed thresholds. Normal runs <span class="pill pill-danger">modify the firewall</span> — every run can add <code>iptables</code>/<code>nftables</code>/<code>DOCKER-USER</code> rules. Use <code>--dry-run</code> to execute detection without firewall or state-file changes.</p>
 
@@ -92,7 +92,11 @@
 <tbody>
 <tr><td><code>--limit</code></td><td><code>-l</code></td><td>100</td><td>Max HTTP requests per IP in window before block</td></tr>
 <tr><td><code>--window</code></td><td><code>-w</code></td><td>1m</td><td>Sliding window (per-second buckets)</td></tr>
+<tr><td><code>--eval-interval</code></td><td></td><td>1s</td><td>Threshold evaluation interval, capped at <code>--window</code>; must be positive</td></tr>
 <tr><td><code>--duration</code></td><td><code>-d</code></td><td>10m</td><td>Ban duration (0 = permanent)</td></tr>
+<tr><td><code>--ban-escalation</code></td><td></td><td>false</td><td>Increase repeat-offender ban durations; requires finite positive duration and a state file</td></tr>
+<tr><td><code>--ban-reset-after</code></td><td></td><td>30d</td><td>Forget history after this period without a successful ban; accepts <code>d</code> or Go durations</td></tr>
+<tr><td><code>--max-ban-duration</code></td><td></td><td>168h</td><td>Upper bound on every escalated ban, including the first</td></tr>
 <tr><td><code>--auth-limit</code></td><td></td><td>10</td><td>401/403 before block</td></tr>
 <tr><td><code>--notfound-limit</code></td><td></td><td>50</td><td>404 before block</td></tr>
 <tr><td><code>--detect-confidence</code></td><td></td><td>8</td><td>Min confidence 1-10 for pattern-based blocks (0 disables only this block path; it is not a dry run)</td></tr>
@@ -100,7 +104,7 @@
 <tr><td><code>--dry-run</code></td><td></td><td>false</td><td>Report would-be blocks and emit <code>would_block</code> audit events without changing firewall or state</td></tr>
 <tr><td><code>--iptables-timeout</code></td><td></td><td>10s</td><td>Per-invocation iptables timeout</td></tr>
 <tr><td><code>--country-block</code></td><td></td><td></td><td>ISO codes to block immediately (e.g. <code>CN,RU</code>)</td></tr>
-<tr><td><code>--no-blocklist</code></td><td></td><td>false</td><td>Disable 8 blocklist feeds</td></tr>
+<tr><td><code>--no-blocklist</code></td><td></td><td>false</td><td>Disable 9 blocklist feeds</td></tr>
 <tr><td><code>--blocklist-refresh</code></td><td></td><td>6h</td><td>Refresh interval (min 1h, 0 off)</td></tr>
 <tr><td><code>--cache-dir</code></td><td></td><td>~/.cache/…/blocklists</td><td>Blocklist cache dir</td></tr>
 <tr><td><code>--geoip-db</code></td><td></td><td></td><td>GeoIP mmdb path (auto-discovery)</td></tr>
@@ -130,6 +134,28 @@
 <p>If discovery fails at startup, guard refuses to start; runtime failures retain known protected addresses and suspend new bans until discovery recovers. Both errors instruct you to restart with <code>--protect-self=false</code>. See <a href="guide/troubleshooting.html#self-ip">Troubleshooting → server IP protection</a>.</p>
 <p>On a remote VPS, the administrator's home/mobile IP is usually different from the server's IP: add it separately with <code>--never-block</code> or <code>whitelist</code>. Shared-NAT sources receive the same public-IP exemption; a different device's IPv6 address is not automatically protected. Run guard on the same network/egress path as the processes being protected. This feature does not change Fail2Ban or prevent explicit manual <code>block</code> commands.</p>
 
+<h2 id="evaluation">Evaluation and evidence</h2>
+<p>Thresholds are checked every second by default, independently of counting-window resets. A successful ban consumes the triggering evidence so old traffic cannot immediately re-ban the address after expiry; failed attempts retain it for retry. Anomaly RPS uses actual elapsed sample time. The evaluation interval is not a guaranteed response time: self-IP discovery and firewall operations can add latency.</p>
+
+<h2 id="progressive-bans">Progressive bans and offender history</h2>
+<p>Opt in with <code>--ban-escalation</code>. The first successful automatic ban uses <code>--duration</code>; repeats use at least 1h, 24h and 168h, without reducing a longer base duration except for the <code>--max-ban-duration</code> cap. Permanent bans cannot use escalation. History expires after <code>--ban-reset-after</code> without another successful ban.</p>
+<pre><code># Modifies the firewall; replace the example administrator IP
+sudo caddy-analyze guard /var/log/caddy/access.log --never-block 203.0.113.10 \
+  --ban-escalation --ban-reset-after 30d --max-ban-duration 168h
+# Read-only JSON history; use the same --state-file as the running guard
+sudo caddy-analyze guard offenders
+sudo caddy-analyze guard offender show 198.51.100.7
+# Forget history without removing the active ban
+sudo caddy-analyze guard offender reset 198.51.100.7
+# Remove the ban and its history (modifies the firewall)
+sudo caddy-analyze unban 198.51.100.7 --reset-offenses</code></pre>
+<p>Back up both the state file and its adjacent <code>.offenders/</code> directory. Active-ban state remains compatible with older entries; new optional duration metadata preserves the effective duration in unblock audits. Failed/allowlisted decisions do not count as offenses. Dry-run reads history but simulates new offenses only in memory. History I/O errors are reported and fall back to the capped base ban without overwriting corrupt history. Run one guard per state file. Restart a running guard after a manual unban to synchronize its in-memory bans.</p>
+
+<h2 id="whitelist-reload">Live whitelist reload</h2>
+<p>Guard reloads the managed whitelist, or the <code>--never-block-file</code> override, every 30 seconds. Explicit <code>--never-block</code> entries remain in force. CLI startup refuses malformed, unreadable or non-regular files; an absent default managed file is optional. A failed runtime reload preserves the last good list; a valid empty file removes file-derived exemptions.</p>
+<p>New exemptions remove existing covering IP/subnet bans and prevent their reintroduction. Protecting one address inside a banned subnet can therefore remove the whole subnet rule. Whitelist CLI edits use atomic replacement and a persistent adjacent <code>.lock</code> file to serialize writers across processes; do not remove the lock file while writers are running. OS locks are released when the process exits.</p>
+<p>For endpoint-scoped brute-force, suspected stuffing and aggregate spraying, see <a href="guide/configuration.html#auth-abuse">behavioral authentication abuse</a>. These rules are opt-in and separate from <code>--auth-limit</code>.</p>
+
 <h2 id="minimal">Minimal example</h2>
 <p><span class="pill pill-danger">modifies firewall</span> — server addresses are protected automatically. For remote administration, also allowlist the client IP.</p>
 <pre><code># Replace this with the public IP of your administrator workstation, not the VPS
@@ -157,7 +183,7 @@ sudo caddy-analyze guard docker://caddy \
 sudo caddy-analyze unban --list
 cat /var/log/caddy-analyzer-audit.jsonl | tail</code></pre>
 
-<div class="callout callout-warning"><div class="callout-label">Remote administrator access</div>Automatic protection covers the server, not every administrator connection. Obtain your workstation's public IP on that workstation and pass it with <code>--never-block</code>. Use <code>--dry-run</code> to preview decisions; it still performs self-IP discovery unless disabled. Whitelist-file changes require restarting guard.</div>
+<div class="callout callout-warning"><div class="callout-label">Remote administrator access</div>Automatic protection covers the server, not every administrator connection. Obtain your workstation's public IP on that workstation and pass it with <code>--never-block</code>. Use <code>--dry-run</code> to preview decisions; it still performs self-IP discovery unless disabled. Whitelist-file changes are reloaded automatically every 30 seconds; no guard restart is needed.</div>
       <footer class="footer">
   <p>caddy-analyzer is open-source under <a href="https://github.com/lenny-ts/caddy-analyzer/blob/main/LICENSE">MIT</a> · <a href="https://github.com/lenny-ts/caddy-analyzer">GitHub</a> · <a href="changelog.html">Changelog</a></p>
 </footer>
@@ -165,7 +191,7 @@ cat /var/log/caddy-analyzer-audit.jsonl | tail</code></pre>
 
     </div>
   </main>
-  <nav class="doc-toc" aria-label="On this page"><div class="toc-label">On this page</div><a href="#synopsis" class="toc-link">Synopsis</a><a href="#flags" class="toc-link">Flags</a><a href="#self-protection" class="toc-link">Automatic self-ban protection</a><a href="#minimal" class="toc-link">Minimal example</a><a href="#restricted-network" class="toc-link h3">Fixed-IP or restricted-network server</a><a href="#advanced" class="toc-link">Advanced example</a></nav>
+  <nav class="doc-toc" aria-label="On this page"><div class="toc-label">On this page</div><a href="#synopsis" class="toc-link">Synopsis</a><a href="#flags" class="toc-link">Flags</a><a href="#self-protection" class="toc-link">Automatic self-ban protection</a><a href="#evaluation" class="toc-link">Evaluation and evidence</a><a href="#progressive-bans" class="toc-link">Progressive bans and offender history</a><a href="#whitelist-reload" class="toc-link">Live whitelist reload</a><a href="#minimal" class="toc-link">Minimal example</a><a href="#restricted-network" class="toc-link h3">Fixed-IP or restricted-network server</a><a href="#advanced" class="toc-link">Advanced example</a></nav>
 </div>
 <script src="docs.min.js?v=36"></script>
 </body>

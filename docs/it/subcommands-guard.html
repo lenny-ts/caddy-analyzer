@@ -75,7 +75,7 @@
   <main class="wrap" id="main">
     <div class="doc-content">
       <nav class="breadcrumb" aria-label="Breadcrumb"><a href="../it/reference/cli.html">Riferimento</a><span class="sep">/</span><span>guard</span></nav>
-      <div class="page-meta"><a href="https://github.com/lenny-ts/caddy-analyzer/releases">v0.8.1</a> · aggiornata <time datetime="2026-10-19">2026-10-19</time> · <a href="https://github.com/lenny-ts/caddy-analyzer">GitHub</a></div>
+      <div class="page-meta"><a href="https://github.com/lenny-ts/caddy-analyzer/releases">v0.9.0</a> · aggiornata <time datetime="2026-11-16">2026-11-16</time> · <a href="https://github.com/lenny-ts/caddy-analyzer">GitHub</a></div>
       <h1>guard</h1>
 <p>Segue una sorgente di log e blocca automaticamente gli IP che superano le soglie. Le esecuzioni normali <span class="pill pill-danger">modificano il firewall</span>; usa <code>--dry-run</code> per eseguire il rilevamento senza modificare firewall o file di stato.</p>
 
@@ -92,7 +92,11 @@
 <tbody>
 <tr><td><code>--limit</code></td><td><code>-l</code></td><td>100</td><td>Massime richieste HTTP per IP nella finestra prima del blocco</td></tr>
 <tr><td><code>--window</code></td><td><code>-w</code></td><td>1m</td><td>Finestra scorrevole (bucket al secondo)</td></tr>
+<tr><td><code>--eval-interval</code></td><td></td><td>1s</td><td>Intervallo positivo di valutazione delle soglie, limitato a <code>--window</code></td></tr>
 <tr><td><code>--duration</code></td><td><code>-d</code></td><td>10m</td><td>Durata del ban (0 = permanente)</td></tr>
+<tr><td><code>--ban-escalation</code></td><td></td><td>false</td><td>Aumenta i ban dei recidivi; richiede durata finita positiva e file di stato</td></tr>
+<tr><td><code>--ban-reset-after</code></td><td></td><td>30d</td><td>Scadenza dello storico senza nuovi ban riusciti; accetta giorni <code>d</code> o durate Go</td></tr>
+<tr><td><code>--max-ban-duration</code></td><td></td><td>168h</td><td>Limite di ogni ban progressivo, incluso il primo</td></tr>
 <tr><td><code>--auth-limit</code></td><td></td><td>10</td><td>401/403 prima del blocco</td></tr>
 <tr><td><code>--notfound-limit</code></td><td></td><td>50</td><td>404 prima del blocco</td></tr>
 <tr><td><code>--detect-confidence</code></td><td></td><td>8</td><td>Confidenza minima 1-10 per blocchi da pattern (0 disabilita solo questo percorso; non è un dry run)</td></tr>
@@ -100,7 +104,7 @@
 <tr><td><code>--dry-run</code></td><td></td><td>false</td><td>Mostra i blocchi previsti ed emette eventi audit <code>would_block</code> senza modificare firewall o stato</td></tr>
 <tr><td><code>--iptables-timeout</code></td><td></td><td>10s</td><td>Timeout iptables per invocazione</td></tr>
 <tr><td><code>--country-block</code></td><td></td><td></td><td>Codici ISO da bloccare subito (ad es. <code>CN,RU</code>)</td></tr>
-<tr><td><code>--no-blocklist</code></td><td></td><td>false</td><td>Disabilita gli 8 feed blocklist</td></tr>
+<tr><td><code>--no-blocklist</code></td><td></td><td>false</td><td>Disabilita i 9 feed blocklist</td></tr>
 <tr><td><code>--blocklist-refresh</code></td><td></td><td>6h</td><td>Intervallo di aggiornamento (min 1h, 0 disattivato)</td></tr>
 <tr><td><code>--cache-dir</code></td><td></td><td>~/.cache/…/blocklists</td><td>Directory cache blocklist</td></tr>
 <tr><td><code>--geoip-db</code></td><td></td><td></td><td>Percorso mmdb GeoIP (rilevamento automatico)</td></tr>
@@ -152,7 +156,29 @@ sudo caddy-analyze guard docker://caddy \
 sudo caddy-analyze unban --list
 cat /var/log/caddy-analyzer-audit.jsonl | tail</code></pre>
 
-<div class="callout callout-warning"><div class="callout-label">Accesso amministratore remoto</div>La protezione automatica copre il server, non ogni connessione amministratore. Rileva l'IP pubblico sulla tua postazione e passalo con <code>--never-block</code>. Usa <code>--dry-run</code> per un'anteprima; esegue comunque il rilevamento degli IP salvo disabilitazione. Le modifiche al file whitelist richiedono il riavvio di guard.</div>
+<div class="callout callout-warning"><div class="callout-label">Accesso amministratore remoto</div>La protezione automatica copre il server, non ogni connessione amministratore. Rileva l'IP pubblico sulla tua postazione e passalo con <code>--never-block</code>. Usa <code>--dry-run</code> per un'anteprima; esegue comunque il rilevamento degli IP salvo disabilitazione. Le modifiche al file whitelist vengono ricaricate automaticamente ogni 30 secondi; non è necessario riavviare guard.</div>
+
+<h2 id="evaluation">Valutazione ed evidenze</h2>
+<p>Le soglie vengono verificate ogni secondo, indipendentemente dal reset delle finestre. Un ban riuscito consuma le evidenze che lo hanno attivato, evitando nuovi ban causati dal vecchio traffico dopo la scadenza; i tentativi falliti le conservano. Il calcolo RPS usa il tempo realmente trascorso. L'intervallo non garantisce il tempo di risposta: rilevamento degli IP del server e operazioni firewall possono aggiungere latenza.</p>
+
+<h2 id="progressive-bans">Ban progressivi e storico dei recidivi</h2>
+<p>Abilita <code>--ban-escalation</code>: il primo ban automatico riuscito usa <code>--duration</code>, poi almeno 1h, 24h e 168h. Una durata base superiore non viene ridotta, salvo il limite <code>--max-ban-duration</code>. I ban permanenti non supportano escalation. Lo storico scade dopo <code>--ban-reset-after</code> senza nuovi ban riusciti.</p>
+<pre><code># Modifica il firewall; sostituisci l'IP amministratore di esempio
+sudo caddy-analyze guard /var/log/caddy/access.log --never-block 203.0.113.10 \
+  --ban-escalation --ban-reset-after 30d --max-ban-duration 168h
+# Storico JSON in sola lettura; usa lo stesso --state-file di guard
+sudo caddy-analyze guard offenders
+sudo caddy-analyze guard offender show 198.51.100.7
+# Cancella lo storico senza rimuovere il ban attivo
+sudo caddy-analyze guard offender reset 198.51.100.7
+# Rimuove ban e storico (modifica il firewall)
+sudo caddy-analyze unban 198.51.100.7 --reset-offenses</code></pre>
+<p>Salva sia il file di stato sia la directory adiacente <code>.offenders/</code>. I vecchi record restano leggibili; i nuovi metadati opzionali conservano la durata effettiva negli audit di sblocco. Decisioni fallite o protette non incrementano lo storico. Il dry-run legge lo storico ma simula i nuovi eventi solo in memoria. Errori I/O vengono segnalati e applicano il ban base limitato senza sovrascrivere dati corrotti. Esegui un solo guard per file di stato; dopo un unban manuale riavvia guard per sincronizzare i ban in memoria.</p>
+
+<h2 id="whitelist-reload">Reload della whitelist</h2>
+<p>Guard ricarica ogni 30 secondi la whitelist managed o l'override <code>--never-block-file</code>, conservando le voci <code>--never-block</code>. La CLI non parte con file malformati, illeggibili o non regolari; il file managed predefinito assente resta facoltativo. Un reload fallito conserva l'ultima lista valida; un file vuoto valido elimina le esenzioni derivate dal file.</p>
+<p>Le nuove esenzioni rimuovono i ban IP/subnet che le coprono e ne impediscono la reintroduzione. Proteggere un IP può quindi rimuovere l'intera regola della subnet. La CLI usa sostituzione atomica e un file adiacente <code>.lock</code> persistente per serializzare i writer tra processi: non eliminarlo durante le scritture. Il sistema rilascia il lock all'uscita del processo.</p>
+<p>Per brute-force su endpoint specifici, stuffing sospetto e spraying aggregato, consulta <a href="guide/configuration.html#auth-abuse">abusi di autenticazione</a>. Sono regole opt-in separate da <code>--auth-limit</code>.</p>
       <footer class="footer">
   <p>caddy-analyzer è open-source sotto licenza <a href="https://github.com/lenny-ts/caddy-analyzer/blob/main/LICENSE">MIT</a> · <a href="https://github.com/lenny-ts/caddy-analyzer">GitHub</a> · <a href="../it/changelog.html">Registro modifiche</a></p>
 </footer>
@@ -160,7 +186,7 @@ cat /var/log/caddy-analyzer-audit.jsonl | tail</code></pre>
 
     </div>
   </main>
-  <nav class="doc-toc" aria-label="In questa pagina"><div class="toc-label">In questa pagina</div><a href="#synopsis" class="toc-link">Sintassi</a><a href="#flags" class="toc-link">Flag</a><a href="#self-protection" class="toc-link">Protezione automatica dall'auto-ban</a><a href="#minimal" class="toc-link">Esempio minimo</a><a href="#restricted-network" class="toc-link h3">Server con IP fisso o rete limitata</a><a href="#advanced" class="toc-link">Esempio avanzato</a></nav>
+  <nav class="doc-toc" aria-label="In questa pagina"><div class="toc-label">In questa pagina</div><a href="#synopsis" class="toc-link">Sintassi</a><a href="#flags" class="toc-link">Flag</a><a href="#self-protection" class="toc-link">Protezione automatica dall'auto-ban</a><a href="#minimal" class="toc-link">Esempio minimo</a><a href="#restricted-network" class="toc-link h3">Server con IP fisso o rete limitata</a><a href="#advanced" class="toc-link">Esempio avanzato</a><a href="#evaluation" class="toc-link">Valutazione ed evidenze</a><a href="#progressive-bans" class="toc-link">Ban progressivi e storico dei recidivi</a><a href="#whitelist-reload" class="toc-link">Reload della whitelist</a></nav>
 </div>
 <script src="../docs.min.js?v=36"></script>
 </body>

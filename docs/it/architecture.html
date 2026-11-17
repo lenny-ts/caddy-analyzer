@@ -75,7 +75,7 @@
   <main class="wrap" id="main">
     <div class="doc-content">
       <nav class="breadcrumb" aria-label="Breadcrumb"><a href="../it/index.html">Panoramica</a><span class="sep">/</span><span>Architettura</span></nav>
-      <div class="page-meta"><a href="https://github.com/lenny-ts/caddy-analyzer/releases">v0.8.1</a> · aggiornata <time datetime="2026-10-19">2026-10-19</time> · <a href="https://github.com/lenny-ts/caddy-analyzer">GitHub</a></div>
+      <div class="page-meta"><a href="https://github.com/lenny-ts/caddy-analyzer/releases">v0.9.0</a> · aggiornata <time datetime="2026-11-16">2026-11-16</time> · <a href="https://github.com/lenny-ts/caddy-analyzer">GitHub</a></div>
       <h1>Architettura</h1>
 <p>Singolo binario, zero CGO, memoria limitata (LRU + istogramma). Per le firme dei pacchetti e gli esempi di importazione, consulta <a href="reference/api.html">API / Pacchetti</a>. Per aggiungere una funzionalita, consulta <a href="contributing.html">Contribuire</a>.</p>
 
@@ -110,7 +110,7 @@
 <tr><td>“Caddy JSON → LogEntry”</td><td><code>pkg/parser</code></td><td><a href="reference/api.html#parser">API → parser</a></td></tr>
 <tr><td>“Paese/asn principale, cache GeoIP”</td><td><code>pkg/enrich</code></td><td><a href="reference/api.html#enrich">API → enrich</a></td></tr>
 <tr><td>“26 categorie, MITRE, Sigma”</td><td><code>pkg/analysis</code></td><td><a href="reference/api.html#analysis">API → analysis</a>, <a href="reference/security-detection.html">Rilevamento</a></td></tr>
-<tr><td>“8 feed, trie CIDR, cache 7g”</td><td><code>pkg/blocklist</code></td><td><a href="reference/api.html#blocklist">API → blocklist</a></td></tr>
+<tr><td>“9 feed, trie CIDR, cache 7g”</td><td><code>pkg/blocklist</code></td><td><a href="reference/api.html#blocklist">API → blocklist</a></td></tr>
 <tr><td>“finestra scorrevole, audit, stato”</td><td><code>pkg/guard</code> + <code>guard/firewall</code></td><td><a href="reference/api.html#guard">API → guard</a></td></tr>
 <tr><td>“file/docker/k8s/journalctl”</td><td><code>pkg/reader</code></td><td><a href="reference/api.html#reader">API → reader</a></td></tr>
 <tr><td>“table/html/json”</td><td><code>pkg/output</code></td><td><a href="reference/api.html#output">API → output</a></td></tr>
@@ -119,6 +119,7 @@
 </table></div>
 
 <h2 id="memory">Limiti di memoria</h2>
+<p>Il rilevamento opzionale degli abusi conserva fino a 100.000 fallimenti per scenario (300.000 totali). Guard valuta le soglie ogni secondo per default, resetta le finestre indipendentemente, aggiorna whitelist/IP del server ogni 30 secondi e conserva lo storico accanto allo stato dei ban. La diagnostica in sola lettura è in <code>pkg/doctor</code>: consulta il <a href="reference/api.html#doctor">riferimento API</a>.</p>
 <p><code>MaxCardinality 100k</code> per contatore, LRU IP da 100k, istogramma da 1000 bucket (log10, 1µs–10s), LRU GeoIP da 50k. Nessuna mappa senza limiti.</p>
 
 <h2 id="self-ip">Flusso degli IP del server in guard</h2>
