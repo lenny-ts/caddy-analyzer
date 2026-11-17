@@ -63,6 +63,15 @@ jobs:
             printf 'caddy-analyze update --version %s\n' "$RELEASE_TAG"
             printf '```\n\n'
             cat "$changelog_section"
+            notes_file="release-notes-$RELEASE_TAG.md"
+            if [ -f "$notes_file" ]; then
+              printf '\n'
+              awk '
+                /^## Contributors$/ { contributors = 1; print; next }
+                contributors && /^## / { exit }
+                contributors { print }
+              ' "$notes_file"
+            fi
           } > "$RUNNER_TEMP/release-notes.md"
           rm -f "$changelog_section"
 
