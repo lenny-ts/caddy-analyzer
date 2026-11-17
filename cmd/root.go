@@ -398,6 +398,7 @@ func runOnceMode(ctx context.Context, sources []types.LogSource, filters types.F
 	var parseErrors, processed int64
 	var entries []*types.LogEntry
 	var opEntries []*types.OperationalEntry
+	var readErr error
 	showListing := output.HasEntryFilters(filters) && flagFormat == "table" && flagOutput == "" && !flagDetect
 
 	geoip := newGeoIPEnricher()
@@ -412,6 +413,7 @@ func runOnceMode(ctx context.Context, sources []types.LogSource, filters types.F
 		lines, err := r.Read(ctx)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "error reading %s: %v\n", r.Name(), err)
+			readErr = err
 			continue
 		}
 		processParsedLines(ctx, lines, configuredWorkers(), func(entry types.Entry, err error) {
@@ -463,6 +465,10 @@ func runOnceMode(ctx context.Context, sources []types.LogSource, filters types.F
 	}
 
 	bar.Done()
+
+	if readErr != nil {
+		return readErr
+	}
 
 	if processed == 0 && opEngine.Stats().TotalEvents == 0 && parseErrors == 0 {
 		fmt.Fprintln(os.Stderr, "no log entries found")

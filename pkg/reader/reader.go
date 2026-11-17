@@ -123,6 +123,18 @@ func (r *FileReader) Name() string {
 }
 
 func (r *FileReader) Read(ctx context.Context) (<-chan string, error) {
+	// Validate up front that every input file can be opened. Previously
+	// open/read failures were only printed from inside the reader goroutine,
+	// so callers (and the process exit code) never saw them. Surfacing them
+	// here lets a missing or unreadable input file fail the command.
+	for _, path := range r.paths {
+		f, err := os.Open(path)
+		if err != nil {
+			return nil, err
+		}
+		_ = f.Close()
+	}
+
 	out := newLineChannel()
 	if r.follow && len(r.paths) > 1 {
 		// In follow mode with multiple files, read them concurrently
