@@ -199,3 +199,30 @@ func TestStdinReaderName(t *testing.T) {
 		t.Errorf("unexpected name %q", r.Name())
 	}
 }
+
+func TestStdinReaderReportsOversizedLine(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "stdin.log")
+	content := strings.Repeat("x", MaxLineSize+1) + "\n" + `{"msg":"next"}` + "\n"
+	if err := os.WriteFile(path, []byte(content), 0644); err != nil {
+		t.Fatal(err)
+	}
+	f, err := os.Open(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = f.Close() }()
+	oldStdin := os.Stdin
+	os.Stdin = f
+	defer func() { os.Stdin = oldStdin }()
+
+	r := &StdinReader{}
+	lines, err := r.Read(context.Background())
+	if err != nil {
+		t.Fatalf("Read failed: %v", err)
+	}
+	for range lines {
+	}
+	if r.Err() == nil {
+		t.Fatal("expected scanner error for oversized stdin line")
+	}
+}

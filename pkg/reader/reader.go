@@ -81,9 +81,20 @@ func newLineChannel() chan string {
 	return make(chan string, 1000)
 }
 
-type StdinReader struct{}
+type StdinReader struct {
+	mu  sync.Mutex
+	err error
+}
 
 func (r *StdinReader) Name() string { return "stdin" }
+
+// Err returns the scanner error that stopped reading stdin, if any. It is
+// only meaningful after the channel returned by Read has been closed.
+func (r *StdinReader) Err() error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	return r.err
+}
 
 func (r *StdinReader) Read(ctx context.Context) (<-chan string, error) {
 	// Defense-in-depth: resolveSources already refuses the stdin fallback
@@ -105,6 +116,12 @@ func (r *StdinReader) Read(ctx context.Context) (<-chan string, error) {
 			case <-ctx.Done():
 				return
 			}
+		}
+		if err := scanner.Err(); err != nil {
+			r.mu.Lock()
+			r.err = err
+			r.mu.Unlock()
+			printReadError("stdin", err)
 		}
 	}()
 	return out, nil
