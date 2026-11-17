@@ -15,6 +15,15 @@ plus the integrated progressive-ban and CI fixes.
 
 See [CHANGELOG.md](CHANGELOG.md) for the complete change list.
 
+## Contributors
+
+Thanks to everyone who contributed to this release:
+
+- @noahkhomer18 — implemented live whitelist reload and atomic replacement, protection against overlapping subnet bans (#130), the read-only `doctor` command and diagnostic follow-up fixes (#132), and prompt guard threshold evaluation with independent window deadlines and evidence consumption (#126).
+- @slavaolesik — added the NetAPI honeypot attackers feed to the default blocklists (#133).
+- @lenny-ts — implemented progressive bans and persistent offender history, preserved effective ban durations in audits, added behavioral authentication-abuse detection (#129), and contributed integration fixes, review-driven hardening, CI fixes and release documentation (#134).
+- @dependabot[bot] — updated pinned GitHub Actions used for release builds, signing and Docker publishing (#123).
+
 ## Install or upgrade after publication
 
 ```bash
