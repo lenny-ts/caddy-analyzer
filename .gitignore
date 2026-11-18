@@ -8,3 +8,6 @@ sample.log
 *.sha256
 dist/
 coverage.out
+mutation-report.json
+mutation-report.html
+.gomu_history.json
