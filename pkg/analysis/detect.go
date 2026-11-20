@@ -244,6 +244,7 @@ func getCompiledPatterns() []compiledPattern {
 }
 
 type Detector struct {
+	explain             func(Explanation)
 	authAbuse           *AuthAbuseDetector
 	patterns            []compiledPattern
 	customPatterns      []compiledPattern
@@ -1096,25 +1097,37 @@ func (d *Detector) DetectAll(entry *types.LogEntry) []Detection {
 		}
 	}
 
-	var appendDetection func(compiledPattern)
-	consider := func(p compiledPattern, lowerSrc string) {
+	var explanations map[DetectionType]matchEvidence
+	var headers []headerEvidence
+	var appendDetection func(compiledPattern, string, string, int, int)
+	consider := func(p compiledPattern, lowerSrc, source string) bool {
 		var matched bool
+		var start, end int
 		if len(p.literals) > 0 {
 			for _, lit := range p.literals {
-				if strings.Contains(lowerSrc, lit) {
+				if i := strings.Index(lowerSrc, lit); i >= 0 {
 					matched = true
+					start, end = i, i+len(lit)
 					break
 				}
+			}
+		} else if d.explain != nil {
+			if loc := p.re.FindStringIndex(lowerSrc); loc != nil {
+				matched, start, end = true, loc[0], loc[1]
 			}
 		} else {
 			matched = p.re.MatchString(lowerSrc)
 		}
-		if !matched {
+		if matched {
+			appendDetection(p, lowerSrc, source, start, end)
+		}
+		return matched
+	}
+	appendDetection = func(p compiledPattern, text, source string, start, end int) {
+		idx, exists := index[p.dtype]
+		if exists && p.confidence <= dets[idx].Confidence {
 			return
 		}
-		appendDetection(p)
-	}
-	appendDetection = func(p compiledPattern) {
 		techniques := p.techniques
 		if len(techniques) == 0 {
 			techniques = detectionTechniques[p.dtype]
@@ -1128,10 +1141,14 @@ func (d *Detector) DetectAll(entry *types.LogEntry) []Detection {
 			Confidence: p.confidence,
 			Techniques: techniques,
 		}
-		if idx, ok := index[p.dtype]; ok {
-			if p.confidence > dets[idx].Confidence {
-				dets[idx] = det
+		if d.explain != nil {
+			if explanations == nil {
+				explanations = make(map[DetectionType]matchEvidence)
 			}
+			explanations[p.dtype] = matchEvidence{p, source, text, start, end}
+		}
+		if exists {
+			dets[idx] = det
 			return
 		}
 		index[p.dtype] = len(dets)
@@ -1166,19 +1183,19 @@ func (d *Detector) DetectAll(entry *types.LogEntry) []Detection {
 				continue
 			}
 		}
-		lowerSrc := lowerURI
+		lowerSrc, source := lowerURI, "uri"
 		switch {
 		case p.uaOnly:
-			lowerSrc = lowerUA
+			lowerSrc, source = lowerUA, "user_agent"
 		case p.matchAuth:
-			lowerSrc = lowerAuth
+			lowerSrc, source = lowerAuth, "authorization"
 		case p.matchUA:
-			lowerSrc = lowerURI + "\n" + lowerUA
+			lowerSrc, source = lowerURI+"\n"+lowerUA, "uri_and_user_agent"
 		}
 		if p.gate != "" && !strings.Contains(lowerSrc, p.gate) {
 			continue
 		}
-		consider(p, lowerSrc)
+		consider(p, lowerSrc, source)
 	}
 	for _, p := range rawPatterns {
 		if p.hasMarkers && !triageRawOK {
@@ -1187,47 +1204,54 @@ func (d *Detector) DetectAll(entry *types.LogEntry) []Detection {
 		if p.gate != "" && !strings.Contains(lowerRaw, p.gate) {
 			continue
 		}
-		consider(p, lowerRaw)
+		consider(p, lowerRaw, "raw_uri")
 	}
 
 	// Custom signatures deliberately bypass built-in marker triage: their
 	// source and regex are user-defined, so an inferred marker could skip a
 	// valid match. They still use compiled regexes and literal fast paths.
-	headerText := ""
-	for name, values := range entry.Headers {
-		for _, value := range values {
-			headerText += strings.ToLower(name) + ": " + strings.ToLower(value) + "\n"
+	var headerText strings.Builder
+	if len(d.customPatterns) != 0 {
+		for name, values := range entry.Headers {
+			for _, value := range values {
+				start := headerText.Len()
+				headerText.WriteString(strings.ToLower(name))
+				headerText.WriteString(": ")
+				headerText.WriteString(strings.ToLower(value))
+				if d.explain != nil {
+					headers = append(headers, headerEvidence{name, value, start, headerText.Len()})
+				}
+				headerText.WriteByte('\n')
+			}
 		}
 	}
 	for _, p := range d.customPatterns {
-		match := func(src string) bool {
-			if len(p.literals) > 0 {
-				for _, lit := range p.literals {
-					if strings.Contains(src, lit) {
-						return true
-					}
-				}
-				return false
-			}
-			return p.re.MatchString(src)
-		}
-		matched := false
 		switch p.source {
-		case "uri":
-			matched = match(lowerURI) || match(lowerRaw)
-		case "header":
-			matched = match(headerText)
-		case "user_agent":
-			matched = match(lowerUA)
-		case "all":
-			matched = match(lowerURI) || match(lowerRaw) || match(headerText) || match(lowerUA)
+		case "uri", "all":
+			if consider(p, lowerURI, "uri") || consider(p, lowerRaw, "raw_uri") {
+				continue
+			}
 		}
-		if matched {
-			appendDetection(p)
+		if p.source == "header" || p.source == "all" {
+			if consider(p, headerText.String(), "header") {
+				continue
+			}
+		}
+		if p.source == "user_agent" || p.source == "all" {
+			consider(p, lowerUA, "user_agent")
 		}
 	}
 
-	return append(dets, d.authAbuse.Observe(entry)...)
+	heuristics := d.authAbuse.Observe(entry)
+	if d.explain != nil {
+		for _, det := range dets {
+			d.explain(explanations[det.Type].explanation(det, entry, lowerURI, headers))
+		}
+		for _, det := range heuristics {
+			d.explain(Explanation{Detection: det, Source: "request history"})
+		}
+	}
+	return append(dets, heuristics...)
 }
 
 // extractIDFromPath extracts the trailing numeric ID from a path.
