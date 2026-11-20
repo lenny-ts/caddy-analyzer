@@ -13,6 +13,7 @@ func TestRulesTest(t *testing.T) {
 	t.Cleanup(func() { customPatterns = previous })
 	customPatterns = []analysis.DetectionPattern{
 		{Type: "example", Pattern: "review me", Description: "Local test rule", Source: "uri", Confidence: 8},
+		{Type: "raw_example", Pattern: "%41", Description: "Raw query test rule", Source: "uri", Confidence: 8},
 		{Type: "custom_header", Pattern: "x-review: marker", Description: "Header test rule", Source: "header", Confidence: 7},
 		{Type: "secret_header", Pattern: "private-test-value", Description: "Sensitive header test", Source: "header", Confidence: 7},
 	}
@@ -26,6 +27,7 @@ func TestRulesTest(t *testing.T) {
 			`Source: "query string"`, `raw URI -> "/search?q=Review%20Me"`, `URL decode -> "/search?q=Review Me"`, `Matched: "review me"`,
 		}},
 		{"encoded separator in path", []string{"/search%3Ftag?q=review%20me"}, []string{`Source: "query string"`}},
+		{"raw query after Unicode path", []string{"/İ?%41"}, []string{`Source: "query string"`, `Matched: "%41"`}},
 		{"built-in header", []string{"--header", "user-agent: sqlmap"}, []string{`Source: "user_agent"`, "Rule: SCANNER-", "MITRE ATT&CK:"}},
 		{"custom header", []string{"--header", "X-Review: Marker"}, []string{`Source: "header: X-Review"`, `raw header -> "X-Review: Marker"`}},
 		{"redacted header", []string{"--header", "Authorization: private-test-value"}, []string{`Matched: "[redacted]"`}},

@@ -51,8 +51,7 @@ func newRulesTestCmd() *cobra.Command {
 				name = textproto.CanonicalMIMEHeaderKey(strings.TrimSpace(name))
 				if !ok || name == "" || strings.ContainsAny(header, "\r\n\x00") ||
 					strings.ContainsFunc(name, func(r rune) bool {
-						return !strings.ContainsRune("!#$%&'*+-.^_`|~", r) &&
-							!(r >= 'a' && r <= 'z' || r >= 'A' && r <= 'Z' || r >= '0' && r <= '9')
+						return !strings.ContainsRune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!#$%&'*+-.^_`|~", r)
 					}) {
 					return fmt.Errorf("--header requires Name: Value")
 				}

@@ -68,14 +68,13 @@ func (m matchEvidence) explanation(det Detection, entry *types.LogEntry, lowerUR
 	switch m.source {
 	case "uri", "raw_uri":
 		if q := strings.IndexByte(entry.URI, '?'); q >= 0 {
+			path := entry.URI[:q]
 			if m.source == "uri" {
-				path := entry.URI[:q]
 				if decoded, err := url.PathUnescape(path); err == nil {
 					path = decoded
 				}
-				q = len(strings.ToLower(path))
 			}
-			if m.start > q {
+			if m.start > len(strings.ToLower(path)) {
 				x.Source = "query string"
 			}
 		}
