@@ -232,6 +232,19 @@ Caddy v2 uses a **structured JSON log format** that differs from the Common/Comb
 
 ---
 
+## Explain detection rules
+
+```bash
+caddy-analyze rules test '/search?q=example'
+caddy-analyze rules test --header 'User-Agent: sqlmap'
+caddy-analyze rules test --custom-patterns rules.json --url 'https://example.org/search?q=example'
+caddy-analyze --detect --explain access.log
+```
+
+`rules test` analyzes a single request target and optional headers locally without sending a request. Both commands show the winning rule per detection category, its rule ID, the matching field and text, normalization stages, confidence, severity, and available MITRE ATT&CK IDs. Behavioral detections explain the request history rather than naming a signature.
+
+`--explain` is available in one-shot analysis and writes to stderr, leaving the report unchanged. Request bodies aren't available in Caddy access logs. Authorization and cookie headers are redacted, but URLs and other headers may still contain sensitive data; review the output before sharing.
+
 ## Real-Time Threat Detection (`tail --detect`)
 
 The `tail` subcommand accepts `--detect` (`-d`) to run the full detection engine on every streamed entry, inline:
