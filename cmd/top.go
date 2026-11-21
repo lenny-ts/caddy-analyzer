@@ -105,7 +105,7 @@ func runTopCmd(cmd *cobra.Command, args []string) error {
 		r := reader.FromSource(src)
 		lines, err := r.Read(ctx)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "error reading %s: %v\\n", r.Name(), err)
+			fmt.Fprintf(os.Stderr, "error reading %s: %v\n", r.Name(), err)
 			if readErr == nil {
 				readErr = err
 			}

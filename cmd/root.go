@@ -428,7 +428,9 @@ func runOnceMode(ctx context.Context, sources []types.LogSource, filters types.F
 		lines, err := r.Read(ctx)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "error reading %s: %v\n", r.Name(), err)
-			readErr = err
+			if readErr == nil {
+				readErr = err
+			}
 			continue
 		}
 		processParsedLines(ctx, lines, configuredWorkers(), func(entry types.Entry, err error) {
@@ -678,6 +680,9 @@ func countTotalLines(sources []types.LogSource) int64 {
 			return 0
 		}
 		for _, path := range expandSourcePaths(src.Path) {
+			if info, err := os.Stat(path); err != nil || !info.Mode().IsRegular() {
+				return 0
+			}
 			f, err := os.Open(path)
 			if err != nil {
 				return 0

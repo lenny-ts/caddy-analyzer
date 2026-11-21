@@ -19,6 +19,7 @@ import (
 type LogReader interface {
 	Read(ctx context.Context) (<-chan string, error)
 	Name() string
+	// Err reports a streaming error after the lines channel has been drained.
 	Err() error
 }
 
@@ -136,37 +137,39 @@ func (r *FileReader) Read(ctx context.Context) (<-chan string, error) {
 	// read when only some paths are missing: process the available ones and
 	// record the error so callers can surface a non-zero exit code. Use
 	// os.Stat instead of open+close to avoid blocking twice on FIFOs.
-	available := r.paths[:0]
+	var once sync.Once
+	recordError := func(path string, err error) {
+		if errors.Is(err, context.Canceled) {
+			return
+		}
+		printReadError(path, err)
+		once.Do(func() { r.err = err })
+	}
+	r.err = nil
+	available := make([]string, 0, len(r.paths))
 	for _, path := range r.paths {
 		if _, err := os.Stat(path); err != nil {
-			printReadError(path, err)
-			if r.err == nil {
-				r.err = err
-			}
+			recordError(path, err)
 			continue
 		}
 		available = append(available, path)
 	}
-	r.paths = available
-	if len(r.paths) == 0 && r.err != nil {
+	if len(available) == 0 && r.err != nil {
 		return nil, r.err
 	}
 
 	out := newLineChannel()
-	if r.follow && len(r.paths) > 1 {
+	if r.follow && len(available) > 1 {
 		// In follow mode with multiple files, read them concurrently
 		// so all files are tailed in parallel. Without this, the first
 		// file blocks forever and the rest are never read.
 		var wg sync.WaitGroup
-		for _, path := range r.paths {
+		for _, path := range available {
 			wg.Add(1)
 			go func(p string) {
 				defer wg.Done()
 				if err := readFileAndFollow(ctx, p, out); err != nil {
-					printReadError(p, err)
-					if r.err == nil {
-						r.err = err
-					}
+					recordError(p, err)
 				}
 			}(path)
 		}
@@ -178,20 +181,14 @@ func (r *FileReader) Read(ctx context.Context) (<-chan string, error) {
 	}
 	go func() {
 		defer close(out)
-		for _, path := range r.paths {
+		for _, path := range available {
 			if r.follow {
 				if err := readFileAndFollow(ctx, path, out); err != nil {
-					printReadError(path, err)
-					if r.err == nil {
-						r.err = err
-					}
+					recordError(path, err)
 				}
 			} else {
 				if err := readFileLines(ctx, path, out); err != nil {
-					printReadError(path, err)
-					if r.err == nil {
-						r.err = err
-					}
+					recordError(path, err)
 				}
 			}
 		}
