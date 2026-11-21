@@ -99,10 +99,16 @@ func runTopCmd(cmd *cobra.Command, args []string) error {
 
 	bar := progress.New(os.Stderr, 0, "Analyzing")
 
+	var readErr error
+
 	for _, src := range sources {
 		r := reader.FromSource(src)
 		lines, err := r.Read(ctx)
 		if err != nil {
+			fmt.Fprintf(os.Stderr, "error reading %s: %v\\n", r.Name(), err)
+			if readErr == nil {
+				readErr = err
+			}
 			continue
 		}
 		processParsedLines(ctx, lines, configuredWorkers(), func(entry types.Entry, err error) {
@@ -117,6 +123,9 @@ func runTopCmd(cmd *cobra.Command, args []string) error {
 			}
 			bar.Add(1)
 		})
+		if rerr := r.Err(); rerr != nil && readErr == nil {
+			readErr = rerr
+		}
 	}
 
 	bar.Done()
@@ -156,9 +165,21 @@ func runTopCmd(cmd *cobra.Command, args []string) error {
 
 	switch output.ParseFormat(flagFormat) {
 	case output.FormatJSON:
-		return writeTopJSON(w, items)
+		if err := writeTopJSON(w, items); err != nil {
+			return err
+		}
+		if readErr != nil {
+			return readErr
+		}
+		return nil
 	case output.FormatCSV:
-		return writeTopCSV(w, items)
+		if err := writeTopCSV(w, items); err != nil {
+			return err
+		}
+		if readErr != nil {
+			return readErr
+		}
+		return nil
 	default:
 		title := topTitle(dim)
 		if _, err := fmt.Fprintf(w, "Top %s:\n", title); err != nil {
@@ -175,6 +196,9 @@ func runTopCmd(cmd *cobra.Command, args []string) error {
 					return err
 				}
 			}
+		}
+		if readErr != nil {
+			return readErr
 		}
 		return nil
 	}
