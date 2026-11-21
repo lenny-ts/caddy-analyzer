@@ -1384,6 +1384,7 @@ func (g *Guard) Run(ctx context.Context, linesCh <-chan string, logf func(string
 		allowlistTick = allowlistTicker.C
 	}
 
+	authEvicted := 0
 	logBlocked := func(now time.Time, blocked []Candidate) {
 		for _, c := range blocked {
 			verb := "blocked"
@@ -1415,6 +1416,10 @@ func (g *Guard) Run(ctx context.Context, linesCh <-chan string, logf func(string
 		case <-ticker.C:
 			now := time.Now()
 			logBlocked(now, g.evaluate(ctx, now))
+			if evicted := g.cfg.AuthAbuse.EvictedEvidence(); evicted > authEvicted {
+				logf("[%s] auth_abuse evidence budget full: %d older failures evicted (%d total)\n", now.Format("15:04:05"), evicted-authEvicted, evicted)
+				authEvicted = evicted
+			}
 			if window <= 0 {
 				g.resetWindow(now, window)
 			}
