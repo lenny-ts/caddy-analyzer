@@ -481,7 +481,7 @@ func runOnceMode(ctx context.Context, sources []types.LogSource, filters types.F
 
 	bar.Done()
 
-	if processed == 0 && opEngine.Stats().TotalEvents == 0 && parseErrors == 0 {
+	if processed == 0 && opEngine.Stats().TotalEvents == 0 && parseErrors == 0 && skippedLines == 0 {
 		fmt.Fprintln(os.Stderr, "no log entries found")
 		return nil
 	}

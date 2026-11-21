@@ -61,13 +61,26 @@ func normalizeLine(b []byte) []byte {
 // written after a sparse hole is still delivered. Only read errors and errors
 // returned by fn stop the iteration.
 func forEachLine(r io.Reader, max int, fn func(string) error, onSkip func(int64)) error {
-	br := bufio.NewReaderSize(r, 64*1024)
-	var line []byte
-	var raw int64 // bytes of the current line consumed so far, newline excluded
-	tooLong := false
+	var line boundedLine
+	return line.read(context.Background(), bufio.NewReaderSize(r, 64*1024), max, true, fn, onSkip)
+}
+
+type boundedLine struct {
+	content []byte
+	raw     int64 // bytes consumed so far, newline excluded
+	tooLong bool
+}
+
+// read drains through EOF. When following, EOF is temporary: retain only the
+// bounded partial line and resume at the current offset on the next poll.
+func (l *boundedLine) read(ctx context.Context, br *bufio.Reader, max int, final bool, fn func(string) error, onSkip func(int64)) error {
 	for {
+		if err := ctx.Err(); err != nil {
+			return err
+		}
 		chunk, err := br.ReadSlice('\n')
-		if err != nil && !errors.Is(err, bufio.ErrBufferFull) && !errors.Is(err, io.EOF) {
+		eof := errors.Is(err, io.EOF)
+		if err != nil && !errors.Is(err, bufio.ErrBufferFull) && !eof {
 			return err
 		}
 		complete := err == nil
@@ -75,35 +88,33 @@ func forEachLine(r io.Reader, max int, fn func(string) error, onSkip func(int64)
 		if complete {
 			data = chunk[:len(chunk)-1]
 		}
-		raw += int64(len(data))
-		if !tooLong {
-			if len(line) == 0 {
+		l.raw += int64(len(data))
+		if !l.tooLong {
+			if len(l.content) == 0 {
 				data = bytes.TrimLeft(data, "\x00")
 			}
-			if len(line)+len(data) > max+1 {
+			if len(l.content)+len(data) > max+1 {
 				// max+1 leaves room for a trailing "\r" that normalizeLine drops.
-				tooLong = true
-				line = line[:0]
+				l.tooLong = true
+				l.content = l.content[:0]
 			} else {
-				line = append(line, data...)
+				l.content = append(l.content, data...)
 			}
 		}
-		if complete || (errors.Is(err, io.EOF) && raw > 0) {
-			if !tooLong {
-				if content := normalizeLine(line); len(content) > max {
-					tooLong = true
+		if complete || (final && eof && l.raw > 0) {
+			if !l.tooLong {
+				if content := normalizeLine(l.content); len(content) > max {
+					l.tooLong = true
 				} else if ferr := fn(string(content)); ferr != nil {
 					return ferr
 				}
 			}
-			if tooLong && onSkip != nil {
-				onSkip(raw)
+			if l.tooLong && onSkip != nil {
+				onSkip(l.raw)
 			}
-			line = line[:0]
-			raw = 0
-			tooLong = false
+			*l = boundedLine{content: l.content[:0]}
 		}
-		if errors.Is(err, io.EOF) {
+		if eof {
 			return nil
 		}
 	}
@@ -279,45 +290,31 @@ func readFileLines(ctx context.Context, path string, out chan<- string, skips *s
 	}, func(n int64) { skips.skip(path, n) })
 }
 
-// followLine applies the one-shot rules to a complete line read in follow
-// mode: the same normalization, and the same skip for an over-long line.
-func followLine(ctx context.Context, out chan<- string, path, line string, skips *skipCounter) error {
-	raw := strings.TrimSuffix(line, "\n")
-	content := normalizeLine([]byte(raw))
-	if len(content) > MaxLineSize {
-		skips.skip(path, int64(len(raw)))
-		return nil
-	}
-	return sendLine(ctx, out, string(content))
-}
-
 func readFileAndFollow(ctx context.Context, path string, out chan<- string, skips *skipCounter) error {
 	f, err := os.Open(path)
 	if err != nil {
 		return err
 	}
-	defer func() { _ = f.Close() }()
+	defer func() {
+		if f != nil {
+			_ = f.Close()
+		}
+	}()
 
 	initialInfo, err := f.Stat()
 	if err != nil {
 		return err
 	}
 
-	initialReader := bufio.NewReaderSize(f, 1024*1024)
-	for {
-		line, err := initialReader.ReadString('\n')
-		if err != nil {
-			if len(line) > 0 {
-				pos, _ := f.Seek(0, io.SeekCurrent)
-				if _, err := f.Seek(pos-int64(len(line)), io.SeekStart); err != nil {
-					return err
-				}
-			}
-			break
-		}
-		if err := followLine(ctx, out, path, line, skips); err != nil {
-			return err
-		}
+	buffer := bufio.NewReaderSize(f, 64*1024)
+	var pending boundedLine
+	drain := func() error {
+		return pending.read(ctx, buffer, MaxLineSize, false, func(line string) error {
+			return sendLine(ctx, out, line)
+		}, func(n int64) { skips.skip(path, n) })
+	}
+	if err := drain(); err != nil {
+		return err
 	}
 
 	pos, err := f.Seek(0, io.SeekCurrent)
@@ -350,28 +347,20 @@ func readFileAndFollow(ctx context.Context, path string, out chan<- string, skip
 				if err != nil {
 					return err
 				}
+				pending = boundedLine{}
+				buffer.Reset(f)
 			} else if info.Size() == pos {
 				continue
 			}
 
-			reader := bufio.NewReader(f)
-			for {
-				line, err := reader.ReadString('\n')
-				if err != nil {
-					if len(line) > 0 {
-						pos, _ := f.Seek(0, io.SeekCurrent)
-						if _, err := f.Seek(pos-int64(len(line)), io.SeekStart); err != nil {
-							return err
-						}
-					}
-					break
-				}
-				if err := followLine(ctx, out, path, line, skips); err != nil {
-					return err
-				}
+			if err := drain(); err != nil {
+				return err
 			}
 
-			pos, _ = f.Seek(0, io.SeekCurrent)
+			pos, err = f.Seek(0, io.SeekCurrent)
+			if err != nil {
+				return err
+			}
 		}
 	}
 }
