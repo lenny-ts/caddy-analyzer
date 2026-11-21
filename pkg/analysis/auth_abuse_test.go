@@ -294,3 +294,58 @@ func TestAuthAbuseScenarioExpiryAndBudget(t *testing.T) {
 		t.Fatal("budget not reclaimed at expiry")
 	}
 }
+
+func TestAuthAbuseSaturatedBudgetStillCountsNewIPs(t *testing.T) {
+	d, err := NewAuthAbuseDetector(AuthAbuseConfig{Enabled: true,
+		BruteForce:         AuthThreshold{Failures: 2, Window: "1m"},
+		CredentialStuffing: AuthThreshold{Window: "1m"}, PasswordSpray: AuthThreshold{Window: "1m"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	base := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
+	for i := 0; i < DefaultIPCap; i++ {
+		d.Observe(&types.LogEntry{Timestamp: base, RemoteIP: "203.0.113.1", URI: "/login", Status: 401})
+	}
+	if got := d.EvictedEvidence(); got != 0 {
+		t.Fatalf("evicted before the budget was full: %d", got)
+	}
+
+	var dets []Detection
+	for i := 0; i < 2; i++ {
+		dets = d.Observe(&types.LogEntry{Timestamp: base.Add(time.Second), RemoteIP: "203.0.113.2", URI: "/login", Status: 401})
+	}
+	found := false
+	for _, det := range dets {
+		if det.Type == DetBruteForce && det.IP == "203.0.113.2" {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatalf("new IP not detected while the budget was full: %+v", dets)
+	}
+	if len(d.windows[0].events) != DefaultIPCap {
+		t.Fatalf("budget exceeded: %d events", len(d.windows[0].events))
+	}
+	if got := d.EvictedEvidence(); got != 2 {
+		t.Fatalf("EvictedEvidence = %d, want 2", got)
+	}
+
+	// A record older than everything retained is the one dropped.
+	d.Observe(&types.LogEntry{Timestamp: base.Add(-30 * time.Second), RemoteIP: "203.0.113.3", URI: "/login", Status: 401})
+	if d.windows[0].counts[authKey{"", "/login", "203.0.113.3"}] != nil {
+		t.Fatal("late record older than all retained evidence was kept")
+	}
+	if got := d.EvictedEvidence(); got != 3 {
+		t.Fatalf("EvictedEvidence = %d, want 3", got)
+	}
+
+	// Once the flood expires, new failures are retained without eviction.
+	d.Observe(&types.LogEntry{Timestamp: base.Add(2 * time.Minute), RemoteIP: "203.0.113.4", URI: "/login", Status: 401})
+	if len(d.windows[0].events) != 1 || d.EvictedEvidence() != 3 {
+		t.Fatalf("budget not recovered after expiry: %d events, %d evicted", len(d.windows[0].events), d.EvictedEvidence())
+	}
+	var nilDetector *AuthAbuseDetector
+	if nilDetector.EvictedEvidence() != 0 {
+		t.Fatal("nil detector reported evictions")
+	}
+}

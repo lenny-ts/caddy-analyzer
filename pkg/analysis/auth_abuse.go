@@ -73,6 +73,9 @@ type authWindow struct {
 	aggregate bool
 	events    authFailures
 	counts    map[authKey]*authEvidence
+	// evicted counts failures pushed out of a full budget, or refused because
+	// they were older than everything retained.
+	evicted int
 }
 
 func (w *authWindow) group(key authKey) authKey {
@@ -131,6 +134,22 @@ func (d *AuthAbuseDetector) NewSession() *AuthAbuseDetector {
 		}
 	}
 	return &copy
+}
+
+// EvictedEvidence reports how many failures were lost to a full evidence
+// budget across all scenarios since the session started. A non-zero value
+// means counts are a lower bound for the oldest evidence in the window.
+func (d *AuthAbuseDetector) EvictedEvidence() int {
+	if d == nil {
+		return 0
+	}
+	n := 0
+	for _, window := range d.windows {
+		if window != nil {
+			n += window.evicted
+		}
+	}
+	return n
 }
 
 // BlockingEnabled reports whether per-IP Guard blocking was explicitly enabled.
@@ -217,11 +236,22 @@ func (d *AuthAbuseDetector) Observe(e *types.LogEntry) []Detection {
 		if window == nil || !e.Timestamp.After(d.now.Add(-window.duration)) {
 			continue
 		}
-		if len(window.events) < DefaultIPCap {
-			event := authFailure{at: e.Timestamp, key: key, status: e.Status, ua: e.UserAgent}
-			heap.Push(&window.events, event)
-			window.adjust(event, 1)
+		event := authFailure{at: e.Timestamp, key: key, status: e.Status, ua: e.UserAgent}
+		if len(window.events) >= DefaultIPCap {
+			// A full budget gives up its oldest failure so a new attacker is
+			// still counted; a record older than all retained evidence is the
+			// one that goes instead.
+			window.evicted++
+			if e.Timestamp.Before(window.events[0].at) {
+				if det := d.detection(i, key); det != nil {
+					out = append(out, *det)
+				}
+				continue
+			}
+			window.adjust(heap.Pop(&window.events).(authFailure), -1)
 		}
+		heap.Push(&window.events, event)
+		window.adjust(event, 1)
 		if det := d.detection(i, key); det != nil {
 			out = append(out, *det)
 		}
