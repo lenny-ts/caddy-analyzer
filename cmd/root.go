@@ -459,14 +459,7 @@ func runOnceMode(ctx context.Context, sources []types.LogSource, filters types.F
 				}
 			}
 			bar.Add(1)
-			bar.Add(1)
 		})
-		if er, ok := r.(interface{ Err() error }); ok {
-			if readErr := er.Err(); readErr != nil {
-				bar.Done()
-				return fmt.Errorf("error reading %s: %w", r.Name(), readErr)
-			}
-		}
 	}
 
 	bar.Done()
