@@ -301,7 +301,7 @@ func TestIsNewFormatBundle(t *testing.T) {
 	}
 }
 
-func TestDownloadArtifactsFetchesSidecarsAlongsideBundle(t *testing.T) {
+func TestDownloadArtifactsSelectsVerificationAssets(t *testing.T) {
 	ext := ".tar.gz"
 	if runtime.GOOS == "windows" {
 		ext = ".zip"
@@ -327,9 +327,9 @@ func TestDownloadArtifactsFetchesSidecarsAlongsideBundle(t *testing.T) {
 	defer srv.Close()
 	asset := func(name string) Asset { return Asset{Name: name, URL: srv.URL + "/" + name} }
 
-	t.Run("with bundle", func(t *testing.T) {
+	t.Run("modern bundle without sidecars", func(t *testing.T) {
 		rel := &Release{Tag: "v0.7.2", Assets: []Asset{
-			asset("checksums.txt"), asset("checksums.txt.pem"), asset("checksums.txt.sig"),
+			asset("checksums.txt"),
 			asset("checksums.txt.bundle"), asset("trusted_root.json"), asset(archName),
 		}}
 		dir := t.TempDir()
@@ -337,7 +337,7 @@ func TestDownloadArtifactsFetchesSidecarsAlongsideBundle(t *testing.T) {
 		if err != nil {
 			t.Fatalf("downloadArtifacts: %v", err)
 		}
-		for _, name := range []string{"checksums.txt", "checksums.txt.pem", "checksums.txt.sig", "checksums.txt.bundle", "trusted_root.json", archName} {
+		for _, name := range []string{"checksums.txt", "checksums.txt.bundle", "trusted_root.json", archName} {
 			if _, err := os.Stat(filepath.Join(dir, name)); err != nil {
 				t.Errorf("expected staged %s: %v", name, err)
 			}
@@ -347,6 +347,17 @@ func TestDownloadArtifactsFetchesSidecarsAlongsideBundle(t *testing.T) {
 		}
 		if filepath.Base(archivePath) != archName {
 			t.Errorf("archive = %q, want %q", archivePath, archName)
+		}
+	})
+
+	t.Run("modern bundle missing trusted root", func(t *testing.T) {
+		rel := &Release{Tag: "v0.7.2", Assets: []Asset{
+			asset("checksums.txt"), asset("checksums.txt.bundle"),
+			asset("checksums.txt.pem"), asset("checksums.txt.sig"), asset(archName),
+		}}
+		_, _, err := downloadArtifacts(context.Background(), srv.Client(), rel, t.TempDir())
+		if err == nil || !strings.Contains(err.Error(), "trusted_root.json") {
+			t.Fatalf("expected missing trusted root, got %v", err)
 		}
 	})
 
