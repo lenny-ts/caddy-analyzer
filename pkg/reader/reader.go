@@ -225,7 +225,7 @@ func (r *StdinReader) Read(ctx context.Context) (<-chan string, error) {
 			return sendLine(ctx, out, line)
 		}, func(n int64) { r.skip(r.Name(), n) })
 		if err != nil && !errors.Is(err, context.Canceled) {
-			r.err = err
+			r.err = fmt.Errorf("read stdin: %w", err)
 			printReadError(r.Name(), err)
 		}
 	}()
