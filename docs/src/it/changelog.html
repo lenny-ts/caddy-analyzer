@@ -3,6 +3,23 @@
 <p>Tutte le modifiche rilevanti a <code>caddy-analyzer</code> saranno documentate in questo file.</p>
 <p>Il formato si basa su <a href="https://keepachangelog.com/en/1.0.0/">Keep a Changelog</a> e questo progetto aderisce al <a href="https://semver.org/spec/v2.0.0.html">Semantic Versioning</a>.</p>
 
+<h2 id="0-10-0">0.10.0 — 2026-11-21</h2>
+<h3>Aggiunto</h3>
+<ul>
+<li><strong>Spiegazione del rilevamento (#155)</strong>: <code>rules test</code> verifica localmente URI e header, anche con regole personalizzate. <code>--detect --explain</code> mostra il match e la normalizzazione su stderr senza cambiare il report.</li>
+</ul>
+<h3>Corretto</h3>
+<ul>
+<li><strong>Righe troppo lunghe (#156)</strong>: vengono saltate e conteggiate senza perdere le righe successive; vengono recuperati i record preceduti da byte NUL e il buffer è limitato anche in modalità follow.</li>
+<li><strong>Errori di lettura (#149, #150)</strong>: file illeggibili ed errori effettivi di lettura da stdin producono un codice di uscita non zero nell'analisi non continua.</li>
+<li><strong>Saturazione auth-abuse (#157)</strong>: vengono mantenute le evidenze più recenti; a parità di timestamp vale l'ordine di arrivo. Guard segnala gli scarti.</li>
+<li><strong>Commenti nelle blocklist (#151)</strong>: accetta voci IP e CIDR seguite da spazi e un commento.</li>
+</ul>
+<h3>Modificato</h3>
+<ul>
+<li><strong>Note di release</strong>: il testo su GitHub viene generato dal changelog prima della pubblicazione.</li>
+</ul>
+
 <h2 id="0-9-0">0.9.0 — 2026-11-16</h2>
 <h3>Aggiunto</h3>
 <ul>
