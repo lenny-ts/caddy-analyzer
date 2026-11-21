@@ -388,8 +388,9 @@ endpoint-scoped behavior is wanted. Other Guard blocking rules remain active.
 At most 100,000 failures are retained per enabled scenario (300,000 with all
 three enabled). Counts and distinct User-Agents remain exact within that budget;
 when a scenario's budget is full, each new failure evicts the oldest retained
-one, so a new IP is still counted during a flood from another. Failures older
-than everything retained are dropped instead. Guard logs each evaluation in
+one (earliest arrival breaks timestamp ties), so a new IP is still counted
+during a flood from another. Failures older than everything retained are
+dropped instead. Guard logs each evaluation in
 which evidence was evicted (`auth_abuse evidence budget full`); while that is
 happening, counts for the oldest part of the window are a lower bound. Each
 scenario expires its own rolling window independently.

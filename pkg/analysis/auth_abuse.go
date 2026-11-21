@@ -41,6 +41,7 @@ type AuthAbuseConfig struct {
 type authKey struct{ host, path, ip string }
 type authFailure struct {
 	at     time.Time
+	seq    uint64
 	key    authKey
 	status int
 	ua     string
@@ -48,10 +49,15 @@ type authFailure struct {
 
 type authFailures []authFailure
 
-func (h authFailures) Len() int           { return len(h) }
-func (h authFailures) Less(i, j int) bool { return h[i].at.Before(h[j].at) }
-func (h authFailures) Swap(i, j int)      { h[i], h[j] = h[j], h[i] }
-func (h *authFailures) Push(x any)        { *h = append(*h, x.(authFailure)) }
+func (h authFailures) Len() int { return len(h) }
+func (h authFailures) Less(i, j int) bool {
+	if h[i].at.Equal(h[j].at) {
+		return h[i].seq < h[j].seq
+	}
+	return h[i].at.Before(h[j].at)
+}
+func (h authFailures) Swap(i, j int) { h[i], h[j] = h[j], h[i] }
+func (h *authFailures) Push(x any)   { *h = append(*h, x.(authFailure)) }
 func (h *authFailures) Pop() any {
 	old := *h
 	event := old[len(old)-1]
@@ -119,6 +125,7 @@ type AuthAbuseDetector struct {
 	cfg     AuthAbuseConfig
 	windows [3]*authWindow
 	now     time.Time
+	seq     uint64
 }
 
 // NewSession creates independent evidence storage with the validated settings.
@@ -128,6 +135,7 @@ func (d *AuthAbuseDetector) NewSession() *AuthAbuseDetector {
 	}
 	copy := *d
 	copy.now = time.Time{}
+	copy.seq = 0
 	for i, window := range d.windows {
 		if window != nil {
 			copy.windows[i] = &authWindow{duration: window.duration, aggregate: window.aggregate, counts: make(map[authKey]*authEvidence)}
@@ -229,6 +237,7 @@ func (d *AuthAbuseDetector) Observe(e *types.LogEntry) []Detection {
 		return nil
 	}
 	key := authKey{strings.ToLower(e.Host), path, net.ParseIP(e.RemoteIP).String()}
+	d.seq++
 	var out []Detection
 	for i, window := range d.windows {
 		// ponytail: at most 100k failures per enabled scenario; use an external
@@ -236,7 +245,7 @@ func (d *AuthAbuseDetector) Observe(e *types.LogEntry) []Detection {
 		if window == nil || !e.Timestamp.After(d.now.Add(-window.duration)) {
 			continue
 		}
-		event := authFailure{at: e.Timestamp, key: key, status: e.Status, ua: e.UserAgent}
+		event := authFailure{at: e.Timestamp, seq: d.seq, key: key, status: e.Status, ua: e.UserAgent}
 		if len(window.events) >= DefaultIPCap {
 			// A full budget gives up its oldest failure so a new attacker is
 			// still counted; a record older than all retained evidence is the
