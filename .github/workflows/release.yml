@@ -78,27 +78,30 @@ jobs:
           curl --fail --location --retry 3 \
             --output trusted_root.json \
             https://raw.githubusercontent.com/sigstore/root-signing/main/targets/trusted_root.json
-          # Preserve legacy sidecars alongside the bundle for older updaters.
           cosign sign-blob --yes --use-signing-config=false \
-            --bundle checksums.txt.bundle \
-            --new-bundle-format \
-            --output-signature checksums.txt.sig \
-            --output-certificate checksums.txt.pem \
-            checksums.txt
-
-      - name: Keep bootstrap release compatible with older updaters
-        if: github.ref_name == 'v0.7.1'
-        run: rm -f dist/checksums.txt.bundle
+            --bundle checksums.txt.bundle checksums.txt
+          bash ../tools/cosign-sidecars.sh
+          cosign verify-blob --bundle checksums.txt.bundle --trusted-root trusted_root.json \
+            --certificate-identity "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/.github/workflows/release.yml@$GITHUB_REF" \
+            --certificate-oidc-issuer https://token.actions.githubusercontent.com checksums.txt
 
       - name: Upload SBOM and signatures
         uses: softprops/action-gh-release@8a0cd651e5b2365bd640854a3fa5dfc70e4875f3 # v3.0.4
         with:
+          draft: true
+          fail_on_unmatched_files: true
           files: |
             dist/*.spdx.json
             dist/checksums.txt.bundle
             dist/checksums.txt.sig
             dist/checksums.txt.pem
             dist/trusted_root.json
+
+      - name: Publish signed release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: gh release edit "$RELEASE_TAG" --draft=false
 
   release-docker:
     name: Publish Docker image

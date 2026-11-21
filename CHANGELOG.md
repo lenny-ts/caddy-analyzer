@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.10.1] - 2026-11-21
+
+### Fixed
+- **Release verification assets**: publish releases only after the signed checksum bundle, trusted root, and legacy signature files have been uploaded. The updater no longer requires legacy files when a modern bundle is available.
+
 ## [0.10.0] - 2026-11-21
 
 ### Added

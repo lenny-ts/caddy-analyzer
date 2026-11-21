@@ -33,6 +33,9 @@ archives:
 checksum:
   name_template: "checksums.txt"
 
+release:
+  draft: true
+
 sboms:
   - id: default
     cmd: syft
