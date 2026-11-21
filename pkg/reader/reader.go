@@ -67,7 +67,7 @@ func forEachLine(r io.Reader, max int, fn func(string) error, onSkip func(int64)
 	tooLong := false
 	for {
 		chunk, err := br.ReadSlice('\n')
-		if err != nil && err != bufio.ErrBufferFull && err != io.EOF {
+		if err != nil && !errors.Is(err, bufio.ErrBufferFull) && !errors.Is(err, io.EOF) {
 			return err
 		}
 		complete := err == nil
@@ -88,7 +88,7 @@ func forEachLine(r io.Reader, max int, fn func(string) error, onSkip func(int64)
 				line = append(line, data...)
 			}
 		}
-		if complete || (err == io.EOF && raw > 0) {
+		if complete || (errors.Is(err, io.EOF) && raw > 0) {
 			if !tooLong {
 				if content := normalizeLine(line); len(content) > max {
 					tooLong = true
@@ -103,7 +103,7 @@ func forEachLine(r io.Reader, max int, fn func(string) error, onSkip func(int64)
 			raw = 0
 			tooLong = false
 		}
-		if err == io.EOF {
+		if errors.Is(err, io.EOF) {
 			return nil
 		}
 	}
