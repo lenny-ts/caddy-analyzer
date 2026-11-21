@@ -1,11 +1,62 @@
 package cmd
 
 import (
+	"bytes"
+	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
+	"sync"
 	"testing"
 )
+
+func TestWhitelistConcurrentAdds(t *testing.T) {
+	if ip := os.Getenv("CADDY_TEST_WHITELIST_IP"); ip != "" {
+		whitelistFile = os.Getenv("CADDY_TEST_WHITELIST_FILE")
+		whitelistAdd = []string{ip}
+		if err := runWhitelist(nil, nil); err != nil {
+			t.Fatal(err)
+		}
+		return
+	}
+	path := filepath.Join(t.TempDir(), "whitelist.txt")
+	if err := os.WriteFile(path, []byte("203.0.113.7\n"+strings.Repeat("# padding\n", 100000)), 0600); err != nil {
+		t.Fatal(err)
+	}
+	const writers = 8
+	var commands [writers]*exec.Cmd
+	var output [writers]bytes.Buffer
+	for i := range commands {
+		commands[i] = exec.Command(os.Args[0], "-test.run=^TestWhitelistConcurrentAdds$")
+		commands[i].Env = append(os.Environ(),
+			"CADDY_TEST_WHITELIST_FILE="+path,
+			fmt.Sprintf("CADDY_TEST_WHITELIST_IP=198.51.100.%d", i+1))
+		commands[i].Stdout, commands[i].Stderr = &output[i], &output[i]
+		if err := commands[i].Start(); err != nil {
+			t.Fatal(err)
+		}
+	}
+	for i, command := range commands {
+		if err := command.Wait(); err != nil {
+			t.Errorf("writer %d: %v: %s", i, err, output[i].String())
+		}
+	}
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	content := "\n" + string(raw)
+	if !strings.Contains(content, "\n203.0.113.7\n") {
+		t.Fatal("concurrent update lost the retained whitelist entry")
+	}
+	for i := range writers {
+		ip := fmt.Sprintf("198.51.100.%d", i+1)
+		if !strings.Contains(content, "\n"+ip+"\n") {
+			t.Errorf("concurrent update lost %s", ip)
+		}
+	}
+}
 
 func TestWhitelistInit(t *testing.T) {
 	dir := t.TempDir()
@@ -166,5 +217,118 @@ func TestWhitelistAddSkipsInvalid(t *testing.T) {
 	}
 	if len(entries) != 2 {
 		t.Fatalf("expected 2 valid entries, got %d: %v", len(entries), entries)
+	}
+}
+
+func TestWhitelistReplacementUsesAtomicRename(t *testing.T) {
+	statOpen := func(t *testing.T, path string) os.FileInfo {
+		t.Helper()
+		f, err := os.Open(path)
+		if err != nil {
+			t.Fatalf("open %s: %v", path, err)
+		}
+		defer func() { _ = f.Close() }()
+		info, err := f.Stat()
+		if err != nil {
+			t.Fatalf("stat %s: %v", path, err)
+		}
+		return info
+	}
+	for _, tc := range []struct {
+		name string
+		op   func() error
+	}{
+		{name: "add", op: func() error { return addWhitelist([]string{"198.51.100.7"}) }},
+		{name: "remove", op: func() error { return removeWhitelist([]string{"10.0.0.1"}) }},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			path := filepath.Join(t.TempDir(), "whitelist.txt")
+			whitelistFile = path
+			if err := os.WriteFile(path, []byte("10.0.0.1\n"), 0600); err != nil {
+				t.Fatalf("seed whitelist: %v", err)
+			}
+			before := statOpen(t, path)
+			if err := tc.op(); err != nil {
+				t.Fatalf("%s: %v", tc.name, err)
+			}
+			after := statOpen(t, path)
+			if os.SameFile(before, after) {
+				t.Fatalf("%s rewrote the whitelist in place; a reload can observe a torn file", tc.name)
+			}
+		})
+	}
+}
+
+func TestWhitelistReloadDuringReplacementKeepsLastGoodList(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "whitelist.txt")
+	whitelistFile = path
+
+	// Seed exactly what removeWhitelist writes, plus enough entries to widen
+	// the replacement window. A reload that opens the path mid-write sees a
+	// different size, which means it did not get the last good list.
+	var seed strings.Builder
+	seed.WriteString("# caddy-analyzer whitelist\n")
+	seed.WriteString("# IPs and CIDRs listed here will NEVER be blocked by the guard daemon.\n")
+	seed.WriteString("# One entry per line. Lines starting with # are comments.\n")
+	seed.WriteString("203.0.113.7\n")
+	for i := 0; i < 200_000; i++ {
+		fmt.Fprintf(&seed, "10.%d.%d.%d\n", i>>16&255, i>>8&255, i&255)
+	}
+	lastGood := []byte(seed.String())
+	if err := os.WriteFile(path, lastGood, 0600); err != nil {
+		t.Fatalf("seed whitelist: %v", err)
+	}
+
+	stop := make(chan struct{})
+	torn := make(chan struct{}, 1)
+	var readers sync.WaitGroup
+	for i := 0; i < 4; i++ {
+		readers.Add(1)
+		go func() {
+			defer readers.Done()
+			for {
+				select {
+				case <-stop:
+					return
+				default:
+				}
+				info, err := os.Stat(path)
+				if err != nil {
+					continue
+				}
+				if info.Size() == int64(len(lastGood)) {
+					continue
+				}
+				select {
+				case torn <- struct{}{}:
+				default:
+				}
+				return
+			}
+		}()
+	}
+
+	for i := 0; i < 10; i++ {
+		if err := removeWhitelist([]string{"198.51.100.99"}); err != nil {
+			t.Fatalf("remove: %v", err)
+		}
+	}
+	close(stop)
+	readers.Wait()
+
+	select {
+	case <-torn:
+		entries, err := loadWhitelist()
+		if err != nil {
+			t.Fatalf("reload during replacement failed: %v", err)
+		}
+		for _, e := range entries {
+			if e == "203.0.113.7" {
+				t.Fatal("reload during replacement observed a partially written whitelist")
+			}
+		}
+		t.Fatal("reload during replacement lost the retained whitelist entry")
+	default:
 	}
 }

@@ -41,7 +41,7 @@ caddy-analyze whitelist --init          # persist never-block to /etc/caddy-anal
 <p><code>blocklist init</code> scrive gli attuali valori di <code>--no-default-blocklists / --blocklist-config / --blocklist-remove</code> nello stesso file, così <code>guard</code> li applica senza flag CLI.</p>
 
 <h2 id="self-ip">Protezione degli IP del server in guard</h2>
-<p><code>--protect-self=true</code> è un flag CLI specifico di guard, non un campo di <code>caddy-analyzer.json</code>. Gli indirizzi rilevati delle interfacce e di uscita pubblica restano in memoria e vengono aggiornati automaticamente, senza scriverli nel file whitelist. Le voci <code>--never-block</code> e la whitelist esplicita sono caricate all'avvio: le modifiche al file richiedono il riavvio di guard.</p>
+<p><code>--protect-self=true</code> è specifico di guard, non un campo di <code>caddy-analyzer.json</code>. Gli IP rilevati restano in memoria. Guard carica la whitelist selezionata all'avvio e la ricarica ogni 30 secondi senza riavvio, conservando le voci <code>--never-block</code>. Consulta <a href="../subcommands-guard.html#whitelist-reload">validazione e pulizia dei ban di subnet</a>.</p>
 <p>Per un server offline, accessibile solo tramite proxy o con IP fisso, aggiungi <code>--protect-self=false</code> agli argomenti di avvio del servizio guard. Disabilita il rilevamento automatico senza disattivare le voci never-block esplicite. Il rilevamento pubblico diretto ignora <code>http_proxy</code>/<code>https_proxy</code>. Consulta <a href="../subcommands-guard.html#self-protection">guard</a> e <a href="troubleshooting.html#self-ip">errori di rilevamento</a>.</p>
 
 <h2 id="tuning">Ottimizzazione — precedenza</h2>
@@ -56,6 +56,25 @@ caddy-analyze whitelist --init          # persist never-block to /etc/caddy-anal
 </table></div>
 <pre><code># example: keep GeoIP results longer on a busy host
 caddy-analyze --geo-cache-ttl 48h --geo-cache-size 100000 /var/log/caddy/access.log</code></pre>
+
+<h2 id="auth-abuse">Abusi di autenticazione comportamentali (opt-in)</h2>
+<p>Aggiungi questo oggetto alla configurazione attiva. <code>enabled</code> abilita il rilevamento; <code>block</code> abilita separatamente i ban per IP da brute-force/stuffing in guard. Lo spraying aggregato resta sempre solo un alert.</p>
+<pre><code>{
+  "behavioral_detection": {
+    "auth_abuse": {
+      "enabled": true,
+      "block": false,
+      "endpoints": ["/login", "/api/login", "/wp-login.php"],
+      "failure_statuses": [401, 403],
+      "brute_force": {"failures": 10, "window": "1m"},
+      "credential_stuffing": {"failures": 20, "unique_uas": 5, "window": "1m"},
+      "password_spray": {"failures": 100, "unique_ips": 20, "window": "5m"}
+    }
+  }
+}</code></pre>
+<p>Gli endpoint sono percorsi decodificati esatti e case-sensitive, separati per host; le query vengono ignorate. Gli status devono essere 400–599. Gli scenari omessi usano i default mostrati; per disabilitarne uno imposta <code>failures</code> a 0 e specifica una <code>window</code> valida. Le finestre devono essere positive e al massimo 24h; le soglie di fallimento al massimo 100.000; le soglie di IP/UA distinti tra 2 e la corrispondente soglia di fallimenti.</p>
+<p>Usa <code>--detect</code> in report/tail/watch. I segnali hanno gravità alta e confidenza 7: indicano abuso sospetto, non account compromessi; username/password non vengono estratti. Lo stuffing usa la diversità degli User-Agent; lo spraying appare sotto <code>aggregate</code> nei report. L'analisi offline usa i timestamp dei log, guard l'ora di ricezione e conserva le evidenze tra i reset normali. Ogni scenario conserva fino a 100.000 fallimenti (300.000 totali); a budget pieno scarta nuove evidenze finché quelle vecchie non scadono.</p>
+<p>Il blocco <code>block: true</code> in guard è indipendente da <code>--detect-confidence</code> e rispetta whitelist, protezione del server e dry-run. Il vecchio <code>--auth-limit</code> resta una soglia 401/403 separata su tutti i percorsi: impostalo a 0 per usare solo le regole sugli endpoint. Le altre regole di guard restano attive.</p>
 
 <h2 id="env">Ambiente e XDG</h2>
 <div class="table-wrap"><table>
@@ -74,6 +93,7 @@ caddy-analyze --geo-cache-ttl 48h --geo-cache-size 100000 /var/log/caddy/access.
 <tr><td><code>~/.cache/caddy-analyzer/blocklists/</code></td><td>CIDR delle blocklist (TTL 7g)</td></tr>
 <tr><td><code>~/.config/caddy-analyzer/GeoLite2-*.mmdb</code></td><td>GeoIP (download automatico dal mirror P3TERX)</td></tr>
 <tr><td><code>/var/lib/caddy-analyzer/blocked.json</code></td><td>IP bloccati da Guard (persistono al riavvio)</td></tr>
+<tr><td><code>&lt;state-file&gt;.offenders/</code></td><td>Storico privato per IP/CIDR; salvare insieme allo stato dei ban attivi</td></tr>
 <tr><td><code>/var/log/caddy-analyzer-audit.jsonl</code></td><td>Log di audit (0600, righe JSON)</td></tr>
 <tr><td><code>/etc/caddy-analyzer/whitelist.txt</code></td><td>Elenco da non bloccare mai (CIDR, commenti #)</td></tr>
 </tbody>

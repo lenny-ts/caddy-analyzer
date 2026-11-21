@@ -3,6 +3,27 @@
 <p>Tutte le modifiche rilevanti a <code>caddy-analyzer</code> saranno documentate in questo file.</p>
 <p>Il formato si basa su <a href="https://keepachangelog.com/en/1.0.0/">Keep a Changelog</a> e questo progetto aderisce al <a href="https://semver.org/spec/v2.0.0.html">Semantic Versioning</a>.</p>
 
+<h2 id="0-9-0">0.9.0 — 2026-11-16</h2>
+<h3>Aggiunto</h3>
+<ul>
+<li><strong>Doctor (#113, #132)</strong>: diagnostica in sola lettura per runtime, log Caddy, firewall, GeoIP e cache, con JSON e codice non zero per errori critici.</li>
+<li><strong>Abusi di autenticazione (#110)</strong>: rilevamento opt-in di brute-force, stuffing sospetto tramite diversità UA e spraying aggregato; ban opzionali solo per IP, campagne aggregate solo come alert.</li>
+<li><strong>Ban progressivi (#109)</strong>: escalation opt-in da durata base ad almeno 1h, 24h e 168h, storico persistente e comandi per ispezionarlo/azzerarlo.</li>
+<li><strong>NetAPI honeypot</strong>: nono feed predefinito, IPv4 osservati nelle ultime 48h, aggiornato ogni ora; CC BY 4.0, nessuna chiave API.</li>
+</ul>
+<h3>Modificato</h3>
+<ul>
+<li><strong>Whitelist (#118, #130)</strong>: reload ogni 30 secondi, rimozione dei ban IP/subnet che coprono nuove esenzioni, ultima lista valida conservata dopo errori runtime. File malformati/illeggibili impediscono l'avvio CLI.</li>
+<li><strong>CI e release</strong>: controlli su develop, aggiornamento delle GitHub Actions fissate e selezione della toolchain compatibile per gli scanner.</li>
+</ul>
+<h3>Corretto</h3>
+<ul>
+<li><strong>Scritture whitelist concorrenti</strong>: lock tra processi e sostituzione atomica evitano aggiornamenti persi e letture parziali; FIFO e file non regolari vengono rifiutati dal loader del guard.</li>
+<li><strong>Diagnostica</strong>: nessun fallback per log espliciti errati, verifica iptables/DOCKER-USER per Docker, rifiuto dei GeoIP corrotti e dei file non regolari; errori di validazione della configurazione inclusi nel report.</li>
+<li><strong>Latenza guard (#124)</strong>: valutazioni ogni secondo con <code>--eval-interval</code>, deadline delle finestre indipendenti, consumo delle evidenze dopo ban riusciti e RPS sul tempo realmente trascorso.</li>
+<li><strong>Audit delle durate</strong>: gli sblocchi conservano la durata effettiva anche dopo riavvio o reset dello storico; i record legacy usano la durata configurata.</li>
+</ul>
+
 <h2 id="0-8-1">0.8.1 — 2026-10-19</h2>
 <h3>Corretto</h3>
 <ul>

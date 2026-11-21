@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"bufio"
 	"context"
 	"fmt"
 	"io"
@@ -41,6 +40,7 @@ var (
 	flagInterval       string
 	flagWatch          bool
 	flagDetect         bool
+	flagExplain        bool
 	flagOutput         string
 	flag2xx            bool
 	flag3xx            bool
@@ -86,7 +86,7 @@ var (
 	authAbuse          *analysis.AuthAbuseDetector
 )
 
-var Version = "0.8.1-dev"
+var Version = "0.9.0-dev"
 
 var rootCmd = &cobra.Command{
 	Use:          "caddy-analyze [flags] [source...]",
@@ -238,6 +238,7 @@ func init() {
 	rootFlags.StringVarP(&flagInterval, "interval", "i", "", "Aggregation interval (e.g. 5m, 1h)")
 	rootFlags.BoolVarP(&flagWatch, "watch", "w", false, "Live dashboard (RPS, top IP, status)")
 	rootFlags.BoolVarP(&flagDetect, "detect", "d", false, "Detect suspicious activity (SQLi, XSS, scanners, etc.)")
+	rootFlags.BoolVar(&flagExplain, "explain", false, "Explain detections on stderr in one-shot --detect mode (may expose request data)")
 
 	rootCmd.Flags().BoolP("version", "v", false, "Version")
 	rootCmd.Version = Version
@@ -341,6 +342,9 @@ func ctxForCommand() (context.Context, context.CancelFunc) {
 }
 
 func validateFlags() error {
+	if flagExplain && (!flagDetect || flagWatch || flagFollow || flagInterval != "" || flagAgainst != "") {
+		return fmt.Errorf("--explain requires --detect in one-shot analysis mode")
+	}
 	if flagWorkers < 0 {
 		return fmt.Errorf("--workers must be 0 or greater")
 	}
@@ -391,13 +395,19 @@ func runOnceMode(ctx context.Context, sources []types.LogSource, filters types.F
 	opEngine := analysis.NewOperationalEngine(filters)
 	if flagDetect {
 		det := newDetector()
+		if flagExplain {
+			det.SetExplain(func(x analysis.Explanation) {
+				printDetectionExplanation(os.Stderr, x, flagDefang)
+			})
+		}
 		engine.SetDetector(det)
 	}
 	engine.Stats().MaxCardinality = flagMaxCard
 	sections := types.DefaultTopSections()
-	var parseErrors, processed int64
+	var parseErrors, processed, skippedLines int64
 	var entries []*types.LogEntry
 	var opEntries []*types.OperationalEntry
+	var readErr error
 	showListing := output.HasEntryFilters(filters) && flagFormat == "table" && flagOutput == "" && !flagDetect
 
 	geoip := newGeoIPEnricher()
@@ -405,13 +415,21 @@ func runOnceMode(ctx context.Context, sources []types.LogSource, filters types.F
 		defer func() { _ = geoip.Close() }()
 	}
 
-	bar := progress.New(os.Stderr, countTotalLines(sources), "Analyzing")
+	var bar *progress.Bar
+	if flagExplain {
+		bar = progress.New(io.Discard, 0, "Analyzing")
+	} else {
+		bar = progress.New(os.Stderr, countTotalLines(sources), "Analyzing")
+	}
 
 	for _, src := range sources {
 		r := reader.FromSource(src)
 		lines, err := r.Read(ctx)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "error reading %s: %v\n", r.Name(), err)
+			if readErr == nil {
+				readErr = err
+			}
 			continue
 		}
 		processParsedLines(ctx, lines, configuredWorkers(), func(entry types.Entry, err error) {
@@ -460,12 +478,21 @@ func runOnceMode(ctx context.Context, sources []types.LogSource, filters types.F
 			}
 			bar.Add(1)
 		})
+		if sc, ok := r.(reader.SkipCounter); ok {
+			skippedLines += sc.SkippedLines()
+		}
+		if rerr := r.Err(); rerr != nil && readErr == nil {
+			readErr = rerr
+		}
 	}
 
 	bar.Done()
 
-	if processed == 0 && opEngine.Stats().TotalEvents == 0 && parseErrors == 0 {
+	if processed == 0 && opEngine.Stats().TotalEvents == 0 && parseErrors == 0 && skippedLines == 0 {
 		fmt.Fprintln(os.Stderr, "no log entries found")
+		if readErr != nil {
+			return readErr
+		}
 		return nil
 	}
 
@@ -473,10 +500,14 @@ func runOnceMode(ctx context.Context, sources []types.LogSource, filters types.F
 		fmt.Fprintf(os.Stderr, "%d entries matched\n\n", len(entries)+len(opEntries))
 		output.PrintLogEntries(entries, os.Stdout, flagDefang)
 		output.PrintOperationalEntries(opEntries, os.Stdout, flagDefang)
+		if readErr != nil {
+			return readErr
+		}
 		return nil
 	}
 
 	engine.Stats().ParseErrors = parseErrors
+	engine.Stats().SkippedLines = skippedLines
 	engine.Finalize()
 	report := output.NewReportWithSections(engine, output.ParseFormat(flagFormat), flagTop, sections)
 	report.SetDetect(flagDetect)
@@ -497,7 +528,13 @@ func runOnceMode(ctx context.Context, sources []types.LogSource, filters types.F
 		defer func() { _ = f.Close() }()
 		report.SetWriter(f)
 	}
-	return report.Print()
+	if err := report.Print(); err != nil {
+		return err
+	}
+	if readErr != nil {
+		return readErr
+	}
+	return nil
 }
 
 func applyForwarded(entry *types.LogEntry, filters types.Filters) {
@@ -646,19 +683,21 @@ func countTotalLines(sources []types.LogSource) int64 {
 			return 0
 		}
 		for _, path := range expandSourcePaths(src.Path) {
+			if info, err := os.Stat(path); err != nil || !info.Mode().IsRegular() {
+				return 0
+			}
 			f, err := os.Open(path)
 			if err != nil {
 				return 0
 			}
-			scanner := bufio.NewScanner(f)
-			scanner.Buffer(make([]byte, 64*1024), reader.MaxLineSize)
-			for scanner.Scan() {
-				total++
-			}
+			// Same line rules as the reader, so an over-long line neither
+			// aborts the count nor counts as a line the bar will see.
+			n, err := reader.CountLines(f)
 			_ = f.Close()
-			if err := scanner.Err(); err != nil {
+			if err != nil {
 				return 0
 			}
+			total += n
 		}
 	}
 	return total
@@ -830,6 +869,8 @@ func runIntervalMode(ctx context.Context, sources []types.LogSource, filters typ
 	sections := types.DefaultTopSections()
 	initial := true
 
+	var readErr error
+
 	geoip := newGeoIPEnricher()
 	if geoip != nil {
 		defer func() { _ = geoip.Close() }()
@@ -879,6 +920,9 @@ func runIntervalMode(ctx context.Context, sources []types.LogSource, filters typ
 		lines, err := r.Read(ctx)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "error reading %s: %v\n", r.Name(), err)
+			if readErr == nil {
+				readErr = err
+			}
 			continue
 		}
 		var processErr error
@@ -935,9 +979,17 @@ func runIntervalMode(ctx context.Context, sources []types.LogSource, filters typ
 		if processErr != nil {
 			return processErr
 		}
+		if rerr := r.Err(); rerr != nil && readErr == nil {
+			readErr = rerr
+		}
 	}
 	if engine != nil && (engine.Count() > 0 || (opEngine != nil && opEngine.Stats().TotalEvents > 0)) {
-		return reportFn(engine, opEngine, current)
+		if err := reportFn(engine, opEngine, current); err != nil {
+			return err
+		}
+	}
+	if readErr != nil {
+		return readErr
 	}
 	return nil
 }

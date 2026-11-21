@@ -75,18 +75,23 @@
   <main class="wrap" id="main">
     <div class="doc-content">
       <nav class="breadcrumb" aria-label="Breadcrumb"><a href="../reference/cli.html">Reference</a><span class="sep">/</span><span>API</span></nav>
-      <div class="page-meta"><a href="https://github.com/lenny-ts/caddy-analyzer/releases">v0.8.1</a> · updated <time datetime="2026-10-19">2026-10-19</time> · <a href="https://github.com/lenny-ts/caddy-analyzer">GitHub</a></div>
+      <div class="page-meta"><a href="https://github.com/lenny-ts/caddy-analyzer/releases">v0.9.0</a> · updated <time datetime="2026-11-16">2026-11-16</time> · <a href="https://github.com/lenny-ts/caddy-analyzer">GitHub</a></div>
       <h1>API / Packages</h1>
 <p>Import path: <code>github.com/lenny-ts/caddy-analyzer/pkg/*</code>. Go 1.25+. For the data flow across these packages, see <a href="../architecture.html">Architecture</a>.</p>
+<p>Examples are function-body excerpts; also import <code>context</code>, <code>log</code>, <code>os</code> and <code>time</code> where used. Supply the input entry, log channel or existing engine shown in each excerpt.</p>
 
 <h2 id="parser">parser — Caddy JSON → Go structs</h2>
 <p>Parses one JSON line into <code>*LogEntry</code> (handled request) or <code>*OperationalEntry</code> (log without <code>request</code>).</p>
 <pre><code>import "github.com/lenny-ts/caddy-analyzer/pkg/parser"
+import "github.com/lenny-ts/caddy-analyzer/pkg/types"
 
 entry, err := parser.Parse(line)
+if err != nil { log.Fatal(err) }
 switch v := entry.(type) {
-case *parser.LogEntry:       // v.Method, v.URI, v.Status, v.RemoteIP, v.UserAgent
-case *parser.OperationalEntry: // v.Level, v.Logger, v.Msg, v.Extra
+case *types.LogEntry:
+    log.Print(v.Method, v.URI, v.Status)
+case *types.OperationalEntry:
+    log.Print(v.Level, v.Msg)
 }</code></pre>
 <div class="table-wrap"><table>
 <thead><tr><th>Key type</th><th>Fields</th></tr></thead>
@@ -100,34 +105,40 @@ case *parser.OperationalEntry: // v.Level, v.Logger, v.Msg, v.Extra
 <pre><code>import "github.com/lenny-ts/caddy-analyzer/pkg/analysis"
 import "github.com/lenny-ts/caddy-analyzer/pkg/types"
 
-eng := analysis.New(types.Filters{From: time.Now().Add(-1*time.Hour), Status: []string{"500"}})
-det := analysis.NewDetector(10) // uaRotation
+filters := types.Filters{From: time.Now().Add(-time.Hour), HasFrom: true, Status: []int{500}}
+eng := analysis.New(filters)
+det := analysis.NewDetector()
+det.SetUARotationThreshold(10)
 eng.SetDetector(det)
 
 // per line:
-if eng.MatchEntry(entry) { // respects all Filters (ip, country, asn, grep, bot, etc.)
+if analysis.MatchEntry(entry, filters) {
     eng.Process(entry)     // counters + detector + histogram
 }
-stats := eng.Finalize() // computes P50/P95/RPS
-topIPs := eng.TopN(10, types.TopFieldIP)
+eng.Finalize()
+stats := eng.Stats()
+topIPs := analysis.TopN(stats.RemoteIPCounts, 10)
 suspicious := stats.SuspiciousIPs // grouped by IP with MITRE tags</code></pre>
 <p>Behavioral heuristics: <code>ua_rotation ≥10</code>, <code>object_enumeration ≥10 IDs/template</code>, <code>beaconing CV&lt;0.25</code>. Export Sigma: <code>det.ExportSigmaInfo()</code>.</p>
 
 <h2 id="enrich">enrich — GeoIP</h2>
 <pre><code>import "github.com/lenny-ts/caddy-analyzer/pkg/enrich"
 
-geo, err := enrich.NewGeoIP("") // auto-discovers mmdb in 7 paths + auto-downloads GeoLite2
-if err == nil { defer geo.Close() }
-info := geo.Lookup("203.0.113.18") // -&gt; CountryCode, CountryName, ASN
-code, _ := enrich.CountryCodeFromName("Italy") // "IT"</code></pre>
+geo, err := enrich.NewGeoIP("") // auto-discovery and optional download
+if err != nil { log.Fatal(err) }
+defer geo.Close()
+info, err := geo.Lookup("203.0.113.18") // -&gt; CountryCode, CountryName, ASN
+if err != nil { log.Fatal(err) }
+code := enrich.CountryCodeFromName("Italy", geo.Path()) // "IT"</code></pre>
 <p>Cache: 50K LRU, 24h TTL (tunable via <a href="../guide/configuration.html#tuning">Configuration</a>). Async variant: <code>NewGeoIPAsync</code>.</p>
 
 <h2 id="blocklist">blocklist — CIDR trie</h2>
 <pre><code>import "github.com/lenny-ts/caddy-analyzer/pkg/blocklist"
 
-mgr := blocklist.NewManager("~/.cache/caddy-analyzer/blocklists")
-mgr.Refresh(context.Background()) // download 8 feeds
-hit := mgr.Contains("198.51.100.23") // O(1) via cidranger.PCTrie
+mgr, err := blocklist.NewManager(nil, ".cache/caddy-analyzer/blocklists")
+if err != nil { log.Fatal(err) }
+mgr.Refresh() // download 9 feeds
+hit, source := mgr.Contains("198.51.100.23") // CIDR-trie lookup
 sources := mgr.ListSources() // name, URL, count, age, status</code></pre>
 <p>Add custom: <code>mgr.AddSource(blocklist.Source{Name:"My",URL:"https://…/list.txt"})</code>. Cache TTL 7d.</p>
 
@@ -141,9 +152,11 @@ if err != nil { log.Fatal(err) }
 backend := firewall.Detect(firewall.BackendAuto)
 g := guard.New(guard.Config{
   Limit: 100, Window: time.Minute, BlockDuration: 10*time.Minute,
+  EvalInterval: time.Second,
   FirewallBackend: backend, GeoIP: geo, BlocklistMgr: mgr,
   StatePath: "/var/lib/caddy-analyzer/blocked.json",
   NeverBlock: []string{"10.0.0.0/8"},
+  NeverBlockFile: "whitelist.txt", NeverBlockRefresh: 30*time.Second,
   SelfIPs: selfIPs, SelfIPLookup: guard.DetectSelfIPs,
   OnError: func(err error) { log.Print(err) },
   OnAudit: func(action, ip, reason, duration string) {
@@ -157,22 +170,35 @@ g.FlushState()
 <p>Also import <code>context</code>, <code>log</code> and <code>time</code>. Unlike the CLI default, library callers opt into self-IP protection by seeding <code>SelfIPs</code> before <code>New</code> restores state and setting <code>SelfIPLookup</code>. Leave both unset for explicit-whitelist-only operation. <code>Evaluate(line string)</code> returns no value; <code>Tick(ctx)</code> returns blocked candidates when driving the loop manually.</p>
 <p>State persists to <code>/var/lib/caddy-analyzer/blocked.json</code>. See <a href="../architecture.html#data-flow">Architecture → data flow</a> for where guard sits.</p>
 
+<h2 id="doctor">doctor — read-only diagnostics</h2>
+<p><code>doctor.Collect(doctor.Env{...})</code> returns grouped checks; <code>doctor.NewReport(groups)</code> computes severity counts and exit status. Render with <code>WriteText(io.Writer)</code> or <code>WriteJSON(io.Writer)</code>; check returned errors and <code>report.Summary.ExitCode</code>. Supply the actual EUID, state/log/cache/GeoIP paths and runtime version in <code>Env</code>. Injectable command hooks permit tests without a live firewall. The CLI also adds shared configuration-validation failures to the report.</p>
+<p>For optional authentication rules, use <code>analysis.NewAuthAbuseDetector(cfg)</code> and <code>NewSession()</code> for independent evidence storage; pass it as the optional second argument to <code>analysis.NewDetectorWithPatterns</code> or as <code>guard.Config.AuthAbuse</code>. See <a href="../guide/configuration.html#auth-abuse">threshold and memory limits</a>.</p>
+
 <h2 id="reader">reader — multi-source ingestion</h2>
 <pre><code>import "github.com/lenny-ts/caddy-analyzer/pkg/reader"
 
-src, _ := reader.ParseSource("docker://caddy")
-r, _ := reader.FromSource(src, true /*follow*/) // → LogReader (file/docker/k8s/journalctl/stdin)
-for line := range r.Lines() { entry, _ := parser.Parse(line) }</code></pre>
+src := reader.ParseSource("docker://caddy")
+r := reader.FromSourceFollow(src)
+lines, err := r.Read(ctx)
+if err != nil { log.Fatal(err) }
+for line := range lines {
+    entry, err := parser.Parse(line)
+    if err != nil { log.Print(err); continue }
+    // Process entry.
+    _ = entry
+}</code></pre>
 <p>Merges Docker stdout+stderr, follows file rotation via inode check, globs via <code>expandPaths</code>.</p>
 
 <h2 id="output">output — table / json / csv / html</h2>
 <pre><code>import "github.com/lenny-ts/caddy-analyzer/pkg/output"
 
-output.Report(stats, output.FormatTable, false /*defang*/, nil)
-output.Report(stats, output.FormatHTML, true, os.Stdout) // standalone dark HTML</code></pre>
+report := output.NewReport(eng, output.FormatHTML, 10)
+report.SetDefang(true)
+report.SetWriter(os.Stdout)
+if err := report.Print(); err != nil { log.Fatal(err) }</code></pre>
 
 <h2 id="types">types — shared structs</h2>
-<p><code>types.GeoInfo</code> includes optional <code>City</code>, <code>Latitude</code>, <code>Longitude</code>, and <code>Timezone</code>. City MMDBs are discovered locally via <code>enrich.FindCityDB</code>; they are not auto-downloaded.</p>
+<p><code>types.GeoInfo</code> includes optional <code>City</code>, <code>Latitude</code>, <code>Longitude</code>, and <code>Timezone</code>. City MMDBs are discovered locally and can be auto-downloaded unless disabled.</p>
 <pre><code>import "github.com/lenny-ts/caddy-analyzer/pkg/types"
 
 var f types.Filters // --ip, --country, --asn, --grep, --level, --ops-only, Top, Format, ...
@@ -187,7 +213,7 @@ entry.EffectiveClientIP(trustForwarded) // last public XFF or RemoteIP</code></p
 
     </div>
   </main>
-  <nav class="doc-toc" aria-label="On this page"><div class="toc-label">On this page</div><a href="#parser" class="toc-link">parser — Caddy JSON → Go structs</a><a href="#analysis" class="toc-link">analysis — filtering + 26-category detection</a><a href="#enrich" class="toc-link">enrich — GeoIP</a><a href="#blocklist" class="toc-link">blocklist — CIDR trie</a><a href="#guard" class="toc-link">guard — firewall</a><a href="#reader" class="toc-link">reader — multi-source ingestion</a><a href="#output" class="toc-link">output — table / json / csv / html</a><a href="#types" class="toc-link">types — shared structs</a></nav>
+  <nav class="doc-toc" aria-label="On this page"><div class="toc-label">On this page</div><a href="#parser" class="toc-link">parser — Caddy JSON → Go structs</a><a href="#analysis" class="toc-link">analysis — filtering + 26-category detection</a><a href="#enrich" class="toc-link">enrich — GeoIP</a><a href="#blocklist" class="toc-link">blocklist — CIDR trie</a><a href="#guard" class="toc-link">guard — firewall</a><a href="#doctor" class="toc-link">doctor — read-only diagnostics</a><a href="#reader" class="toc-link">reader — multi-source ingestion</a><a href="#output" class="toc-link">output — table / json / csv / html</a><a href="#types" class="toc-link">types — shared structs</a></nav>
 </div>
 <script src="../docs.min.js?v=36"></script>
 </body>

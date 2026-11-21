@@ -75,7 +75,7 @@
   <main class="wrap" id="main">
     <div class="doc-content">
       <nav class="breadcrumb" aria-label="Breadcrumb"><a href="../../it/reference/cli.html">Riferimento</a><span class="sep">/</span><span>Riferimento CLI</span></nav>
-      <div class="page-meta"><a href="https://github.com/lenny-ts/caddy-analyzer/releases">v0.8.1</a> · aggiornata <time datetime="2026-10-19">2026-10-19</time> · <a href="https://github.com/lenny-ts/caddy-analyzer">GitHub</a></div>
+      <div class="page-meta"><a href="https://github.com/lenny-ts/caddy-analyzer/releases">v0.9.0</a> · aggiornata <time datetime="2026-11-16">2026-11-16</time> · <a href="https://github.com/lenny-ts/caddy-analyzer">GitHub</a></div>
       <div class="cli-heading"><div><div class="hero-badge">Interfaccia a riga di comando</div><h1>Riferimento CLI</h1></div></div>
 <p>Punto di ingresso: <code>caddy-analyze [flags] [source...]</code> — le sorgenti sono risolte tramite <a href="../sources.html">Sorgenti log</a> o <a href="../guide/configuration.html">caddy-analyzer.json</a>. Di seguito: ogni flag, il suo ambito e se interagisce con il sistema.</p>
 <div class="callout callout-info"><div class="callout-label">Guida operativa</div>Per spiegazioni passo passo, casi d'uso e flag propri di ogni sottocomando, consulta <a href="commands.html">Tutti i comandi</a>.</div>
@@ -155,9 +155,11 @@
 <tr><td><code>top</code></td><td><span class="pill pill-readonly">sola lettura</span></td><td>Ispettore classificato (10 dimensioni)</td></tr>
 <tr><td><code>diff</code></td><td><span class="pill pill-readonly">sola lettura</span></td><td>Confronta due log</td></tr>
 <tr><td><code>baseline</code></td><td>scrive un file</td><td>Salva baseline di analisi versionate</td></tr>
+<tr><td><a href="commands.html#doctor"><code>doctor</code></a></td><td><span class="pill pill-readonly">sola lettura</span></td><td>Diagnostica installazione/runtime; <code>--json</code> per l'automazione</td></tr>
+<tr><td><code>guard offenders</code> / <code>guard offender show</code></td><td><span class="pill pill-readonly">sola lettura</span></td><td>Ispeziona lo storico; <code>guard offender reset</code> modifica solo lo storico</td></tr>
 <tr><td><code>guard</code></td><td><span class="pill pill-danger">modifica il firewall</span></td><td>Blocco automatico tramite iptables/nftables/Docker</td></tr>
 <tr><td><code>block</code> / <code>unban</code></td><td><span class="pill pill-danger">modifica il firewall</span></td><td>Firewall manuale</td></tr>
-<tr><td><code>blocklist</code></td><td>scrive cache/config</td><td>8 feed, refresh/list/config/init</td></tr>
+<tr><td><code>blocklist</code></td><td>scrive cache/config</td><td>9 feed, refresh/list/config/init</td></tr>
 <tr><td><code>config</code></td><td>scrive config</td><td>Salva la sorgente predefinita</td></tr>
 <tr><td><code>export-sigma</code></td><td>scrive file/stdout</td><td>23 regole Sigma</td></tr>
 <tr><td><code>update</code></td><td>sostituisce il binario</td><td>Autoaggiornamento (cosign + SHA256)</td></tr>

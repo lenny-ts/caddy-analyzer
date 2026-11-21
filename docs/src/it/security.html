@@ -12,7 +12,7 @@
 <tr><td>I percorsi legittimi possono sembrare dannosi</td><td><code>?url=https://…</code>, <code>?code={{var}}</code>, <code>__proto__</code> nella documentazione</td><td>Usa <code>--never-block</code> / <code>whitelist</code> e controlla <code>-f html</code> prima di bloccare</td></tr>
 <tr><td>Le euristiche comportamentali richiedono stato</td><td><code>ua_rotation</code>, <code>object_enumeration</code>, <code>beaconing</code> richiedono ≥10 campioni per IP/percorso</td><td>Esegui su ≥1h di traffico; i log con una singola richiesta non le attivano</td></tr>
 <tr><td>Non e un WAF</td><td>Rilevamento offline/al momento del log, non blocco inline delle richieste</td><td>Usa <code>guard</code> per bloccare dopo il rilevamento; non aspettarti un deny prima della richiesta</td></tr>
-<tr><td>GeoIP/blocklist sono best-effort</td><td>DB-IP lite + 8 feed, cache 7g, rete necessaria per l'aggiornamento</td><td>Fissa <code>--geoip-db</code> e controlla l'eta di <code>blocklist list</code></td></tr>
+<tr><td>GeoIP/blocklist sono best-effort</td><td>DB-IP lite + 9 feed, cache 7g, rete necessaria per l'aggiornamento</td><td>Fissa <code>--geoip-db</code> e controlla l'eta di <code>blocklist list</code></td></tr>
 </tbody>
 </table></div>
 <div class="callout callout-warning"><div class="callout-label">Non bloccarti fuori</div>Ogni esempio di <code>guard</code> che modifica il firewall e contrassegnato con <span class="pill pill-danger">modifica il firewall</span>. Su un host remoto, usa sempre <code>--never-block YOUR_IP</code>. In caso di dubbi, usa prima i comandi in sola lettura (<code>blocklist list</code>, <code>--detect -f html</code>).</div>

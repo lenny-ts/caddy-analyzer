@@ -76,9 +76,11 @@
 <tr><td><code>top</code></td><td><span class="pill pill-readonly">read-only</span></td><td>Ranked inspector (10 dimensions)</td></tr>
 <tr><td><code>diff</code></td><td><span class="pill pill-readonly">read-only</span></td><td>Compare two logs</td></tr>
 <tr><td><code>baseline</code></td><td>writes file</td><td>Save versioned analysis baselines</td></tr>
+<tr><td><a href="commands.html#doctor"><code>doctor</code></a></td><td><span class="pill pill-readonly">read-only</span></td><td>Installation/runtime checks; <code>--json</code> for automation</td></tr>
+<tr><td><code>guard offenders</code> / <code>guard offender show</code></td><td><span class="pill pill-readonly">read-only</span></td><td>Inspect escalation history; <code>guard offender reset</code> writes history only</td></tr>
 <tr><td><code>guard</code></td><td><span class="pill pill-danger">modifies firewall</span></td><td>Auto-block via iptables/nftables/Docker</td></tr>
 <tr><td><code>block</code> / <code>unban</code></td><td><span class="pill pill-danger">modifies firewall</span></td><td>Manual firewall</td></tr>
-<tr><td><code>blocklist</code></td><td>writes cache/config</td><td>8 feeds, refresh/list/config/init</td></tr>
+<tr><td><code>blocklist</code></td><td>writes cache/config</td><td>9 feeds, refresh/list/config/init</td></tr>
 <tr><td><code>config</code></td><td>writes config</td><td>Persist default source</td></tr>
 <tr><td><code>export-sigma</code></td><td>writes file/stdout</td><td>23 Sigma rules</td></tr>
 <tr><td><code>update</code></td><td>replaces binary</td><td>Self-update (cosign + SHA256)</td></tr>

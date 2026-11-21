@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"bufio"
 	"context"
 	"fmt"
 	"math"
@@ -50,7 +49,10 @@ var (
 	guardNotify            auditNotifyFlags
 )
 
-const minBlocklistRefresh = 1 * time.Hour
+const (
+	minBlocklistRefresh = 1 * time.Hour
+	neverBlockRefresh   = 30 * time.Second
+)
 
 func init() {
 	guardCmd.Flags().IntVarP(&guardLimit, "limit", "l", 100, "Max requests before blocking (0 disables)")
@@ -102,7 +104,7 @@ Detection:
   • 404 surge — directory scanning / enumeration
   • Request threshold — generic high-volume
   • Pattern detection — 26 categories: SQLi, NoSQLi, XSS, SSTI, SSRF, RCE, path traversal, LFI wrappers, GraphQL, Log4j/JNDI, XXE, open redirect, LDAP/XPath/CRLF/SSI injection, prototype pollution, probes, scanners, UA rotation, JWT abuse, object enumeration, beaconing (confidence >= --detect-confidence)
-  • Blocklist feeds (Spamhaus DROP, FireHOL, CINS, Tor, Emerging Threats, AbuseIPDB) — immediate block
+  • Blocklist feeds (Spamhaus DROP, FireHOL, CINS, Tor, Emerging Threats, AbuseIPDB, NetAPI honeypot) — immediate block
   • Country block (--country-block) — immediate block by GeoIP country code
 
 Self-ban protection (enabled by default):
@@ -193,6 +195,19 @@ func runGuard(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("guard requires root: run with sudo (iptables needs CAP_NET_ADMIN)")
 	}
 
+	// Validate before starting readers or touching the firewall. At startup
+	// there is no last good file-derived list to retain on a malformed file.
+	neverBlockFile := guardNeverBlockFile
+	if neverBlockFile == "" {
+		neverBlockFile = WhitelistPath()
+	}
+	if neverBlockFile != "" {
+		if _, err := guard.LoadAllowlistFile(neverBlockFile); err != nil &&
+			(guardNeverBlockFile != "" || !os.IsNotExist(err)) {
+			return fmt.Errorf("never-block-file: %w", err)
+		}
+	}
+
 	sources, err := resolveSources(args)
 	if err != nil {
 		return err
@@ -216,36 +231,6 @@ func runGuard(cmd *cobra.Command, args []string) error {
 	defer func() { _ = dispatcher.Close() }()
 
 	neverBlock := guardNeverBlock
-	// Load the whitelist file (managed by `caddy-analyze whitelist`).
-	// This is always loaded unless --never-block-file overrides it.
-	if guardNeverBlockFile != "" {
-		ips, err := loadIPList(guardNeverBlockFile)
-		if err != nil {
-			return fmt.Errorf("never-block-file: %w", err)
-		}
-		for _, ip := range ips {
-			if err := validateIP(ip); err != nil {
-				fmt.Fprintf(os.Stderr, "warning: skipping invalid allowlist entry %q: %v\n", ip, err)
-				continue
-			}
-			neverBlock = append(neverBlock, ip)
-		}
-	} else if wlPath := WhitelistPath(); wlPath != "" {
-		if _, err := os.Stat(wlPath); err == nil {
-			ips, err := loadIPList(wlPath)
-			if err != nil {
-				fmt.Fprintf(os.Stderr, "warning: whitelist load: %v\n", err)
-			} else {
-				for _, ip := range ips {
-					if err := validateIP(ip); err != nil {
-						fmt.Fprintf(os.Stderr, "warning: skipping invalid whitelist entry %q: %v\n", ip, err)
-						continue
-					}
-					neverBlock = append(neverBlock, ip)
-				}
-			}
-		}
-	}
 
 	// Blocklist manager: load cached feeds first, then start background
 	// refresh. If --no-blocklist is set, skip entirely. Source list is
@@ -365,6 +350,8 @@ func runGuard(cmd *cobra.Command, args []string) error {
 		},
 		StatePath:           guardStateFile,
 		NeverBlock:          neverBlock,
+		NeverBlockFile:      neverBlockFile,
+		NeverBlockRefresh:   neverBlockRefresh,
 		SelfIPs:             selfIPs,
 		SelfIPLookup:        selfLookup,
 		TrustForwarded:      flagTrustXFF,
@@ -422,8 +409,8 @@ func runGuard(cmd *cobra.Command, args []string) error {
 	if len(guardCountryBlock) > 0 && geoip != nil {
 		fmt.Fprintf(os.Stderr, "Country block: %s\n", strings.Join(guardCountryBlock, ", "))
 	}
-	if len(neverBlock) > 0 {
-		fmt.Fprintf(os.Stderr, "Whitelist: %d entries (%s)\n", len(neverBlock), whitelistFile)
+	if n := g.AllowlistCount(); n > 0 {
+		fmt.Fprintf(os.Stderr, "Whitelist: %d entries (%s)\n", n, neverBlockFile)
 	}
 	fmt.Fprintf(os.Stderr, "Ctrl+C to stop\n\n")
 
@@ -476,23 +463,4 @@ func parseBanResetAfter(value string) (time.Duration, error) {
 		return 0, fmt.Errorf("--ban-reset-after must be a positive duration (e.g. 30d or 720h)")
 	}
 	return duration * multiplier, nil
-}
-
-func loadIPList(path string) ([]string, error) {
-	f, err := os.Open(path)
-	if err != nil {
-		return nil, err
-	}
-	defer func() { _ = f.Close() }()
-
-	var ips []string
-	scanner := bufio.NewScanner(f)
-	for scanner.Scan() {
-		line := strings.TrimSpace(scanner.Text())
-		if line == "" || strings.HasPrefix(line, "#") {
-			continue
-		}
-		ips = append(ips, line)
-	}
-	return ips, scanner.Err()
 }
