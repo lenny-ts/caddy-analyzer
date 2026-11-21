@@ -193,6 +193,18 @@ func TestParseSourceSchemes(t *testing.T) {
 	}
 }
 
+func TestFileReaderMissingFileReturnsError(t *testing.T) {
+	r := FromSource(types.LogSource{Type: types.SourceFile, Path: filepath.Join(t.TempDir(), "no-such-file.log")})
+	ctx := context.Background()
+	lines, err := r.Read(ctx)
+	if err == nil {
+		t.Fatal("expected error for missing file, got nil")
+	}
+	if lines != nil {
+		t.Fatalf("expected nil channel on error, got %v", lines)
+	}
+}
+
 func TestStdinReaderName(t *testing.T) {
 	r := &StdinReader{}
 	if !strings.Contains(r.Name(), "stdin") {

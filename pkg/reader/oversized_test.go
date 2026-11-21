@@ -265,7 +265,7 @@ func TestExecLinesSkipsOversizedLines(t *testing.T) {
 	cmd.Env = append(os.Environ(), "CADDY_ANALYZER_HELPER_EMIT=1")
 
 	var skips skipCounter
-	lines, err := execLines(context.Background(), cmd, newLineChannel(), "docker:web", &skips)
+	lines, err := execLines(context.Background(), cmd, newLineChannel(), "docker:web", &skips, nil)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -21,6 +21,8 @@ import (
 type LogReader interface {
 	Read(ctx context.Context) (<-chan string, error)
 	Name() string
+	// Err reports a streaming error after the lines channel has been drained.
+	Err() error
 }
 
 // MaxLineSize is the largest log line accepted from any source. A longer line
@@ -200,7 +202,10 @@ func newLineChannel() chan string {
 
 type StdinReader struct {
 	skipCounter
+	err error
 }
+
+func (r *StdinReader) Err() error { return r.err }
 
 func (r *StdinReader) Name() string { return "stdin" }
 
@@ -219,7 +224,8 @@ func (r *StdinReader) Read(ctx context.Context) (<-chan string, error) {
 		err := forEachLine(os.Stdin, MaxLineSize, func(line string) error {
 			return sendLine(ctx, out, line)
 		}, func(n int64) { r.skip(r.Name(), n) })
-		if err != nil {
+		if err != nil && !errors.Is(err, context.Canceled) {
+			r.err = err
 			printReadError(r.Name(), err)
 		}
 	}()
@@ -230,7 +236,10 @@ type FileReader struct {
 	skipCounter
 	paths  []string
 	follow bool
+	err    error
 }
+
+func (r *FileReader) Err() error { return r.err }
 
 func (r *FileReader) Name() string {
 	if len(r.paths) == 1 {
@@ -240,18 +249,43 @@ func (r *FileReader) Name() string {
 }
 
 func (r *FileReader) Read(ctx context.Context) (<-chan string, error) {
+	// Validate up front that every input exists, but do not abort the whole
+	// read when only some paths are missing: process the available ones and
+	// record the error so callers can surface a non-zero exit code. Use
+	// os.Stat instead of open+close to avoid blocking twice on FIFOs.
+	var once sync.Once
+	recordError := func(path string, err error) {
+		if errors.Is(err, context.Canceled) {
+			return
+		}
+		printReadError(path, err)
+		once.Do(func() { r.err = err })
+	}
+	r.err = nil
+	available := make([]string, 0, len(r.paths))
+	for _, path := range r.paths {
+		if _, err := os.Stat(path); err != nil {
+			recordError(path, err)
+			continue
+		}
+		available = append(available, path)
+	}
+	if len(available) == 0 && r.err != nil {
+		return nil, r.err
+	}
+
 	out := newLineChannel()
-	if r.follow && len(r.paths) > 1 {
+	if r.follow && len(available) > 1 {
 		// In follow mode with multiple files, read them concurrently
 		// so all files are tailed in parallel. Without this, the first
 		// file blocks forever and the rest are never read.
 		var wg sync.WaitGroup
-		for _, path := range r.paths {
+		for _, path := range available {
 			wg.Add(1)
 			go func(p string) {
 				defer wg.Done()
 				if err := readFileAndFollow(ctx, p, out, &r.skipCounter); err != nil {
-					printReadError(p, err)
+					recordError(p, err)
 				}
 			}(path)
 		}
@@ -263,14 +297,14 @@ func (r *FileReader) Read(ctx context.Context) (<-chan string, error) {
 	}
 	go func() {
 		defer close(out)
-		for _, path := range r.paths {
+		for _, path := range available {
 			if r.follow {
 				if err := readFileAndFollow(ctx, path, out, &r.skipCounter); err != nil {
-					printReadError(path, err)
+					recordError(path, err)
 				}
 			} else {
 				if err := readFileLines(ctx, path, out, &r.skipCounter); err != nil {
-					printReadError(path, err)
+					recordError(path, err)
 				}
 			}
 		}
@@ -369,7 +403,10 @@ type DockerReader struct {
 	skipCounter
 	container string
 	follow    bool
+	err       error
 }
+
+func (r *DockerReader) Err() error { return r.err }
 
 func (r *DockerReader) Name() string { return "docker:" + r.container }
 
@@ -387,7 +424,7 @@ func (r *DockerReader) Read(ctx context.Context) (<-chan string, error) {
 	args = append(args, r.container)
 
 	cmd := exec.CommandContext(ctx, "docker", args...)
-	return execLines(ctx, cmd, out, r.Name(), &r.skipCounter)
+	return execLines(ctx, cmd, out, r.Name(), &r.skipCounter, &r.err)
 }
 
 type K8sReader struct {
@@ -395,7 +432,10 @@ type K8sReader struct {
 	pod       string
 	namespace string
 	follow    bool
+	err       error
 }
+
+func (r *K8sReader) Err() error { return r.err }
 
 func (r *K8sReader) Name() string {
 	ns := r.namespace
@@ -417,14 +457,17 @@ func (r *K8sReader) Read(ctx context.Context) (<-chan string, error) {
 	args = append(args, r.pod)
 
 	cmd := exec.CommandContext(ctx, "kubectl", args...)
-	return execLines(ctx, cmd, out, r.Name(), &r.skipCounter)
+	return execLines(ctx, cmd, out, r.Name(), &r.skipCounter, &r.err)
 }
 
 type JournalctlReader struct {
 	skipCounter
 	unit   string
 	follow bool
+	err    error
 }
+
+func (r *JournalctlReader) Err() error { return r.err }
 
 func (r *JournalctlReader) Name() string { return "journalctl:" + r.unit }
 
@@ -435,10 +478,10 @@ func (r *JournalctlReader) Read(ctx context.Context) (<-chan string, error) {
 		args = append(args, "--follow")
 	}
 	cmd := exec.CommandContext(ctx, "journalctl", args...)
-	return execLines(ctx, cmd, out, r.Name(), &r.skipCounter)
+	return execLines(ctx, cmd, out, r.Name(), &r.skipCounter, &r.err)
 }
 
-func execLines(ctx context.Context, cmd *exec.Cmd, out chan string, name string, skips *skipCounter) (<-chan string, error) {
+func execLines(ctx context.Context, cmd *exec.Cmd, out chan string, name string, skips *skipCounter, errPtr *error) (<-chan string, error) {
 	pr, pw := io.Pipe()
 	cmd.Stdout = pw
 	cmd.Stderr = pw
@@ -453,16 +496,19 @@ func execLines(ctx context.Context, cmd *exec.Cmd, out chan string, name string,
 
 	go func() {
 		defer close(out)
+		defer func() { _ = pr.Close() }()
 		err := forEachLine(pr, MaxLineSize, func(line string) error {
 			return sendLine(ctx, out, line)
 		}, func(n int64) { skips.skip(name, n) })
 		if err != nil && ctx.Err() != nil {
 			_ = cmd.Process.Kill()
-			_ = cmd.Wait()
 			return
 		}
 		if err != nil {
 			printReadError(name, err)
+		}
+		if errPtr != nil {
+			*errPtr = err
 		}
 	}()
 

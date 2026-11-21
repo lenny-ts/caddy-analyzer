@@ -407,6 +407,7 @@ func runOnceMode(ctx context.Context, sources []types.LogSource, filters types.F
 	var parseErrors, processed, skippedLines int64
 	var entries []*types.LogEntry
 	var opEntries []*types.OperationalEntry
+	var readErr error
 	showListing := output.HasEntryFilters(filters) && flagFormat == "table" && flagOutput == "" && !flagDetect
 
 	geoip := newGeoIPEnricher()
@@ -426,6 +427,9 @@ func runOnceMode(ctx context.Context, sources []types.LogSource, filters types.F
 		lines, err := r.Read(ctx)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "error reading %s: %v\n", r.Name(), err)
+			if readErr == nil {
+				readErr = err
+			}
 			continue
 		}
 		processParsedLines(ctx, lines, configuredWorkers(), func(entry types.Entry, err error) {
@@ -477,12 +481,18 @@ func runOnceMode(ctx context.Context, sources []types.LogSource, filters types.F
 		if sc, ok := r.(reader.SkipCounter); ok {
 			skippedLines += sc.SkippedLines()
 		}
+		if rerr := r.Err(); rerr != nil && readErr == nil {
+			readErr = rerr
+		}
 	}
 
 	bar.Done()
 
 	if processed == 0 && opEngine.Stats().TotalEvents == 0 && parseErrors == 0 && skippedLines == 0 {
 		fmt.Fprintln(os.Stderr, "no log entries found")
+		if readErr != nil {
+			return readErr
+		}
 		return nil
 	}
 
@@ -490,6 +500,9 @@ func runOnceMode(ctx context.Context, sources []types.LogSource, filters types.F
 		fmt.Fprintf(os.Stderr, "%d entries matched\n\n", len(entries)+len(opEntries))
 		output.PrintLogEntries(entries, os.Stdout, flagDefang)
 		output.PrintOperationalEntries(opEntries, os.Stdout, flagDefang)
+		if readErr != nil {
+			return readErr
+		}
 		return nil
 	}
 
@@ -515,7 +528,13 @@ func runOnceMode(ctx context.Context, sources []types.LogSource, filters types.F
 		defer func() { _ = f.Close() }()
 		report.SetWriter(f)
 	}
-	return report.Print()
+	if err := report.Print(); err != nil {
+		return err
+	}
+	if readErr != nil {
+		return readErr
+	}
+	return nil
 }
 
 func applyForwarded(entry *types.LogEntry, filters types.Filters) {
@@ -664,6 +683,9 @@ func countTotalLines(sources []types.LogSource) int64 {
 			return 0
 		}
 		for _, path := range expandSourcePaths(src.Path) {
+			if info, err := os.Stat(path); err != nil || !info.Mode().IsRegular() {
+				return 0
+			}
 			f, err := os.Open(path)
 			if err != nil {
 				return 0
@@ -847,6 +869,8 @@ func runIntervalMode(ctx context.Context, sources []types.LogSource, filters typ
 	sections := types.DefaultTopSections()
 	initial := true
 
+	var readErr error
+
 	geoip := newGeoIPEnricher()
 	if geoip != nil {
 		defer func() { _ = geoip.Close() }()
@@ -896,6 +920,9 @@ func runIntervalMode(ctx context.Context, sources []types.LogSource, filters typ
 		lines, err := r.Read(ctx)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "error reading %s: %v\n", r.Name(), err)
+			if readErr == nil {
+				readErr = err
+			}
 			continue
 		}
 		var processErr error
@@ -952,9 +979,17 @@ func runIntervalMode(ctx context.Context, sources []types.LogSource, filters typ
 		if processErr != nil {
 			return processErr
 		}
+		if rerr := r.Err(); rerr != nil && readErr == nil {
+			readErr = rerr
+		}
 	}
 	if engine != nil && (engine.Count() > 0 || (opEngine != nil && opEngine.Stats().TotalEvents > 0)) {
-		return reportFn(engine, opEngine, current)
+		if err := reportFn(engine, opEngine, current); err != nil {
+			return err
+		}
+	}
+	if readErr != nil {
+		return readErr
 	}
 	return nil
 }
