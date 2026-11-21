@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Build step: injects header/sidebar/footer/TOC into docs/*.html
 // Zero deps — Node stdlib only. Handles future docs/it/* with same layout.
-// Before tagging a release: DOCS_VERSION=v0.8.1 node tools/build-docs.js
+// Before tagging a release: DOCS_VERSION=v0.9.0 node tools/build-docs.js
 'use strict';
 const fs = require('fs');
 const path = require('path');
@@ -109,6 +109,8 @@ function changelogHtml() {
   if (firstSection === -1) throw new Error('CHANGELOG.md has no release sections');
 
   const html = [];
+  let releaseId = '';
+  const anchors = new Map();
   let paragraph = [];
   let list = [];
   const flushParagraph = () => {
@@ -128,7 +130,11 @@ function changelogHtml() {
       const release = heading[2].match(/^\[([^\]]+)\]\s+-\s+(.+)$/);
       const text = release ? `${release[1]} — ${release[2]}` : heading[2].replace(/^\[([^\]]+)\]$/, '$1');
       const tag = `h${heading[1].length}`;
-      const id = tag === 'h2' ? ` id="${slugify(text)}"` : '';
+      if (tag === 'h2') releaseId = slugify(text);
+      const anchor = tag === 'h2' ? releaseId : `${releaseId}-${slugify(text)}`;
+      const occurrence = (anchors.get(anchor) || 0) + 1;
+      anchors.set(anchor, occurrence);
+      const id = ` id="${anchor}${occurrence > 1 ? `-${occurrence}` : ''}"`;
       html.push(`<${tag}${id}>${inlineMarkdown(text)}</${tag}>`);
     } else if (/^-\s+/.test(line)) {
       flushParagraph();

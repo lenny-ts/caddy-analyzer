@@ -75,7 +75,7 @@
   <main class="wrap" id="main">
     <div class="doc-content">
       <nav class="breadcrumb" aria-label="Breadcrumb"><a href="../it/reference/cli.html">Riferimento</a><span class="sep">/</span><span>block / unban</span></nav>
-      <div class="page-meta"><a href="https://github.com/lenny-ts/caddy-analyzer/releases">v0.8.1</a> · aggiornata <time datetime="2026-10-19">2026-10-19</time> · <a href="https://github.com/lenny-ts/caddy-analyzer">GitHub</a></div>
+      <div class="page-meta"><a href="https://github.com/lenny-ts/caddy-analyzer/releases">v0.9.0</a> · aggiornata <time datetime="2026-11-16">2026-11-16</time> · <a href="https://github.com/lenny-ts/caddy-analyzer">GitHub</a></div>
       <h1>block / unban</h1>
 <p>Firewall manuale. <span class="pill pill-danger">modifica il firewall</span> — aggiunge/rimuove regole legacy <code>iptables</code>. Si sincronizza con lo stato di guard e il log di audit.</p>
 
@@ -94,11 +94,13 @@ caddy-analyze unban --list        # audit — read-only</code></pre>
 <tr><td><code>--audit-log</code></td><td></td><td><code>/var/log/caddy-analyzer-audit.jsonl</code></td><td>Percorso del log di audit (vuoto disabilita)</td></tr>
 <tr><td><code>--state-file</code></td><td></td><td><code>/var/lib/caddy-analyzer/blocked.json</code></td><td>Sincronizzazione stato guard (vuoto disabilita)</td></tr>
 <tr><td><code>--all</code></td><td><code>-A</code></td><td>false</td><td>unban: tutti gli IP attualmente bloccati</td></tr>
+<tr><td><code>--reset-offenses</code></td><td></td><td>false</td><td>unban: cancella lo storico degli IP sbloccati; richiede stato ed è incompatibile con <code>--list</code></td></tr>
 <tr><td><code>--list</code></td><td><code>-l</code></td><td>false</td><td>unban: elenco senza rimuovere (<span class="pill pill-readonly">sola lettura</span>)</td></tr>
 </tbody>
 </table></div>
 
 <h2 id="minimal">Esempio minimo</h2>
+<p>Unban conserva lo storico progressivo salvo <code>--reset-offenses</code>. Per azzerare solo lo storico usa <code>guard offender reset IP</code>. Dopo un unban manuale riavvia guard per sincronizzare i ban in memoria. Consulta <a href="subcommands-guard.html#progressive-bans">ban progressivi</a>.</p>
 <p>Prima <span class="pill pill-readonly">sola lettura</span>, poi <span class="pill pill-danger">modifica il firewall</span>:</p>
 <pre><code># audit — who is blocked?
 sudo caddy-analyze unban --list

@@ -75,18 +75,23 @@
   <main class="wrap" id="main">
     <div class="doc-content">
       <nav class="breadcrumb" aria-label="Breadcrumb"><a href="../../it/reference/cli.html">Riferimento</a><span class="sep">/</span><span>API</span></nav>
-      <div class="page-meta"><a href="https://github.com/lenny-ts/caddy-analyzer/releases">v0.8.1</a> · aggiornata <time datetime="2026-10-19">2026-10-19</time> · <a href="https://github.com/lenny-ts/caddy-analyzer">GitHub</a></div>
+      <div class="page-meta"><a href="https://github.com/lenny-ts/caddy-analyzer/releases">v0.9.0</a> · aggiornata <time datetime="2026-11-16">2026-11-16</time> · <a href="https://github.com/lenny-ts/caddy-analyzer">GitHub</a></div>
       <h1>API / Pacchetti</h1>
+<p>Gli esempi sono estratti da corpi di funzione: importa anche <code>context</code>, <code>log</code>, <code>os</code> e <code>time</code> dove usati, fornendo entry, canale log o engine indicati.</p>
 <p>Percorso di importazione: <code>github.com/lenny-ts/caddy-analyzer/pkg/*</code>. Go 1.25+. Per il flusso dei dati attraverso questi pacchetti, consulta <a href="../architecture.html">Architettura</a>.</p>
 
 <h2 id="parser">parser — JSON Caddy → struct Go</h2>
 <p>Analizza una riga JSON in <code>*LogEntry</code> (richiesta gestita) o <code>*OperationalEntry</code> (log senza <code>request</code>).</p>
 <pre><code>import "github.com/lenny-ts/caddy-analyzer/pkg/parser"
+import "github.com/lenny-ts/caddy-analyzer/pkg/types"
 
 entry, err := parser.Parse(line)
+if err != nil { log.Fatal(err) }
 switch v := entry.(type) {
-case *parser.LogEntry:       // v.Method, v.URI, v.Status, v.RemoteIP, v.UserAgent
-case *parser.OperationalEntry: // v.Level, v.Logger, v.Msg, v.Extra
+case *types.LogEntry:
+    log.Print(v.Method, v.URI, v.Status)
+case *types.OperationalEntry:
+    log.Print(v.Level, v.Msg)
 }</code></pre>
 <div class="table-wrap"><table>
 <thead><tr><th>Tipo chiave</th><th>Campi</th></tr></thead>
@@ -100,34 +105,40 @@ case *parser.OperationalEntry: // v.Level, v.Logger, v.Msg, v.Extra
 <pre><code>import "github.com/lenny-ts/caddy-analyzer/pkg/analysis"
 import "github.com/lenny-ts/caddy-analyzer/pkg/types"
 
-eng := analysis.New(types.Filters{From: time.Now().Add(-1*time.Hour), Status: []string{"500"}})
-det := analysis.NewDetector(10) // uaRotation
+filters := types.Filters{From: time.Now().Add(-time.Hour), HasFrom: true, Status: []int{500}}
+eng := analysis.New(filters)
+det := analysis.NewDetector()
+det.SetUARotationThreshold(10)
 eng.SetDetector(det)
 
 // per line:
-if eng.MatchEntry(entry) { // respects all Filters (ip, country, asn, grep, bot, etc.)
+if analysis.MatchEntry(entry, filters) {
     eng.Process(entry)     // counters + detector + histogram
 }
-stats := eng.Finalize() // computes P50/P95/RPS
-topIPs := eng.TopN(10, types.TopFieldIP)
+eng.Finalize()
+stats := eng.Stats()
+topIPs := analysis.TopN(stats.RemoteIPCounts, 10)
 suspicious := stats.SuspiciousIPs // grouped by IP with MITRE tags</code></pre>
 <p>Euristiche comportamentali: <code>ua_rotation ≥10</code>, <code>object_enumeration ≥10 IDs/template</code>, <code>beaconing CV&lt;0.25</code>. Esporta Sigma: <code>det.ExportSigmaInfo()</code>.</p>
 
 <h2 id="enrich">enrich — GeoIP</h2>
 <pre><code>import "github.com/lenny-ts/caddy-analyzer/pkg/enrich"
 
-geo, err := enrich.NewGeoIP("") // auto-discovers mmdb in 7 paths + auto-downloads GeoLite2
-if err == nil { defer geo.Close() }
-info := geo.Lookup("203.0.113.18") // -&gt; CountryCode, CountryName, ASN
-code, _ := enrich.CountryCodeFromName("Italy") // "IT"</code></pre>
+geo, err := enrich.NewGeoIP("") // auto-discovery and optional download
+if err != nil { log.Fatal(err) }
+defer geo.Close()
+info, err := geo.Lookup("203.0.113.18") // -&gt; CountryCode, CountryName, ASN
+if err != nil { log.Fatal(err) }
+code := enrich.CountryCodeFromName("Italy", geo.Path()) // "IT"</code></pre>
 <p>Cache: 50K LRU, TTL 24h (configurabile tramite <a href="../guide/configuration.html#tuning">Configurazione</a>). Variante asincrona: <code>NewGeoIPAsync</code>.</p>
 
 <h2 id="blocklist">blocklist — trie CIDR</h2>
 <pre><code>import "github.com/lenny-ts/caddy-analyzer/pkg/blocklist"
 
-mgr := blocklist.NewManager("~/.cache/caddy-analyzer/blocklists")
-mgr.Refresh(context.Background()) // download 8 feeds
-hit := mgr.Contains("198.51.100.23") // O(1) via cidranger.PCTrie
+mgr, err := blocklist.NewManager(nil, ".cache/caddy-analyzer/blocklists")
+if err != nil { log.Fatal(err) }
+mgr.Refresh() // download 9 feeds
+hit, source := mgr.Contains("198.51.100.23") // CIDR-trie lookup
 sources := mgr.ListSources() // name, URL, count, age, status</code></pre>
 <p>Aggiunta personalizzata: <code>mgr.AddSource(blocklist.Source{Name:"My",URL:"https://…/list.txt"})</code>. TTL cache 7d.</p>
 
@@ -141,9 +152,11 @@ if err != nil { log.Fatal(err) }
 backend := firewall.Detect(firewall.BackendAuto)
 g := guard.New(guard.Config{
   Limit: 100, Window: time.Minute, BlockDuration: 10*time.Minute,
+  EvalInterval: time.Second,
   FirewallBackend: backend, GeoIP: geo, BlocklistMgr: mgr,
   StatePath: "/var/lib/caddy-analyzer/blocked.json",
   NeverBlock: []string{"10.0.0.0/8"},
+  NeverBlockFile: "whitelist.txt", NeverBlockRefresh: 30*time.Second,
   SelfIPs: selfIPs, SelfIPLookup: guard.DetectSelfIPs,
   OnError: func(err error) { log.Print(err) },
   OnAudit: func(action, ip, reason, duration string) {
@@ -157,19 +170,32 @@ g.FlushState()
 <p>Importa anche <code>context</code>, <code>log</code> e <code>time</code>. Diversamente dal default CLI, chi usa la libreria abilita la protezione inizializzando <code>SelfIPs</code> prima che <code>New</code> recuperi lo stato e impostando <code>SelfIPLookup</code>. Lascia entrambi vuoti per usare solo la whitelist esplicita. <code>Evaluate(line string)</code> non restituisce valori; <code>Tick(ctx)</code> restituisce i candidati bloccati se gestisci il ciclo manualmente.</p>
 <p>Lo stato persiste in <code>/var/lib/caddy-analyzer/blocked.json</code>. Consulta <a href="../architecture.html#data-flow">Architettura → flusso dei dati</a> per vedere dove si colloca guard.</p>
 
+<h2 id="doctor">doctor — diagnostica in sola lettura</h2>
+<p><code>doctor.Collect(doctor.Env{...})</code> restituisce i controlli raggruppati; <code>doctor.NewReport(groups)</code> calcola conteggi e codice di uscita. Usa <code>WriteText(io.Writer)</code> o <code>WriteJSON(io.Writer)</code>, verificando gli errori e <code>report.Summary.ExitCode</code>. Passa EUID reale, versione e percorsi di stato/log/cache/GeoIP in <code>Env</code>. Gli hook dei comandi consentono test senza firewall attivo. La CLI aggiunge anche gli errori della validazione condivisa della configurazione.</p>
+<p>Per le regole opzionali di autenticazione usa <code>analysis.NewAuthAbuseDetector(cfg)</code> e <code>NewSession()</code> per evidenze indipendenti; passa il risultato come secondo argomento opzionale di <code>analysis.NewDetectorWithPatterns</code> o in <code>guard.Config.AuthAbuse</code>. Consulta <a href="../guide/configuration.html#auth-abuse">soglie e limiti di memoria</a>.</p>
+
 <h2 id="reader">reader — acquisizione da sorgenti multiple</h2>
 <pre><code>import "github.com/lenny-ts/caddy-analyzer/pkg/reader"
 
-src, _ := reader.ParseSource("docker://caddy")
-r, _ := reader.FromSource(src, true /*follow*/) // → LogReader (file/docker/k8s/journalctl/stdin)
-for line := range r.Lines() { entry, _ := parser.Parse(line) }</code></pre>
+src := reader.ParseSource("docker://caddy")
+r := reader.FromSourceFollow(src)
+lines, err := r.Read(ctx)
+if err != nil { log.Fatal(err) }
+for line := range lines {
+    entry, err := parser.Parse(line)
+    if err != nil { log.Print(err); continue }
+    // Elabora entry.
+    _ = entry
+}</code></pre>
 <p>Unisce stdout+stderr di Docker, segue la rotazione dei file tramite controllo inode, espande i glob tramite <code>expandPaths</code>.</p>
 
 <h2 id="output">output — table / json / csv / html</h2>
 <pre><code>import "github.com/lenny-ts/caddy-analyzer/pkg/output"
 
-output.Report(stats, output.FormatTable, false /*defang*/, nil)
-output.Report(stats, output.FormatHTML, true, os.Stdout) // standalone dark HTML</code></pre>
+report := output.NewReport(eng, output.FormatHTML, 10)
+report.SetDefang(true)
+report.SetWriter(os.Stdout)
+if err := report.Print(); err != nil { log.Fatal(err) }</code></pre>
 
 <h2 id="types">types — struct condivise</h2>
 <pre><code>import "github.com/lenny-ts/caddy-analyzer/pkg/types"
@@ -186,7 +212,7 @@ entry.EffectiveClientIP(trustForwarded) // last public XFF or RemoteIP</code></p
 
     </div>
   </main>
-  <nav class="doc-toc" aria-label="In questa pagina"><div class="toc-label">In questa pagina</div><a href="#parser" class="toc-link">parser — JSON Caddy → struct Go</a><a href="#analysis" class="toc-link">analysis — filtraggio + rilevamento in 26 categorie</a><a href="#enrich" class="toc-link">enrich — GeoIP</a><a href="#blocklist" class="toc-link">blocklist — trie CIDR</a><a href="#guard" class="toc-link">guard — firewall</a><a href="#reader" class="toc-link">reader — acquisizione da sorgenti multiple</a><a href="#output" class="toc-link">output — table / json / csv / html</a><a href="#types" class="toc-link">types — struct condivise</a></nav>
+  <nav class="doc-toc" aria-label="In questa pagina"><div class="toc-label">In questa pagina</div><a href="#parser" class="toc-link">parser — JSON Caddy → struct Go</a><a href="#analysis" class="toc-link">analysis — filtraggio + rilevamento in 26 categorie</a><a href="#enrich" class="toc-link">enrich — GeoIP</a><a href="#blocklist" class="toc-link">blocklist — trie CIDR</a><a href="#guard" class="toc-link">guard — firewall</a><a href="#doctor" class="toc-link">doctor — diagnostica in sola lettura</a><a href="#reader" class="toc-link">reader — acquisizione da sorgenti multiple</a><a href="#output" class="toc-link">output — table / json / csv / html</a><a href="#types" class="toc-link">types — struct condivise</a></nav>
 </div>
 <script src="../../docs.min.js?v=36"></script>
 </body>

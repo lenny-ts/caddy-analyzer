@@ -41,6 +41,7 @@ var (
 	flagInterval       string
 	flagWatch          bool
 	flagDetect         bool
+	flagExplain        bool
 	flagOutput         string
 	flag2xx            bool
 	flag3xx            bool
@@ -86,7 +87,7 @@ var (
 	authAbuse          *analysis.AuthAbuseDetector
 )
 
-var Version = "0.8.1-dev"
+var Version = "0.9.0-dev"
 
 var rootCmd = &cobra.Command{
 	Use:          "caddy-analyze [flags] [source...]",
@@ -238,6 +239,7 @@ func init() {
 	rootFlags.StringVarP(&flagInterval, "interval", "i", "", "Aggregation interval (e.g. 5m, 1h)")
 	rootFlags.BoolVarP(&flagWatch, "watch", "w", false, "Live dashboard (RPS, top IP, status)")
 	rootFlags.BoolVarP(&flagDetect, "detect", "d", false, "Detect suspicious activity (SQLi, XSS, scanners, etc.)")
+	rootFlags.BoolVar(&flagExplain, "explain", false, "Explain detections on stderr in one-shot --detect mode (may expose request data)")
 
 	rootCmd.Flags().BoolP("version", "v", false, "Version")
 	rootCmd.Version = Version
@@ -341,6 +343,9 @@ func ctxForCommand() (context.Context, context.CancelFunc) {
 }
 
 func validateFlags() error {
+	if flagExplain && (!flagDetect || flagWatch || flagFollow || flagInterval != "" || flagAgainst != "") {
+		return fmt.Errorf("--explain requires --detect in one-shot analysis mode")
+	}
 	if flagWorkers < 0 {
 		return fmt.Errorf("--workers must be 0 or greater")
 	}
@@ -391,6 +396,11 @@ func runOnceMode(ctx context.Context, sources []types.LogSource, filters types.F
 	opEngine := analysis.NewOperationalEngine(filters)
 	if flagDetect {
 		det := newDetector()
+		if flagExplain {
+			det.SetExplain(func(x analysis.Explanation) {
+				printDetectionExplanation(os.Stderr, x, flagDefang)
+			})
+		}
 		engine.SetDetector(det)
 	}
 	engine.Stats().MaxCardinality = flagMaxCard
@@ -406,7 +416,12 @@ func runOnceMode(ctx context.Context, sources []types.LogSource, filters types.F
 		defer func() { _ = geoip.Close() }()
 	}
 
-	bar := progress.New(os.Stderr, countTotalLines(sources), "Analyzing")
+	var bar *progress.Bar
+	if flagExplain {
+		bar = progress.New(io.Discard, 0, "Analyzing")
+	} else {
+		bar = progress.New(os.Stderr, countTotalLines(sources), "Analyzing")
+	}
 
 	for _, src := range sources {
 		r := reader.FromSource(src)

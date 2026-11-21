@@ -75,7 +75,7 @@
   <main class="wrap" id="main">
     <div class="doc-content">
       <nav class="breadcrumb" aria-label="Breadcrumb"><a href="../reference/cli.html">Reference</a><span class="sep">/</span><span>CLI Reference</span></nav>
-      <div class="page-meta"><a href="https://github.com/lenny-ts/caddy-analyzer/releases">v0.8.1</a> · updated <time datetime="2026-10-19">2026-10-19</time> · <a href="https://github.com/lenny-ts/caddy-analyzer">GitHub</a></div>
+      <div class="page-meta"><a href="https://github.com/lenny-ts/caddy-analyzer/releases">v0.9.0</a> · updated <time datetime="2026-11-16">2026-11-16</time> · <a href="https://github.com/lenny-ts/caddy-analyzer">GitHub</a></div>
       <div class="cli-heading"><div><div class="hero-badge">Command line interface</div><h1>CLI Reference</h1></div></div>
 <p>Entry point: <code>caddy-analyze [flags] [source...]</code> — sources resolved via <a href="../sources.html">Log Sources</a> or <a href="../guide/configuration.html">caddy-analyzer.json</a>. Below: every flag, its scope, and whether it touches the system.</p>
 <div class="callout callout-info"><div class="callout-label">Operational guide</div>For step-by-step explanations, use cases and subcommand-specific flags, see <a href="commands.html">All commands</a>.</div>
@@ -153,9 +153,11 @@
 <tr><td><code>top</code></td><td><span class="pill pill-readonly">read-only</span></td><td>Ranked inspector (10 dimensions)</td></tr>
 <tr><td><code>diff</code></td><td><span class="pill pill-readonly">read-only</span></td><td>Compare two logs</td></tr>
 <tr><td><code>baseline</code></td><td>writes file</td><td>Save versioned analysis baselines</td></tr>
+<tr><td><a href="commands.html#doctor"><code>doctor</code></a></td><td><span class="pill pill-readonly">read-only</span></td><td>Installation/runtime checks; <code>--json</code> for automation</td></tr>
+<tr><td><code>guard offenders</code> / <code>guard offender show</code></td><td><span class="pill pill-readonly">read-only</span></td><td>Inspect escalation history; <code>guard offender reset</code> writes history only</td></tr>
 <tr><td><code>guard</code></td><td><span class="pill pill-danger">modifies firewall</span></td><td>Auto-block via iptables/nftables/Docker</td></tr>
 <tr><td><code>block</code> / <code>unban</code></td><td><span class="pill pill-danger">modifies firewall</span></td><td>Manual firewall</td></tr>
-<tr><td><code>blocklist</code></td><td>writes cache/config</td><td>8 feeds, refresh/list/config/init</td></tr>
+<tr><td><code>blocklist</code></td><td>writes cache/config</td><td>9 feeds, refresh/list/config/init</td></tr>
 <tr><td><code>config</code></td><td>writes config</td><td>Persist default source</td></tr>
 <tr><td><code>export-sigma</code></td><td>writes file/stdout</td><td>23 Sigma rules</td></tr>
 <tr><td><code>update</code></td><td>replaces binary</td><td>Self-update (cosign + SHA256)</td></tr>

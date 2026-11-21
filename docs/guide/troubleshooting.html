@@ -75,8 +75,20 @@
   <main class="wrap" id="main">
     <div class="doc-content">
       <nav class="breadcrumb" aria-label="Breadcrumb"><a href="../guide/configuration.html">Guide</a><span class="sep">/</span><span>Troubleshooting</span></nav>
-      <div class="page-meta"><a href="https://github.com/lenny-ts/caddy-analyzer/releases">v0.8.1</a> · updated <time datetime="2026-10-19">2026-10-19</time> · <a href="https://github.com/lenny-ts/caddy-analyzer">GitHub</a></div>
+      <div class="page-meta"><a href="https://github.com/lenny-ts/caddy-analyzer/releases">v0.9.0</a> · updated <time datetime="2026-11-16">2026-11-16</time> · <a href="https://github.com/lenny-ts/caddy-analyzer">GitHub</a></div>
       <h1>Troubleshooting</h1>
+
+<h2 id="doctor">Start with doctor</h2>
+<pre><code>caddy-analyze doctor --log /var/log/caddy/access.log
+caddy-analyze doctor --json --log /var/log/caddy/access.log &gt; doctor.json
+caddy-analyze doctor --geoip-db /usr/share/GeoIP/GeoLite2-Country.mmdb
+caddy-analyze blocklist refresh  # separate write operation to repair a missing/stale cache</code></pre>
+<p><code>doctor</code> is read-only; run it as the same user and with the same paths as the service. Warnings alone return 0; critical configuration, explicit-log, Linux state-directory or missing-firewall-backend failures return 1. On macOS/Windows, unsupported firewall checks warn instead. See <a href="../reference/commands.html#doctor">flags and JSON schema</a>.</p>
+<p>Fix explicit log paths rather than expecting auto-discovery fallback. For an unusable GeoIP database, replace it with a valid MMDB; doctor never downloads one. Docker daemon access alone is insufficient for guard: local iptables and a usable <code>DOCKER-USER</code> chain are also required.</p>
+
+<h2 id="upgrade-090">Upgrading to v0.9.0</h2>
+<p>Back up the state file and its <code>.offenders/</code> history directory, then restart guard after upgrading the binary. Progressive bans and behavioral authentication-abuse detection remain opt-in. Expect one-second threshold evaluation, not a guaranteed one-second ban: self-IP discovery/firewall latency still applies.</p>
+<p>Malformed/unreadable whitelist files now stop CLI startup; correct the file before restarting. Runtime reload failures keep the last good list. Edits propagate every 30 seconds and new exemptions can remove covering subnet bans. Keep the adjacent <code>.lock</code> file in place while writers run. See <a href="../subcommands-guard.html#whitelist-reload">reload safety</a>.</p>
 
 <h2 id="permission-denied">permission denied reading /var/log/caddy/access.log</h2>
 <p>Caddy writes as <code>caddy:caddy 0600</code>.</p>
@@ -162,7 +174,7 @@ caddy-analyze --country IT testdata/sample.log  # if 0, GeoIP missing</code></pr
 
     </div>
   </main>
-  <nav class="doc-toc" aria-label="On this page"><div class="toc-label">On this page</div><a href="#permission-denied" class="toc-link">permission denied reading /var/log/caddy/access.log</a><a href="#docker-sock" class="toc-link">Cannot connect to the Docker daemon / docker.sock: permission denied</a><a href="#k8s" class="toc-link">k8s:// — no such pod / cannot list resource</a><a href="#journalctl" class="toc-link">journalctl:// — No journal files</a><a href="#geoip" class="toc-link">GeoIP — country/asn empty or download fails</a><a href="#iptables" class="toc-link">guard — iptables: permission denied / No chain/target</a><a href="#self-ip" class="toc-link">guard — server IP protection / new bans suspended</a><a href="#blocklist" class="toc-link">blocklist refresh slow / fails</a><a href="#no-output" class="toc-link">No output / empty report</a><a href="#still-stuck" class="toc-link">Still stuck?</a></nav>
+  <nav class="doc-toc" aria-label="On this page"><div class="toc-label">On this page</div><a href="#doctor" class="toc-link">Start with doctor</a><a href="#upgrade-090" class="toc-link">Upgrading to v0.9.0</a><a href="#permission-denied" class="toc-link">permission denied reading /var/log/caddy/access.log</a><a href="#docker-sock" class="toc-link">Cannot connect to the Docker daemon / docker.sock: permission denied</a><a href="#k8s" class="toc-link">k8s:// — no such pod / cannot list resource</a><a href="#journalctl" class="toc-link">journalctl:// — No journal files</a><a href="#geoip" class="toc-link">GeoIP — country/asn empty or download fails</a><a href="#iptables" class="toc-link">guard — iptables: permission denied / No chain/target</a><a href="#self-ip" class="toc-link">guard — server IP protection / new bans suspended</a><a href="#blocklist" class="toc-link">blocklist refresh slow / fails</a><a href="#no-output" class="toc-link">No output / empty report</a><a href="#still-stuck" class="toc-link">Still stuck?</a></nav>
 </div>
 <script src="../docs.min.js?v=36"></script>
 </body>

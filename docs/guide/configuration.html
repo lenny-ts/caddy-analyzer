@@ -75,7 +75,7 @@
   <main class="wrap" id="main">
     <div class="doc-content">
       <nav class="breadcrumb" aria-label="Breadcrumb"><a href="../guide/configuration.html">Guide</a><span class="sep">/</span><span>Configuration</span></nav>
-      <div class="page-meta"><a href="https://github.com/lenny-ts/caddy-analyzer/releases">v0.8.1</a> · updated <time datetime="2026-10-19">2026-10-19</time> · <a href="https://github.com/lenny-ts/caddy-analyzer">GitHub</a></div>
+      <div class="page-meta"><a href="https://github.com/lenny-ts/caddy-analyzer/releases">v0.9.0</a> · updated <time datetime="2026-11-16">2026-11-16</time> · <a href="https://github.com/lenny-ts/caddy-analyzer">GitHub</a></div>
       <h1>Configuration</h1>
 <p>How the tool itself is configured. For how to <em>connect</em> to each log source, see <a href="../sources.html">Log Sources</a>.</p>
 
@@ -118,7 +118,7 @@ caddy-analyze whitelist --init          # persist never-block to /etc/caddy-anal
 <p><code>blocklist init</code> writes current <code>--no-default-blocklists / --blocklist-config / --blocklist-remove</code> into the same file so <code>guard</code> picks them up without CLI flags.</p>
 
 <h2 id="self-ip">Guard server-IP protection</h2>
-<p><code>--protect-self=true</code> is a guard-only CLI flag, not a field in <code>caddy-analyzer.json</code>. Discovered interface/public egress addresses are kept in memory and refreshed automatically; they are not written to the whitelist file. Explicit <code>--never-block</code> entries and the whitelist are still loaded at startup, so file edits require restarting guard.</p>
+<p><code>--protect-self=true</code> is a guard-only CLI flag, not a field in <code>caddy-analyzer.json</code>. Discovered interface/public egress addresses remain in memory. Guard loads the selected whitelist at startup and reloads it every 30 seconds without restarting; explicit <code>--never-block</code> entries remain in force. See <a href="../subcommands-guard.html#whitelist-reload">reload validation and subnet-ban cleanup</a>.</p>
 <p>For an offline, proxy-only or fixed-IP deployment, put <code>--protect-self=false</code> in the guard service's startup arguments. This disables automatic server-IP discovery without disabling explicit never-block entries. Direct public discovery ignores <code>http_proxy</code>/<code>https_proxy</code>. See <a href="../subcommands-guard.html#self-protection">guard</a> and <a href="troubleshooting.html#self-ip">discovery errors</a>.</p>
 
 <h2 id="tuning">Tuning — precedence</h2>
@@ -133,6 +133,25 @@ caddy-analyze whitelist --init          # persist never-block to /etc/caddy-anal
 </table></div>
 <pre><code># example: keep GeoIP results longer on a busy host
 caddy-analyze --geo-cache-ttl 48h --geo-cache-size 100000 /var/log/caddy/access.log</code></pre>
+
+<h2 id="auth-abuse">Behavioral authentication abuse (opt-in)</h2>
+<p>Add this object to the active configuration. <code>enabled</code> activates detection; <code>block</code> separately enables per-IP brute-force/stuffing bans in guard. Aggregate spraying is always alert-only.</p>
+<pre><code>{
+  "behavioral_detection": {
+    "auth_abuse": {
+      "enabled": true,
+      "block": false,
+      "endpoints": ["/login", "/api/login", "/wp-login.php"],
+      "failure_statuses": [401, 403],
+      "brute_force": {"failures": 10, "window": "1m"},
+      "credential_stuffing": {"failures": 20, "unique_uas": 5, "window": "1m"},
+      "password_spray": {"failures": 100, "unique_ips": 20, "window": "5m"}
+    }
+  }
+}</code></pre>
+<p>Endpoints are exact case-sensitive decoded paths, separated by request host; query strings are ignored. Failure statuses must be 400–599. Omitted scenarios use the defaults shown; to disable one, set its <code>failures</code> to 0 and supply a valid <code>window</code>. Windows must be positive and at most 24h; failures are capped at 100,000; distinct-UA/IP thresholds must be between 2 and the corresponding failure threshold.</p>
+<p>Use <code>--detect</code> in reports/tail/watch. These high-severity, confidence-7 signals indicate suspected abuse, not compromised accounts: usernames/passwords are not extracted. Stuffing uses UA diversity; spraying appears under <code>aggregate</code> in reports. Offline analysis uses log timestamps; guard uses receipt time and retains evidence across normal window resets. Each enabled scenario retains at most 100,000 failures (300,000 total); new evidence is dropped when full until older failures expire.</p>
+<p>Guard's <code>block: true</code> path is independent of <code>--detect-confidence</code> and still honors allowlists, self-IP protection and dry-run. The old <code>--auth-limit</code> remains a separate 401/403 threshold across all paths; set it to 0 if only endpoint-scoped rules are wanted. Other guard rules remain active.</p>
 
 <h2 id="env">Environment &amp; XDG</h2>
 <div class="table-wrap"><table>
@@ -151,6 +170,7 @@ caddy-analyze --geo-cache-ttl 48h --geo-cache-size 100000 /var/log/caddy/access.
 <tr><td><code>~/.cache/caddy-analyzer/blocklists/</code></td><td>Blocklist CIDRs (7d TTL)</td></tr>
 <tr><td><code>~/.config/caddy-analyzer/GeoLite2-*.mmdb</code></td><td>GeoIP (auto-download from P3TERX mirror)</td></tr>
 <tr><td><code>/var/lib/caddy-analyzer/blocked.json</code></td><td>Guard blocked IPs (survives restart)</td></tr>
+<tr><td><code>&lt;state-file&gt;.offenders/</code></td><td>Private per-IP/CIDR escalation history; back up with active-ban state</td></tr>
 <tr><td><code>/var/log/caddy-analyzer-audit.jsonl</code></td><td>Audit log (0600, JSON lines)</td></tr>
 <tr><td><code>/etc/caddy-analyzer/whitelist.txt</code></td><td>Never-block list (CIDRs, # comments)</td></tr>
 </tbody>
@@ -170,7 +190,7 @@ caddy-analyze --geo-cache-ttl 48h --geo-cache-size 100000 /var/log/caddy/access.
 
     </div>
   </main>
-  <nav class="doc-toc" aria-label="On this page"><div class="toc-label">On this page</div><a href="#config-file" class="toc-link">Config file — where it lives</a><a href="#schema" class="toc-link">Schema</a><a href="#manage" class="toc-link">Manage it</a><a href="#self-ip" class="toc-link">Guard server-IP protection</a><a href="#tuning" class="toc-link">Tuning — precedence</a><a href="#env" class="toc-link">Environment &amp;amp; XDG</a><a href="#caches" class="toc-link">Caches &amp;amp; state (not config)</a><a href="#precedence" class="toc-link">Resolution order (no source arg)</a></nav>
+  <nav class="doc-toc" aria-label="On this page"><div class="toc-label">On this page</div><a href="#config-file" class="toc-link">Config file — where it lives</a><a href="#schema" class="toc-link">Schema</a><a href="#manage" class="toc-link">Manage it</a><a href="#self-ip" class="toc-link">Guard server-IP protection</a><a href="#tuning" class="toc-link">Tuning — precedence</a><a href="#auth-abuse" class="toc-link">Behavioral authentication abuse (opt-in)</a><a href="#env" class="toc-link">Environment &amp;amp; XDG</a><a href="#caches" class="toc-link">Caches &amp;amp; state (not config)</a><a href="#precedence" class="toc-link">Resolution order (no source arg)</a></nav>
 </div>
 <script src="../docs.min.js?v=36"></script>
 </body>

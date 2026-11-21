@@ -75,7 +75,7 @@
   <main class="wrap" id="main">
     <div class="doc-content">
       <nav class="breadcrumb" aria-label="Breadcrumb"><a href="index.html">Overview</a><span class="sep">/</span><span>Threat Engine</span></nav>
-      <div class="page-meta"><a href="https://github.com/lenny-ts/caddy-analyzer/releases">v0.8.1</a> · updated <time datetime="2026-10-19">2026-10-19</time> · <a href="https://github.com/lenny-ts/caddy-analyzer">GitHub</a></div>
+      <div class="page-meta"><a href="https://github.com/lenny-ts/caddy-analyzer/releases">v0.9.0</a> · updated <time datetime="2026-11-16">2026-11-16</time> · <a href="https://github.com/lenny-ts/caddy-analyzer">GitHub</a></div>
       <h1>Threat Engine</h1>
 <p>26 categories, dual-pass evasion resistance, MITRE-tagged. This page is the honest overview — what is detected, what is not, and where to read the details.</p>
 
@@ -89,7 +89,7 @@
 <tr><td>Legitimate paths can look malicious</td><td><code>?url=https://…</code>, <code>?code={{var}}</code>, <code>__proto__</code> in docs</td><td>Use <code>--never-block</code> / <code>whitelist</code> and check <code>-f html</code> before blocking</td></tr>
 <tr><td>Behavioral heuristics need state</td><td><code>ua_rotation</code>, <code>object_enumeration</code>, <code>beaconing</code> need ≥10 samples per IP/path</td><td>Run on ≥1h of traffic; single-request logs will not fire them</td></tr>
 <tr><td>Not a WAF</td><td>Offline/log-time detection, not inline request blocking</td><td>Use <code>guard</code> to block after detection; do not expect pre-request deny</td></tr>
-<tr><td>GeoIP/blocklist are best-effort</td><td>DB-IP lite + 8 feeds, 7d cache, network required for refresh</td><td>Pin <code>--geoip-db</code> and check <code>blocklist list</code> age</td></tr>
+<tr><td>GeoIP/blocklist are best-effort</td><td>DB-IP lite + 9 feeds, 7d cache, network required for refresh</td><td>Pin <code>--geoip-db</code> and check <code>blocklist list</code> age</td></tr>
 </tbody>
 </table></div>
 <div class="callout callout-warning"><div class="callout-label">Do not lock yourself out</div>Every <code>guard</code> example that modifies firewall is marked <span class="pill pill-danger">modifies firewall</span>. On a remote host, always <code>--never-block YOUR_IP</code>. When in doubt, use read-only commands (<code>blocklist list</code>, <code>--detect -f html</code>) first.</div>

@@ -75,7 +75,7 @@
   <main class="wrap" id="main">
     <div class="doc-content">
       <nav class="breadcrumb" aria-label="Breadcrumb"><a href="../reference/cli.html">Reference</a><span class="sep">/</span><span>All commands</span></nav>
-      <div class="page-meta"><a href="https://github.com/lenny-ts/caddy-analyzer/releases">v0.8.1</a> · updated <time datetime="2026-10-19">2026-10-19</time> · <a href="https://github.com/lenny-ts/caddy-analyzer">GitHub</a></div>
+      <div class="page-meta"><a href="https://github.com/lenny-ts/caddy-analyzer/releases">v0.9.0</a> · updated <time datetime="2026-11-16">2026-11-16</time> · <a href="https://github.com/lenny-ts/caddy-analyzer">GitHub</a></div>
       <h1>All commands</h1>
 <p>This page explains what every command does, what it reads or changes, and which mode to choose. Use <code>caddy-analyze &lt;command&gt; --help</code> for the exact flags installed in your binary. The complete flag section separates persistent flags, root-only modes and command-specific options.</p>
 
@@ -87,6 +87,7 @@
 <tr><td>See rankings</td><td><code>top</code></td><td>Read-only aggregation</td></tr>
 <tr><td>Compare two periods</td><td><code>diff</code></td><td>Read-only comparison</td></tr>
 <tr><td>Store a reference period</td><td><code>baseline save</code></td><td>Writes JSON</td></tr>
+<tr><td>Diagnose an installation</td><td><a href="#doctor"><code>doctor</code></a></td><td>Read-only checks, text or JSON</td></tr>
 <tr><td>Automatically block attackers</td><td><code>guard</code></td><td>May change firewall rules</td></tr>
 <tr><td>Block or unblock manually</td><td><code>block</code> / <code>unban</code></td><td>Changes firewall rules</td></tr>
 <tr><td>Manage threat-intel feeds</td><td><code>blocklist</code></td><td>Writes cache/config, not firewall</td></tr>
@@ -140,6 +141,20 @@ caddy-analyze diff before.log after.log --format json -o regression.json</code><
 <pre><code>caddy-analyze baseline save access.log --from 7d -o baseline.json --detect
 caddy-analyze --against baseline.json access.log --threshold 15</code></pre>
 
+<h2 id="doctor">doctor</h2>
+<pre><code>caddy-analyze doctor
+caddy-analyze doctor --json --log /var/log/caddy/access.log
+caddy-analyze doctor --state-file /var/lib/caddy-analyzer/blocked.json --cache-dir /var/cache/caddy-analyzer/blocklists</code></pre>
+<p>Runs read-only Runtime, Caddy, Guard and Optional Dependencies checks. It does not change firewall/state/configuration, refresh feeds or download databases. Run it as the service user for meaningful access checks; use sudo only when diagnosing a root-run guard. Non-Linux firewall checks report unsupported-platform warnings.</p>
+<div class="table-wrap"><table><thead><tr><th>Flag</th><th>Default</th><th>Meaning</th></tr></thead><tbody>
+<tr><td><code>--json</code></td><td>false</td><td>Structured report instead of text; not <code>--format json</code></td></tr>
+<tr><td><code>--log</code></td><td>auto</td><td>Regular local access log; an explicit unusable path is a critical failure, with no fallback</td></tr>
+<tr><td><code>--state-file</code></td><td><code>/var/lib/caddy-analyzer/blocked.json</code></td><td>Check its parent directory; empty disables crash-recovery checks</td></tr>
+<tr><td><code>--cache-dir</code></td><td>user blocklist cache</td><td>Inspect cached feed ages; empty disables cache inspection</td></tr>
+<tr><td><code>--geoip-db</code></td><td>auto</td><td>Inherited flag: validate the selected MMDB without downloading one</td></tr>
+</tbody></table></div>
+<p>Checks use <code>OK</code>, <code>WARN</code> or <code>FAIL</code>. JSON contains <code>groups[].checks[]</code> with <code>id/status/message/critical</code>, plus <code>summary</code> counts, status and exit code. Exit code is 1 for critical failures, 0 otherwise; warnings alone do not fail CI. Configuration-validation errors are included as critical checks rather than suppressing the report. See <a href="../guide/troubleshooting.html#doctor">remediation examples</a>.</p>
+
 <h2 id="guard">guard</h2>
 <pre><code>sudo caddy-analyze guard [source] [flags]</code></pre>
 <p>Continuously monitors a source and automatically blocks IPs that cross request, authentication, not-found or detection thresholds. Depending on <code>--firewall-backend</code>, it can modify iptables, nftables, Docker's <code>DOCKER-USER</code> chain, or a hybrid of them. Blocks can be persisted in the state file and every action can be audited.</p>
@@ -149,6 +164,7 @@ caddy-analyze --against baseline.json access.log --threshold 15</code></pre>
 sudo caddy-analyze guard docker://caddy --never-block 203.0.113.10 \
   --firewall-backend hybrid --state-file /var/lib/caddy-analyzer/blocked.json</code></pre>
 <p><code>--country-block</code> blocks matching countries immediately when GeoIP is available. Blocklist feeds are enabled by default and can be disabled with <code>--no-blocklist</code>. Audit notifications support JSONL, syslog and generic, Slack, Discord or PagerDuty webhooks. See the dedicated <a href="../subcommands-guard.html">guard reference</a> for all thresholds and sinks.</p>
+<p>See <a href="../subcommands-guard.html#progressive-bans">progressive bans</a> for <code>guard offenders</code>, <code>guard offender show/reset IP</code> and persistent history. Thresholds use <code>--eval-interval 1s</code> independently of window resets. Authentication-abuse rules are <a href="../guide/configuration.html#auth-abuse">configured separately</a>.</p>
 
 <h2 id="firewall">block and unban</h2>
 <pre><code>sudo caddy-analyze block &lt;ip&gt; [ip...]
@@ -179,6 +195,7 @@ caddy-analyze config reset</code></pre>
 <pre><code>sudo caddy-analyze whitelist [--add IP/CIDR] [--remove IP/CIDR]
 caddy-analyze whitelist --list [--file PATH]</code></pre>
 <p>Maintains a file of IPs and CIDRs that guard must never block. The default is <code>/etc/caddy-analyzer/whitelist.txt</code>. <code>--init</code> creates it with a header, <code>--add</code> and <code>--remove</code> accept comma-separated values, and <code>--list</code> prints entries. Point guard at the same file with <code>--never-block-file</code>.</p>
+<p>Guard reloads changes every 30 seconds without restart, keeping the last good list after runtime errors. CLI writes are atomic and serialized across processes using the adjacent <code>.lock</code> file; do not remove that file while writers run. At startup, guard refuses malformed/unreadable/non-regular selected files.</p>
 
 <h2 id="sigma">export-sigma</h2>
 <pre><code>caddy-analyze export-sigma [output-file]</code></pre>
@@ -191,7 +208,7 @@ caddy-analyze export-sigma - | sigma check</code></pre>
 <p>Checks for and installs a verified release from GitHub. Installation is fail-closed: cosign must validate the signed release manifest and the archive checksum must match it. <code>--check</code> performs no installation, <code>--version</code> pins a tag, <code>--force</code> permits reinstall or downgrade, and <code>--install-dir</code> selects a directory. If verification fails, the current binary is left untouched.</p>
 <pre><code>caddy-analyze update --check
 sudo caddy-analyze update
-caddy-analyze update --version v0.8.1 --install-dir ~/.local/bin</code></pre>
+caddy-analyze update --version v0.9.0 --install-dir ~/.local/bin</code></pre>
 
 <h2 id="completion">completion and version</h2>
 <pre><code>caddy-analyze --version
@@ -275,7 +292,7 @@ sudo caddy-analyze guard access.log --never-block-file whitelist.txt</code></pre
 <h3 id="blocklist-flags">blocklist</h3>
 <div class="table-wrap"><table><thead><tr><th>Flag</th><th>What it does</th></tr></thead><tbody>
 <tr><td><code>--cache-dir</code></td><td>Directory for downloaded feed files.</td></tr>
-<tr><td><code>--no-default-blocklists</code></td><td>Disables the eight built-in feeds for a custom-only setup.</td></tr>
+<tr><td><code>--no-default-blocklists</code></td><td>Disables the nine built-in feeds for a custom-only setup.</td></tr>
 <tr><td><code>--blocklist-config FILE</code></td><td>Adds JSON sources with <code>name</code>, <code>url</code> and optional <code>format</code>; repeatable.</td></tr>
 <tr><td><code>--blocklist-remove NAME</code></td><td>Removes named sources; accepts comma-separated names.</td></tr>
 <tr><td><code>--format table|json</code></td><td>Output format for <code>list</code> and <code>config</code>.</td></tr>
@@ -285,6 +302,10 @@ sudo caddy-analyze guard access.log --never-block-file whitelist.txt</code></pre
 <div class="table-wrap"><table><thead><tr><th>Flag</th><th>Default</th><th>What it does</th></tr></thead><tbody>
 <tr><td><code>--limit, -l</code></td><td>100</td><td>HTTP requests per IP in the window before blocking; <code>0</code> disables.</td></tr>
 <tr><td><code>--window, -w</code></td><td>1m</td><td>Sliding monitoring window with per-second buckets.</td></tr>
+<tr><td><code>--eval-interval</code></td><td>1s</td><td>Positive threshold-check interval, capped at <code>--window</code>.</td></tr>
+<tr><td><code>--ban-escalation</code></td><td>false</td><td>Enable persistent repeat-offender duration escalation.</td></tr>
+<tr><td><code>--ban-reset-after</code></td><td>30d</td><td>History retention after the last successful ban.</td></tr>
+<tr><td><code>--max-ban-duration</code></td><td>168h</td><td>Cap every escalated duration.</td></tr>
 <tr><td><code>--duration, -d</code></td><td>10m</td><td>Block duration; <code>0</code> is permanent.</td></tr>
 <tr><td><code>--auth-limit</code></td><td>10</td><td>401/403 responses before blocking; <code>0</code> disables.</td></tr>
 <tr><td><code>--notfound-limit</code></td><td>50</td><td>404 responses before blocking; <code>0</code> disables.</td></tr>
@@ -292,7 +313,7 @@ sudo caddy-analyze guard access.log --never-block-file whitelist.txt</code></pre
 <tr><td><code>--firewall-backend</code></td><td>auto</td><td>Selects <code>auto</code>, <code>iptables</code>, <code>docker</code>, <code>nftables</code> or <code>hybrid</code>.</td></tr>
 <tr><td><code>--dry-run</code></td><td>false</td><td>Reports and audits would-be blocks without changing firewall or state.</td></tr>
 <tr><td><code>--country-block</code></td><td>none</td><td>Immediately blocks listed ISO countries through GeoIP.</td></tr>
-<tr><td><code>--no-blocklist</code></td><td>false</td><td>Disables checking the eight feeds.</td></tr>
+<tr><td><code>--no-blocklist</code></td><td>false</td><td>Disables checking the nine feeds.</td></tr>
 <tr><td><code>--blocklist-refresh</code></td><td>6h</td><td>Feed refresh interval; minimum 1h, <code>0</code> disables.</td></tr>
 <tr><td><code>--cache-dir</code></td><td>user cache</td><td>Blocklist cache directory.</td></tr>
 <tr><td><code>--never-block</code></td><td>none</td><td>Protected IPs/CIDRs; repeatable.</td></tr>
@@ -312,6 +333,7 @@ sudo caddy-analyze guard access.log --never-block-file whitelist.txt</code></pre
 <tr><td><code>--audit-rate-limit</code></td><td>0</td><td>Minimum interval between notifications for one IP; <code>0</code> disables.</td></tr>
 </tbody></table></div>
 <h3 id="block-unban-flags">block and unban</h3>
+<p><code>unban --reset-offenses</code> also forgets offender history for the unbanned IPs; without it history is preserved. It cannot be combined with <code>--list</code>. Restart a running guard after manual unban to synchronize memory.</p>
 <p>Both commands share audit flags: <code>--audit-log</code>, <code>--audit-syslog</code>, <code>--webhook-url</code>/<code>--audit-webhook</code>, <code>--webhook-provider</code>, <code>--pagerduty-routing-key</code>, <code>--audit-timeout</code>, <code>--audit-retries</code> and <code>--audit-rate-limit</code>. <code>--state-file</code> synchronizes manual changes with guard. Additionally, <code>unban --list</code> lists active IPs and <code>unban --all</code> removes all tracked blocks; do not combine them.</p>
 <h3 id="config-flags">config</h3>
 <p><code>--global, -g</code> selects the global configuration file instead of the local one. <code>config SOURCE</code> and <code>config set SOURCE</code> set a source; <code>config show</code> displays it and <code>config reset</code> removes the selected file.</p>
@@ -330,7 +352,7 @@ sudo caddy-analyze guard access.log --never-block-file whitelist.txt</code></pre
 
     </div>
   </main>
-  <nav class="doc-toc" aria-label="On this page"><div class="toc-label">On this page</div><a href="#decision" class="toc-link">Choose a command</a><a href="#analyze" class="toc-link">Analyze: the root command</a><a href="#tail" class="toc-link">tail</a><a href="#top" class="toc-link">top</a><a href="#diff" class="toc-link">diff</a><a href="#baseline" class="toc-link">baseline save</a><a href="#guard" class="toc-link">guard</a><a href="#firewall" class="toc-link">block and unban</a><a href="#blocklist" class="toc-link">blocklist</a><a href="#config" class="toc-link">config</a><a href="#whitelist" class="toc-link">whitelist</a><a href="#sigma" class="toc-link">export-sigma</a><a href="#update" class="toc-link">update</a><a href="#completion" class="toc-link">completion and version</a><a href="#combinations" class="toc-link">Useful combinations</a><a href="#global-flags" class="toc-link">Global flags: complete reference</a><a href="#subcommand-flags" class="toc-link">Subcommand-specific flags</a><a href="#tail-flags" class="toc-link h3">tail</a><a href="#top-flags" class="toc-link h3">top</a><a href="#baseline-flags" class="toc-link h3">baseline save</a><a href="#blocklist-flags" class="toc-link h3">blocklist</a><a href="#guard-flags" class="toc-link h3">guard</a><a href="#block-unban-flags" class="toc-link h3">block and unban</a><a href="#config-flags" class="toc-link h3">config</a><a href="#whitelist-flags" class="toc-link h3">whitelist</a><a href="#update-flags" class="toc-link h3">update</a><a href="#export-flags" class="toc-link h3">export-sigma</a><a href="#help-flags" class="toc-link h3">help and --help</a></nav>
+  <nav class="doc-toc" aria-label="On this page"><div class="toc-label">On this page</div><a href="#decision" class="toc-link">Choose a command</a><a href="#analyze" class="toc-link">Analyze: the root command</a><a href="#tail" class="toc-link">tail</a><a href="#top" class="toc-link">top</a><a href="#diff" class="toc-link">diff</a><a href="#baseline" class="toc-link">baseline save</a><a href="#doctor" class="toc-link">doctor</a><a href="#guard" class="toc-link">guard</a><a href="#firewall" class="toc-link">block and unban</a><a href="#blocklist" class="toc-link">blocklist</a><a href="#config" class="toc-link">config</a><a href="#whitelist" class="toc-link">whitelist</a><a href="#sigma" class="toc-link">export-sigma</a><a href="#update" class="toc-link">update</a><a href="#completion" class="toc-link">completion and version</a><a href="#combinations" class="toc-link">Useful combinations</a><a href="#global-flags" class="toc-link">Global flags: complete reference</a><a href="#subcommand-flags" class="toc-link">Subcommand-specific flags</a><a href="#tail-flags" class="toc-link h3">tail</a><a href="#top-flags" class="toc-link h3">top</a><a href="#baseline-flags" class="toc-link h3">baseline save</a><a href="#blocklist-flags" class="toc-link h3">blocklist</a><a href="#guard-flags" class="toc-link h3">guard</a><a href="#block-unban-flags" class="toc-link h3">block and unban</a><a href="#config-flags" class="toc-link h3">config</a><a href="#whitelist-flags" class="toc-link h3">whitelist</a><a href="#update-flags" class="toc-link h3">update</a><a href="#export-flags" class="toc-link h3">export-sigma</a><a href="#help-flags" class="toc-link h3">help and --help</a></nav>
 </div>
 <script src="../docs.min.js?v=36"></script>
 </body>

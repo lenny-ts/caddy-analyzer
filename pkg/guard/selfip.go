@@ -151,7 +151,8 @@ func (g *Guard) refreshSelfIPs(ctx context.Context) bool {
 	return false
 }
 
-// clearProtectedBlocks also removes subnet bans containing a server address.
+// clearProtectedBlocks removes bans for allowlisted addresses and subnet bans
+// containing a server or allowlisted address.
 // Failed firewall removals remain in state so the next refresh retries them.
 func (g *Guard) clearProtectedBlocks() {
 	g.mu.Lock()

@@ -27,6 +27,15 @@ func TestExtractEntry(t *testing.T) {
 		{"2001:db8::1 # inline", "2001:db8::1/128"},
 		{"foo bar", ""},
 		{"1.2.3.4 # comment with # hash", "1.2.3.4/32"},
+		{"1.2.3.4 comment", "1.2.3.4/32"},
+		{"1.2.3.0/24 comment", "1.2.3.0/24"},
+		{"2001:db8::1 comment", "2001:db8::1/128"},
+		{"2001:db8::/32 comment", "2001:db8::/32"},
+		{"1.2.3.4\tcomment", "1.2.3.4/32"},
+		{"1.2.3.4   several words of comment", "1.2.3.4/32"},
+		{"1.2.3.4 ; SBL1 comment", "1.2.3.4/32"},
+		{"not-an-ip 1.2.3.4", ""},
+		{"Spamhaus DROP list", ""},
 	}
 	for _, tt := range tests {
 		got := extractEntry(tt.line)
@@ -51,6 +60,20 @@ invalid line
 		t.Fatalf("expected 4 entries, got %d: %v", len(entries), entries)
 	}
 	want := []string{"1.2.3.0/24", "5.6.7.8/32", "2001:db8::/32", "9.10.11.12/32"}
+	for i, e := range entries {
+		if e.String() != want[i] {
+			t.Errorf("entry %d = %s, want %s", i, e.String(), want[i])
+		}
+	}
+}
+
+func TestParseEntriesWhitespaceComments(t *testing.T) {
+	body := []byte("1.2.3.4 comment\n1.2.3.0/24 comment\n2001:db8::1 comment\n2001:db8::/32 comment\nSpamhaus DROP list\nnot-an-ip 5.6.7.8\n")
+	entries := parseEntries(body)
+	want := []string{"1.2.3.4/32", "1.2.3.0/24", "2001:db8::1/128", "2001:db8::/32"}
+	if len(entries) != len(want) {
+		t.Fatalf("got %d entries, want %d: %v", len(entries), len(want), entries)
+	}
 	for i, e := range entries {
 		if e.String() != want[i] {
 			t.Errorf("entry %d = %s, want %s", i, e.String(), want[i])
@@ -320,8 +343,8 @@ func TestManagerContainsInvalidIP(t *testing.T) {
 }
 
 func TestDefaultSources(t *testing.T) {
-	if len(DefaultSources) < 8 {
-		t.Fatalf("expected at least 8 default sources, got %d", len(DefaultSources))
+	if len(DefaultSources) < 9 {
+		t.Fatalf("expected at least 9 default sources, got %d", len(DefaultSources))
 	}
 	names := map[string]bool{}
 	for _, s := range DefaultSources {
@@ -339,6 +362,7 @@ func TestDefaultSources(t *testing.T) {
 		"tor-exit-nodes",
 		"emerging-threats",
 		"abuseipdb",
+		"netapi-honeypot",
 	}
 	for _, e := range expected {
 		if !names[e] {
