@@ -232,6 +232,19 @@ Caddy v2 uses a **structured JSON log format** that differs from the Common/Comb
 
 ---
 
+## Explain detection rules
+
+```bash
+caddy-analyze rules test '/search?q=example'
+caddy-analyze rules test --header 'User-Agent: sqlmap'
+caddy-analyze rules test --custom-patterns rules.json --url 'https://example.org/search?q=example'
+caddy-analyze --detect --explain access.log
+```
+
+`rules test` analyzes a single request target and optional headers locally without sending a request. Both commands show the winning rule per detection category, its rule ID, the matching field and text, normalization stages, confidence, severity, and available MITRE ATT&CK IDs. Behavioral detections explain the request history rather than naming a signature.
+
+`--explain` is available in one-shot analysis and writes to stderr, leaving the report unchanged. Request bodies aren't available in Caddy access logs. Authorization and cookie headers are redacted, but URLs and other headers may still contain sensitive data; review the output before sharing.
+
 ## Real-Time Threat Detection (`tail --detect`)
 
 The `tail` subcommand accepts `--detect` (`-d`) to run the full detection engine on every streamed entry, inline:
@@ -299,7 +312,7 @@ Once installed, self-update with signature verification (cosign keyless + SHA256
 ```bash
 caddy-analyze update                     # install the latest verified release
 caddy-analyze update --check             # report availability only
-caddy-analyze update --version v0.9.0    # pin an exact release
+caddy-analyze update --version v0.10.0   # pin an exact release
 sudo caddy-analyze update                # when the binary is in a root-owned path
 ```
 
@@ -374,8 +387,13 @@ separate 401/403 threshold across **all** paths; set it to `0` if only the new
 endpoint-scoped behavior is wanted. Other Guard blocking rules remain active.
 At most 100,000 failures are retained per enabled scenario (300,000 with all
 three enabled). Counts and distinct User-Agents remain exact within that budget;
-new evidence for a scenario is dropped when its budget is full until failures
-expire. Each scenario expires its own rolling window independently.
+when a scenario's budget is full, each new failure evicts the oldest retained
+one (earliest arrival breaks timestamp ties), so a new IP is still counted
+during a flood from another. Failures older than everything retained are
+dropped instead. Guard logs each evaluation in
+which evidence was evicted (`auth_abuse evidence budget full`); while that is
+happening, counts for the oldest part of the window are a lower bound. Each
+scenario expires its own rolling window independently.
 
 ## Documentation
 

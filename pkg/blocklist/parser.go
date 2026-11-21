@@ -67,7 +67,7 @@ func parseJSONEntries(body []byte) []net.IPNet {
 
 // extractEntry returns the CIDR or bare-IP portion of a line, or "" if
 // the line contains no usable entry. Comment characters ";" and "#"
-// and trailing whitespace are stripped. A bare IP is promoted to a /32
+// and any text after the first whitespace are stripped. A bare IP is promoted to a /32
 // (IPv4) or /128 (IPv6) CIDR so cidranger can store it uniformly.
 func extractEntry(line string) string {
 	line = strings.TrimSpace(line)
@@ -82,6 +82,8 @@ func extractEntry(line string) string {
 	if line == "" {
 		return ""
 	}
+	// Anything after the first run of whitespace is a comment ("1.2.3.4 comment").
+	line = strings.Fields(line)[0]
 	if strings.Contains(line, "/") {
 		return line
 	}

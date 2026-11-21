@@ -2,6 +2,7 @@ package reader
 
 import (
 	"bufio"
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -11,6 +12,7 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/lenny-ts/caddy-analyzer/pkg/types"
@@ -19,10 +21,127 @@ import (
 type LogReader interface {
 	Read(ctx context.Context) (<-chan string, error)
 	Name() string
+	// Err reports a streaming error after the lines channel has been drained.
+	Err() error
 }
 
-// MaxLineSize is the largest log line accepted from any source.
+// MaxLineSize is the largest log line accepted from any source. A longer line
+// is skipped and reported; it never aborts the rest of the source.
 const MaxLineSize = 16 * 1024 * 1024
+
+// SkipCounter is implemented by readers that drop lines longer than
+// MaxLineSize, so callers can surface the count in the report.
+type SkipCounter interface {
+	SkippedLines() int64
+}
+
+// skipCounter counts the over-long lines a reader dropped.
+type skipCounter struct {
+	skipped atomic.Int64
+}
+
+// SkippedLines reports how many lines longer than MaxLineSize were dropped.
+func (c *skipCounter) SkippedLines() int64 { return c.skipped.Load() }
+
+func (c *skipCounter) skip(source string, size int64) {
+	c.skipped.Add(1)
+	fmt.Fprintf(os.Stderr, "warning: skipped a %d-byte line in %s (limit is %d bytes)\n", size, source, MaxLineSize)
+}
+
+// normalizeLine drops a trailing "\r" and any leading NUL bytes. A log file
+// truncated in place while its writer keeps its offset (logrotate's
+// copytruncate) starts with a sparse hole of NULs glued to the next record.
+func normalizeLine(b []byte) []byte {
+	b = bytes.TrimSuffix(b, []byte("\r"))
+	return bytes.TrimLeft(b, "\x00")
+}
+
+// forEachLine calls fn for every line read from r, without the line
+// terminator. A line whose content is longer than max bytes is discarded up to
+// its newline and passed to onSkip with its length; reading then continues
+// with the next line. Leading NUL bytes do not count toward max, so a record
+// written after a sparse hole is still delivered. Only read errors and errors
+// returned by fn stop the iteration.
+func forEachLine(r io.Reader, max int, fn func(string) error, onSkip func(int64)) error {
+	var line boundedLine
+	return line.read(context.Background(), bufio.NewReaderSize(r, 64*1024), max, true, fn, onSkip)
+}
+
+type boundedLine struct {
+	content []byte
+	raw     int64 // bytes consumed so far, newline excluded
+	tooLong bool
+}
+
+// read drains through EOF. When following, EOF is temporary: retain only the
+// bounded partial line and resume at the current offset on the next poll.
+func (l *boundedLine) read(ctx context.Context, br *bufio.Reader, max int, final bool, fn func(string) error, onSkip func(int64)) error {
+	for {
+		if err := ctx.Err(); err != nil {
+			return err
+		}
+		chunk, err := br.ReadSlice('\n')
+		eof := errors.Is(err, io.EOF)
+		if err != nil && !errors.Is(err, bufio.ErrBufferFull) && !eof {
+			return err
+		}
+		complete := err == nil
+		data := chunk
+		if complete {
+			data = chunk[:len(chunk)-1]
+		}
+		l.raw += int64(len(data))
+		if !l.tooLong {
+			if len(l.content) == 0 {
+				data = bytes.TrimLeft(data, "\x00")
+			}
+			if len(l.content)+len(data) > max+1 {
+				// max+1 leaves room for a trailing "\r" that normalizeLine drops.
+				l.tooLong = true
+				l.content = l.content[:0]
+			} else {
+				l.content = append(l.content, data...)
+			}
+		}
+		if complete || (final && eof && l.raw > 0) {
+			if !l.tooLong {
+				if content := normalizeLine(l.content); len(content) > max {
+					l.tooLong = true
+				} else if ferr := fn(string(content)); ferr != nil {
+					return ferr
+				}
+			}
+			if l.tooLong && onSkip != nil {
+				onSkip(l.raw)
+			}
+			*l = boundedLine{content: l.content[:0]}
+		}
+		if eof {
+			return nil
+		}
+	}
+}
+
+// CountLines counts the lines forEachLine would deliver from r, leaving out
+// lines longer than MaxLineSize.
+func CountLines(r io.Reader) (int64, error) {
+	var n int64
+	err := forEachLine(r, MaxLineSize, func(string) error {
+		n++
+		return nil
+	}, nil)
+	return n, err
+}
+
+// sendLine delivers one line unless ctx is done first.
+func sendLine(ctx context.Context, out chan<- string, line string) error {
+	select {
+	case out <- line:
+		return nil
+	case <-ctx.Done():
+		return ctx.Err()
+	}
+}
 
 func FromSource(src types.LogSource) LogReader {
 	return fromSource(src, false)
@@ -81,7 +200,12 @@ func newLineChannel() chan string {
 	return make(chan string, 1000)
 }
 
-type StdinReader struct{}
+type StdinReader struct {
+	skipCounter
+	err error
+}
+
+func (r *StdinReader) Err() error { return r.err }
 
 func (r *StdinReader) Name() string { return "stdin" }
 
@@ -97,23 +221,25 @@ func (r *StdinReader) Read(ctx context.Context) (<-chan string, error) {
 	go func() {
 		defer close(out)
 		fmt.Fprintln(os.Stderr, "reading log lines from stdin... (Ctrl+D to end)")
-		scanner := bufio.NewScanner(os.Stdin)
-		scanner.Buffer(make([]byte, 64*1024), MaxLineSize)
-		for scanner.Scan() {
-			select {
-			case out <- scanner.Text():
-			case <-ctx.Done():
-				return
-			}
+		err := forEachLine(os.Stdin, MaxLineSize, func(line string) error {
+			return sendLine(ctx, out, line)
+		}, func(n int64) { r.skip(r.Name(), n) })
+		if err != nil && !errors.Is(err, context.Canceled) {
+			r.err = fmt.Errorf("read stdin: %w", err)
+			printReadError(r.Name(), err)
 		}
 	}()
 	return out, nil
 }
 
 type FileReader struct {
+	skipCounter
 	paths  []string
 	follow bool
+	err    error
 }
+
+func (r *FileReader) Err() error { return r.err }
 
 func (r *FileReader) Name() string {
 	if len(r.paths) == 1 {
@@ -123,18 +249,43 @@ func (r *FileReader) Name() string {
 }
 
 func (r *FileReader) Read(ctx context.Context) (<-chan string, error) {
+	// Validate up front that every input exists, but do not abort the whole
+	// read when only some paths are missing: process the available ones and
+	// record the error so callers can surface a non-zero exit code. Use
+	// os.Stat instead of open+close to avoid blocking twice on FIFOs.
+	var once sync.Once
+	recordError := func(path string, err error) {
+		if errors.Is(err, context.Canceled) {
+			return
+		}
+		printReadError(path, err)
+		once.Do(func() { r.err = err })
+	}
+	r.err = nil
+	available := make([]string, 0, len(r.paths))
+	for _, path := range r.paths {
+		if _, err := os.Stat(path); err != nil {
+			recordError(path, err)
+			continue
+		}
+		available = append(available, path)
+	}
+	if len(available) == 0 && r.err != nil {
+		return nil, r.err
+	}
+
 	out := newLineChannel()
-	if r.follow && len(r.paths) > 1 {
+	if r.follow && len(available) > 1 {
 		// In follow mode with multiple files, read them concurrently
 		// so all files are tailed in parallel. Without this, the first
 		// file blocks forever and the rest are never read.
 		var wg sync.WaitGroup
-		for _, path := range r.paths {
+		for _, path := range available {
 			wg.Add(1)
 			go func(p string) {
 				defer wg.Done()
-				if err := readFileAndFollow(ctx, p, out); err != nil {
-					printReadError(p, err)
+				if err := readFileAndFollow(ctx, p, out, &r.skipCounter); err != nil {
+					recordError(p, err)
 				}
 			}(path)
 		}
@@ -146,14 +297,14 @@ func (r *FileReader) Read(ctx context.Context) (<-chan string, error) {
 	}
 	go func() {
 		defer close(out)
-		for _, path := range r.paths {
+		for _, path := range available {
 			if r.follow {
-				if err := readFileAndFollow(ctx, path, out); err != nil {
-					printReadError(path, err)
+				if err := readFileAndFollow(ctx, path, out, &r.skipCounter); err != nil {
+					recordError(path, err)
 				}
 			} else {
-				if err := readFileLines(ctx, path, out); err != nil {
-					printReadError(path, err)
+				if err := readFileLines(ctx, path, out, &r.skipCounter); err != nil {
+					recordError(path, err)
 				}
 			}
 		}
@@ -161,55 +312,43 @@ func (r *FileReader) Read(ctx context.Context) (<-chan string, error) {
 	return out, nil
 }
 
-func readFileLines(ctx context.Context, path string, out chan<- string) error {
+func readFileLines(ctx context.Context, path string, out chan<- string, skips *skipCounter) error {
 	f, err := os.Open(path)
 	if err != nil {
 		return err
 	}
 	defer func() { _ = f.Close() }()
 
-	scanner := bufio.NewScanner(f)
-	scanner.Buffer(make([]byte, 64*1024), MaxLineSize)
-	for scanner.Scan() {
-		select {
-		case out <- scanner.Text():
-		case <-ctx.Done():
-			return ctx.Err()
-		}
-	}
-	return scanner.Err()
+	return forEachLine(f, MaxLineSize, func(line string) error {
+		return sendLine(ctx, out, line)
+	}, func(n int64) { skips.skip(path, n) })
 }
 
-func readFileAndFollow(ctx context.Context, path string, out chan<- string) error {
+func readFileAndFollow(ctx context.Context, path string, out chan<- string, skips *skipCounter) error {
 	f, err := os.Open(path)
 	if err != nil {
 		return err
 	}
-	defer func() { _ = f.Close() }()
+	defer func() {
+		if f != nil {
+			_ = f.Close()
+		}
+	}()
 
 	initialInfo, err := f.Stat()
 	if err != nil {
 		return err
 	}
 
-	initialReader := bufio.NewReaderSize(f, 1024*1024)
-	for {
-		line, err := initialReader.ReadString('\n')
-		if err != nil {
-			if len(line) > 0 {
-				pos, _ := f.Seek(0, io.SeekCurrent)
-				if _, err := f.Seek(pos-int64(len(line)), io.SeekStart); err != nil {
-					return err
-				}
-			}
-			break
-		}
-		line = strings.TrimRight(line, "\n")
-		select {
-		case out <- line:
-		case <-ctx.Done():
-			return ctx.Err()
-		}
+	buffer := bufio.NewReaderSize(f, 64*1024)
+	var pending boundedLine
+	drain := func() error {
+		return pending.read(ctx, buffer, MaxLineSize, false, func(line string) error {
+			return sendLine(ctx, out, line)
+		}, func(n int64) { skips.skip(path, n) })
+	}
+	if err := drain(); err != nil {
+		return err
 	}
 
 	pos, err := f.Seek(0, io.SeekCurrent)
@@ -242,39 +381,32 @@ func readFileAndFollow(ctx context.Context, path string, out chan<- string) erro
 				if err != nil {
 					return err
 				}
+				pending = boundedLine{}
+				buffer.Reset(f)
 			} else if info.Size() == pos {
 				continue
 			}
 
-			reader := bufio.NewReader(f)
-			for {
-				line, err := reader.ReadString('\n')
-				if err != nil {
-					if len(line) > 0 {
-						pos, _ := f.Seek(0, io.SeekCurrent)
-						if _, err := f.Seek(pos-int64(len(line)), io.SeekStart); err != nil {
-							return err
-						}
-					}
-					break
-				}
-				line = strings.TrimRight(line, "\n")
-				select {
-				case out <- line:
-				case <-ctx.Done():
-					return ctx.Err()
-				}
+			if err := drain(); err != nil {
+				return err
 			}
 
-			pos, _ = f.Seek(0, io.SeekCurrent)
+			pos, err = f.Seek(0, io.SeekCurrent)
+			if err != nil {
+				return err
+			}
 		}
 	}
 }
 
 type DockerReader struct {
+	skipCounter
 	container string
 	follow    bool
+	err       error
 }
+
+func (r *DockerReader) Err() error { return r.err }
 
 func (r *DockerReader) Name() string { return "docker:" + r.container }
 
@@ -292,14 +424,18 @@ func (r *DockerReader) Read(ctx context.Context) (<-chan string, error) {
 	args = append(args, r.container)
 
 	cmd := exec.CommandContext(ctx, "docker", args...)
-	return execLines(ctx, cmd, out)
+	return execLines(ctx, cmd, out, r.Name(), &r.skipCounter, &r.err)
 }
 
 type K8sReader struct {
+	skipCounter
 	pod       string
 	namespace string
 	follow    bool
+	err       error
 }
+
+func (r *K8sReader) Err() error { return r.err }
 
 func (r *K8sReader) Name() string {
 	ns := r.namespace
@@ -321,13 +457,17 @@ func (r *K8sReader) Read(ctx context.Context) (<-chan string, error) {
 	args = append(args, r.pod)
 
 	cmd := exec.CommandContext(ctx, "kubectl", args...)
-	return execLines(ctx, cmd, out)
+	return execLines(ctx, cmd, out, r.Name(), &r.skipCounter, &r.err)
 }
 
 type JournalctlReader struct {
+	skipCounter
 	unit   string
 	follow bool
+	err    error
 }
+
+func (r *JournalctlReader) Err() error { return r.err }
 
 func (r *JournalctlReader) Name() string { return "journalctl:" + r.unit }
 
@@ -338,10 +478,10 @@ func (r *JournalctlReader) Read(ctx context.Context) (<-chan string, error) {
 		args = append(args, "--follow")
 	}
 	cmd := exec.CommandContext(ctx, "journalctl", args...)
-	return execLines(ctx, cmd, out)
+	return execLines(ctx, cmd, out, r.Name(), &r.skipCounter, &r.err)
 }
 
-func execLines(ctx context.Context, cmd *exec.Cmd, out chan string) (<-chan string, error) {
+func execLines(ctx context.Context, cmd *exec.Cmd, out chan string, name string, skips *skipCounter, errPtr *error) (<-chan string, error) {
 	pr, pw := io.Pipe()
 	cmd.Stdout = pw
 	cmd.Stderr = pw
@@ -356,16 +496,19 @@ func execLines(ctx context.Context, cmd *exec.Cmd, out chan string) (<-chan stri
 
 	go func() {
 		defer close(out)
-		scanner := bufio.NewScanner(pr)
-		scanner.Buffer(make([]byte, 64*1024), MaxLineSize)
-		for scanner.Scan() {
-			select {
-			case out <- scanner.Text():
-			case <-ctx.Done():
-				_ = cmd.Process.Kill()
-				_ = cmd.Wait()
-				return
-			}
+		defer func() { _ = pr.Close() }()
+		err := forEachLine(pr, MaxLineSize, func(line string) error {
+			return sendLine(ctx, out, line)
+		}, func(n int64) { skips.skip(name, n) })
+		if err != nil && ctx.Err() != nil {
+			_ = cmd.Process.Kill()
+			return
+		}
+		if err != nil {
+			printReadError(name, err)
+		}
+		if errPtr != nil {
+			*errPtr = err
 		}
 	}()
 

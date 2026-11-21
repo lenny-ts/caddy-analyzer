@@ -119,6 +119,8 @@ func (errorFollowReader) Read(context.Context) (<-chan string, error) {
 	return nil, os.ErrNotExist
 }
 
+func (errorFollowReader) Err() error { return nil }
+
 var _ reader.LogReader = errorFollowReader{}
 
 func TestFanInFollowErrorPolicyStopsAndCleansUp(t *testing.T) {

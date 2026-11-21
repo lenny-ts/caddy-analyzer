@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.10.0] - 2026-11-21
+
+### Added
+- **Detection explanations ([#155](https://github.com/lenny-ts/caddy-analyzer/pull/155))**: add `rules test` for local URI and header checks against built-in and custom rules. Use `--detect --explain` to see the rule ID, matched field and text, normalization, confidence, severity, and available MITRE ATT&CK IDs on stderr without changing the report. Explanations may contain request data; review them before sharing.
+
+### Fixed
+- **Oversized log lines ([#156](https://github.com/lenny-ts/caddy-analyzer/pull/156))**: skip and count oversized records without losing subsequent entries. Recover records preceded by NUL padding and bound the line buffer in follow mode.
+- **Log read failures ([#150](https://github.com/lenny-ts/caddy-analyzer/pull/150), [#149](https://github.com/lenny-ts/caddy-analyzer/pull/149))**: finite analysis returns a non-zero exit status on unreadable files or actual stdin read failures. Other readable inputs still contribute to the report; skipped oversized lines are warnings, not read failures.
+- **Authentication evidence saturation ([#157](https://github.com/lenny-ts/caddy-analyzer/pull/157))**: retain newer failures within the fixed evidence budget, break timestamp ties by arrival order, and warn in Guard when evidence is dropped.
+- **Blocklist comments ([#151](https://github.com/lenny-ts/caddy-analyzer/pull/151))**: accept IP and CIDR entries followed by whitespace and a comment.
+
+### Changed
+- **Release notes**: generate the GitHub release body from the matching changelog section before publishing.
+
 ## [0.9.0] - 2026-11-16
 
 ### Added

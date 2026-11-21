@@ -5,7 +5,7 @@ on:
     tags: ["v*"]
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   check:
@@ -18,9 +18,26 @@ jobs:
           go-version: '1.25.13'
       - run: go test -race -v ./...
 
+  release-notes:
+    name: Generate release notes
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Generate release notes
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: bash tools/release-notes.sh "$RELEASE_TAG" > "$RUNNER_TEMP/release-notes.md"
+
+      - uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        with:
+          name: release-notes
+          path: ${{ runner.temp }}/release-notes.md
+          if-no-files-found: error
+
   release-goreleaser:
     name: Build, Publish & Sign
-    needs: [check]
+    needs: [check, release-notes]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -34,46 +51,10 @@ jobs:
         with:
           go-version: '1.25.13'
 
-      - name: Generate release notes
-        env:
-          RELEASE_TAG: ${{ github.ref_name }}
-        run: |
-          version="${RELEASE_TAG#v}"
-          changelog_section=$(mktemp "$RUNNER_TEMP/changelog.XXXXXX.md")
-          if ! grep -q "^## \[$version\]" CHANGELOG.md; then
-            echo "Unable to extract $RELEASE_TAG from CHANGELOG.md" >&2
-            exit 1
-          fi
-          sed -n "/^## \[$version\]/,/^## \[/p" CHANGELOG.md | sed '$d' > "$changelog_section"
-          {
-            printf '# caddy-analyzer %s\n\n' "$RELEASE_TAG"
-            printf 'Analyze Caddy v2 logs with security detection, operational metrics, and firewall protection.\n\n'
-            printf '## Install\n\n'
-            printf '```bash\n'
-            printf '# Fresh install\n'
-            printf 'curl -sSfL https://raw.githubusercontent.com/lenny-ts/caddy-analyzer/main/install.sh | bash\n'
-            printf 'go install github.com/lenny-ts/caddy-analyzer/cmd/caddy-analyze@latest\n'
-            printf 'docker run --rm -v /var/log/caddy:/logs ghcr.io/lenny-ts/caddy-analyzer /logs/access.log\n'
-            printf '```\n\n'
-            printf '## Upgrade\n\n'
-            printf 'For an existing installation, `caddy-analyze update` downloads the latest release, verifies its Cosign signature and SHA256 checksum, and replaces the binary atomically. Use `--check` to preview the available version, or `--version %s` to install this exact release.\n\n' "$RELEASE_TAG"
-            printf '```bash\n'
-            printf 'caddy-analyze update --check\n'
-            printf 'caddy-analyze update\n'
-            printf 'caddy-analyze update --version %s\n' "$RELEASE_TAG"
-            printf '```\n\n'
-            cat "$changelog_section"
-            notes_file="release-notes-$RELEASE_TAG.md"
-            if [ -f "$notes_file" ]; then
-              printf '\n'
-              awk '
-                /^## Contributors$/ { contributors = 1; print; next }
-                contributors && /^## / { exit }
-                contributors { print }
-              ' "$notes_file"
-            fi
-          } > "$RUNNER_TEMP/release-notes.md"
-          rm -f "$changelog_section"
+      - uses: actions/download-artifact@70fc10c6e5e1ce46ad2ea6f2b72d43f7d47b13c3 # v8.0.0
+        with:
+          name: release-notes
+          path: ${{ runner.temp }}
 
       - name: Install Syft
         uses: anchore/sbom-action@66cbf4bc1f1c0d2edc94016e65bc221b6bb0ad6c # v0.24.3
@@ -83,7 +64,7 @@ jobs:
         with:
           distribution: goreleaser
           version: "~> v2"
-          args: release --clean
+          args: release --clean --release-notes "${{ runner.temp }}/release-notes.md"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -112,8 +93,6 @@ jobs:
       - name: Upload SBOM and signatures
         uses: softprops/action-gh-release@8a0cd651e5b2365bd640854a3fa5dfc70e4875f3 # v3.0.4
         with:
-          body_path: ${{ runner.temp }}/release-notes.md
-          append_body: false
           files: |
             dist/*.spdx.json
             dist/checksums.txt.bundle
