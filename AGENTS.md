@@ -9,6 +9,7 @@
 ## Release workflow
 
 - `.github/workflows/release.yml` triggers on `v*` tag push → GoReleaser + SBOM (syft) + cosign
+- Preview the GitHub release body with `bash tools/release-notes.sh vX.Y.Z`; the version must have a section in `CHANGELOG.md`.
 - User handles merge to `main` + tag + push themselves
 - `.goreleaser.yaml`: CGO_ENABLED=0, linux/darwin/windows × amd64/arm64/arm, ldflags inject `cmd.Version={{.Version}}`
 
