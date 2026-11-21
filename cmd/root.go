@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"bufio"
 	"context"
 	"fmt"
 	"io"
@@ -405,7 +404,7 @@ func runOnceMode(ctx context.Context, sources []types.LogSource, filters types.F
 	}
 	engine.Stats().MaxCardinality = flagMaxCard
 	sections := types.DefaultTopSections()
-	var parseErrors, processed int64
+	var parseErrors, processed, skippedLines int64
 	var entries []*types.LogEntry
 	var opEntries []*types.OperationalEntry
 	var readErr error
@@ -479,6 +478,9 @@ func runOnceMode(ctx context.Context, sources []types.LogSource, filters types.F
 			}
 			bar.Add(1)
 		})
+		if sc, ok := r.(reader.SkipCounter); ok {
+			skippedLines += sc.SkippedLines()
+		}
 		if rerr := r.Err(); rerr != nil && readErr == nil {
 			readErr = rerr
 		}
@@ -486,7 +488,7 @@ func runOnceMode(ctx context.Context, sources []types.LogSource, filters types.F
 
 	bar.Done()
 
-	if processed == 0 && opEngine.Stats().TotalEvents == 0 && parseErrors == 0 {
+	if processed == 0 && opEngine.Stats().TotalEvents == 0 && parseErrors == 0 && skippedLines == 0 {
 		fmt.Fprintln(os.Stderr, "no log entries found")
 		if readErr != nil {
 			return readErr
@@ -505,6 +507,7 @@ func runOnceMode(ctx context.Context, sources []types.LogSource, filters types.F
 	}
 
 	engine.Stats().ParseErrors = parseErrors
+	engine.Stats().SkippedLines = skippedLines
 	engine.Finalize()
 	report := output.NewReportWithSections(engine, output.ParseFormat(flagFormat), flagTop, sections)
 	report.SetDetect(flagDetect)
@@ -687,15 +690,14 @@ func countTotalLines(sources []types.LogSource) int64 {
 			if err != nil {
 				return 0
 			}
-			scanner := bufio.NewScanner(f)
-			scanner.Buffer(make([]byte, 64*1024), reader.MaxLineSize)
-			for scanner.Scan() {
-				total++
-			}
+			// Same line rules as the reader, so an over-long line neither
+			// aborts the count nor counts as a line the bar will see.
+			n, err := reader.CountLines(f)
 			_ = f.Close()
-			if err := scanner.Err(); err != nil {
+			if err != nil {
 				return 0
 			}
+			total += n
 		}
 	}
 	return total

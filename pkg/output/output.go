@@ -519,6 +519,9 @@ func (r *Report) printTable() error {
 	if s.ParseErrors > 0 {
 		_, _ = fmt.Fprintf(w, "%s\t%d\n\n", renderLabel(styleError, "Parse Errors:"), s.ParseErrors)
 	}
+	if s.SkippedLines > 0 {
+		_, _ = fmt.Fprintf(w, "%s\t%d\n\n", renderLabel(styleError, "Skipped Lines (too long):"), s.SkippedLines)
+	}
 
 	if r.top > 0 {
 		if r.sections.Path {
@@ -820,7 +823,8 @@ func (r *Report) reportData() map[string]interface{} {
 			"p95": s.Percentile95,
 			"p99": s.Percentile99,
 		},
-		"parse_errors": s.ParseErrors,
+		"parse_errors":  s.ParseErrors,
+		"skipped_lines": s.SkippedLines,
 	}
 
 	if r.detect && len(s.SuspiciousIPs) > 0 {
@@ -910,6 +914,7 @@ func (r *Report) printCSV() error {
 	writePair("bot_requests", fmt.Sprintf("%d", s.BotRequests))
 	writePair("total_bytes", fmt.Sprintf("%d", s.TotalBytes))
 	writePair("parse_errors", fmt.Sprintf("%d", s.ParseErrors))
+	writePair("skipped_lines", fmt.Sprintf("%d", s.SkippedLines))
 	writePair("duration_p50", fmt.Sprintf("%.6f", s.Percentile50))
 	writePair("duration_p95", fmt.Sprintf("%.6f", s.Percentile95))
 	writePair("duration_p99", fmt.Sprintf("%.6f", s.Percentile99))

@@ -346,6 +346,7 @@ type Stats struct {
 	EndTime         time.Time
 	Errors          int64
 	ParseErrors     int64
+	SkippedLines    int64 // lines longer than reader.MaxLineSize, not analyzed
 	Status2xx       int64
 	Status3xx       int64
 	Status4xx       int64
