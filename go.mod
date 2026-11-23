@@ -1,6 +1,6 @@
 module github.com/lenny-ts/caddy-analyzer
 
-go 1.25.13
+go 1.26.0
 
 require (
 	github.com/charmbracelet/bubbles v1.0.0
@@ -9,7 +9,7 @@ require (
 	github.com/oschwald/maxminddb-golang v1.13.1
 	github.com/spf13/cobra v1.10.2
 	github.com/yl2chen/cidranger v1.0.2
-	golang.org/x/sys v0.38.0
+	golang.org/x/sys v0.50.0
 )
 
 require (
