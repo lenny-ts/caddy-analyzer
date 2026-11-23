@@ -43,6 +43,12 @@ go run golang.org/x/vuln/cmd/govulncheck@latest ./...
 
 CI enforces a **60%** total coverage threshold.
 
+### Mutation testing
+
+`make mutation` runs [gomu](https://github.com/sivchari/gomu) over the whole repository. This is slow (tens of thousands of mutants), so scope it with e.g. `make mutation MUTATION_TARGET=./pkg/parser`. Mutation reports are written to `mutation-report.json`.
+
+PR builds run mutation testing only on the files changed against the base commit. The job is non-blocking and has a 30-minute cap. The mutation score is informational until a baseline is measured.
+
 ## Pull Request Guidelines
 
 - Ensure all existing tests pass (`go test -race ./...`).

@@ -34,6 +34,33 @@ jobs:
         shell: bash
         run: go build -ldflags "-X github.com/lenny-ts/caddy-analyzer/cmd.Version=$(git describe --tags --always --dirty 2>/dev/null || echo dev)" -o caddy-analyze ./cmd/caddy-analyze
 
+  mutation:
+    name: Mutation Testing
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: '1.25.13'
+          cache: true
+      - name: Run mutation testing on the pull request diff
+        run: |
+          go run github.com/sivchari/gomu/cmd/gomu@v0.3.0 run . \
+            --base-sha "${{ github.event.pull_request.base.sha }}" \
+            --threshold 0 --fail-on-gate=false --workers 4 --timeout 60 --output json
+      - name: Upload mutation report
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: mutation-report
+          path: mutation-report.json
+          if-no-files-found: ignore
+
   coverage:
     name: Coverage
     runs-on: ubuntu-latest
